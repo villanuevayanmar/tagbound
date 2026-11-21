@@ -1,0 +1,141 @@
+# TAGBOUND: The Five Cities
+
+A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D renderer are C++17 compiled to WebAssembly with Emscripten and raylib. The browser layer supplies touch controls, PWA installation, offline caching and the opening story.
+
+## Current playable scope
+
+- Three selectable classes: Vanguard, Skirmisher and Warden.
+- Five city environments with increasing pursuer toughness and speed.
+- Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
+- Pursuit pressure, health, stamina, five weapon slots and ranged bow projectiles.
+- Three beacon quests per city, followed by a city boss gate with telegraphed strikes and stamina-based blocking.
+- XP, levels, two skill unlock milestones and local progress saving.
+- Landscape-first mobile controls and keyboard/mouse support.
+- PWA manifest, phone icons, service worker and offline asset cache.
+
+This is an early playable foundation, not a finished commercial game. Character models, animation, detailed city layouts, full parkour vault/climb interactions, sound design, quest variety and complete boss encounter tuning remain development work. The current renderer uses procedural low-poly geometry. No online accounts or game server are required.
+
+## Requirements
+
+- Windows 10/11, macOS or Linux
+- Git
+- Python 3.10+ (only needed for icon generation / local static server)
+- CMake 3.20+
+- Emscripten SDK (latest stable)
+- Internet connection for the first build: CMake fetches raylib 5.5 from GitHub
+
+The Emscripten SDK includes its own compiler and Node.js. CMake can be installed with: python -m pip install --user cmake ninja.
+
+## Windows setup
+
+From the project root in PowerShell:
+
+    Set-ExecutionPolicy -Scope Process Bypass
+    .\scripts\setup-toolchain.ps1
+
+Open a new PowerShell terminal after setup, then run:
+
+    .\scripts\build-web.ps1
+
+The script configures raylib for WebGL, compiles game.js and game.wasm, and copies the PWA files into dist/. The generated dist/ folder is committed so Vercel can serve a static build without running a C++ toolchain.
+
+## macOS / Linux setup
+
+Install Git, CMake, Python and Ninja, then install Emscripten following the official SDK instructions: https://emscripten.org/docs/getting_started/downloads.html. Activate the SDK in your terminal:
+
+    git clone https://github.com/emscripten-core/emsdk.git
+    cd emsdk
+    ./emsdk install latest
+    ./emsdk activate latest
+    source ./emsdk_env.sh
+    cd /path/to/tagbound
+    emcmake cmake -S . -B build-web -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release
+    cmake --build build-web --config Release --parallel
+    cp -R web/. dist/
+
+The CMake target emits the generated JavaScript and WebAssembly files in dist/.
+
+## Test locally
+
+Serve dist/ over HTTP (do not open index.html as a file):
+
+    python -m http.server 8000 --directory dist
+
+Open http://localhost:8000. WebAssembly, service workers and PWA install prompts require a secure context; localhost is treated as secure by browsers.
+
+## GitHub push
+
+Create an empty repository named tagbound under your GitHub account. From the project root:
+
+    git init
+    git add .
+    git commit -m "Build TAGBOUND WebAssembly PWA"
+    git branch -M main
+    git remote add origin https://github.com/YOUR_USERNAME/tagbound.git
+    git push -u origin main
+
+If the Git repository already exists, inspect its remote and branch before pushing; do not replace its history with --force.
+
+## Deploy to Vercel
+
+1. Sign in to Vercel and choose Add New → Project.
+2. Import the GitHub repository.
+3. Keep the project root at the repository root.
+4. Set Output Directory to dist.
+5. Leave Build Command empty because the generated static build is committed.
+6. Deploy. Later pushes to main trigger new deployments when Git integration is enabled.
+
+The included vercel.json declares the static output directory, WebAssembly MIME type, and cache rules for the service worker and generated assets.
+
+## Install on a phone
+
+### iPhone / iPad
+
+1. Open the deployed HTTPS URL in Safari.
+2. Tap Share → Add to Home Screen.
+3. Confirm the name and tap Add.
+4. Launch TAGBOUND from the Home Screen. Turn the device sideways.
+
+iOS Safari does not consistently support JavaScript orientation locking. The app uses a landscape-first layout and shows a portrait rotation notice instead of claiming to force the device to rotate.
+
+### Android
+
+1. Open the deployed HTTPS URL in Chrome.
+2. Use the browser's Install app / Add to Home screen prompt.
+3. Launch TAGBOUND from its new home-screen icon.
+
+The first visit must download the game assets. The service worker caches the HTML, JS, WASM, stylesheet, manifest and icons for later offline launches. Clear the browser's site data to remove the offline cache.
+
+## Controls
+
+### Touch
+
+- Left joystick: move
+- Right side of the screen: swipe to look
+- Vault: jump; near a wall, face it and jump to vault over the edge
+- Slide: short speed boost while grounded
+- Attack: use equipped weapon
+- Block: shield/block
+- Bow: aim while selected / shoot with Attack
+- Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
+- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
+- Weapon: cycle through sword, axe, shield, bow and spear
+
+### Keyboard / mouse
+
+- WASD or arrow keys: move
+- Mouse right-drag: look / block
+- Space: jump
+- Shift: sprint
+- Ctrl or C: slide
+- Left mouse: attack
+- Number keys 1–5: select sword, axe, shield, bow or spear
+- E: escape skill after unlock
+
+## Save data
+
+Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices.
+
+## Zero-cost notes
+
+The project has no paid engine, API, database or server requirement. GitHub and Vercel plan limits still apply. This is a static PWA, not an authoritative multiplayer game server.

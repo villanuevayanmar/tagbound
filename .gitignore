@@ -1,0 +1,9 @@
+build-web/
+build-desktop/
+external/
+.emscripten
+.emscripten_cache/
+*.log
+.DS_Store
+Thumbs.db
+# Keep dist/ tracked: it is the static site deployed by Vercel.

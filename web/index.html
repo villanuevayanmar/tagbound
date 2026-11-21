@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#111722">
+<meta name="description" content="A fantasy rooftop chase through five dangerous cities.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TAGBOUND">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="manifest" href="/manifest.json"><link rel="stylesheet" href="/styles.css">
+<title>TAGBOUND — The Five Cities</title>
+</head>
+<body>
+<main id="game-shell">
+<canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
+<section id="intro" class="overlay"><div class="story panel">
+<p class="eyebrow">A FIVE-CITY FUGITIVE TALE</p><h1>TAG<span>BOUND</span></h1>
+<p class="story-copy">The city bells rang before dawn. A royal seal was found in your hands, and the wardens named you traitor. Bounty hunters now patrol every roof and bridge. The gates ahead will open only when each city’s champion falls.</p>
+<p class="muted">You wake in an abandoned rooftop loft. Footsteps pass beneath the broken shutters.</p>
+<h2>CHOOSE YOUR CLASS</h2>
+<div class="class-grid">
+<button class="class-card selected" data-class="0"><strong>Vanguard</strong><small>Heavy health · Sword</small></button>
+<button class="class-card" data-class="1"><strong>Skirmisher</strong><small>Fast movement · Bow</small></button>
+<button class="class-card" data-class="2"><strong>Warden</strong><small>Balanced · Shield</small></button>
+</div>
+<button id="start" class="primary">ENTER THE ROOFTOPS</button><button id="install" class="secondary" hidden>INSTALL ON PHONE</button>
+</div></section>
+<section id="ending" class="overlay hidden"><div class="panel"><p class="eyebrow">THE LAST GATE</p><h1>THE CITIES ARE FREE</h1><p class="story-copy">The final warden has fallen. The chase is over — for now.</p><button id="restart" class="primary">PLAY AGAIN</button></div></section>
+<div id="rotate" class="rotate hidden"><span>↻</span><strong>ROTATE YOUR DEVICE</strong><small>TAGBOUND is designed for landscape play.</small></div>
+<div id="touch-help" class="touch-help">LEFT: MOVE / SPRINT · RIGHT: LOOK · ACTIONS: VAULT / SLIDE / ATTACK / BLOCK / BOW / SKILL / SPRINT / WEAPON</div>
+<div id="touch-controls">
+<div class="stick-area" id="stick"><div class="stick-ring"><div class="stick-knob" id="knob"></div></div></div>
+<div class="action-pad">
+<button data-bit="1" class="action jump">VAULT</button><button data-bit="2" class="action">SLIDE</button><button data-bit="4" class="action attack">ATTACK</button><button data-bit="8" class="action">BLOCK</button><button data-bit="16" class="action">BOW</button><button data-bit="32" class="action skill">SKILL</button><button data-bit="64" class="action sprint">SPRINT</button><button data-bit="128" class="action weapon">WEAPON</button>
+</div></div>
+<button id="install-float" class="install-float" hidden>＋ INSTALL</button><div id="loading" class="loading">LOADING THE FIVE CITIES…</div>
+</main>
+<script>
+var Module={
+ canvas:document.getElementById('canvas'),
+ print:(...args)=>console.log(...args),printErr:(...args)=>console.error(...args),
+ setStatus:text=>{const e=document.getElementById('loading');if(e)e.textContent=text||'';},
+ onRuntimeInitialized:()=>document.getElementById('loading').classList.add('hidden')
+};
+</script>
+<script src="/game.js"></script><script src="/pwa.js"></script>
+</body></html>
