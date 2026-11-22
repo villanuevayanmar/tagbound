@@ -478,7 +478,36 @@ int main() {
         }
     }
 
-    // Respawning restores the selected class's actual health maximum.
+    // Each class's maximum health remains consistent when leveling up.
+    const float classMaximums[3]={125.0f,95.0f,115.0f};
+    for(int klass=0;klass<3;klass++) {
+        game.player.playerClass=(PlayerClass)klass;
+        assert(near(ClassMaxHealth(game.player.playerClass),classMaximums[klass]));
+        game.player.health=classMaximums[klass]-5.0f;
+        game.player.level=1;
+        game.player.xp=99;
+        UpdateProgression(game,1);
+        assert(near(game.player.health,classMaximums[klass]));
+        game.player.xp=99;
+        UpdateProgression(game,1);
+        assert(near(game.player.health,classMaximums[klass]));
+    }
+
+
+    const float classHealth[3]={125.0f,95.0f,115.0f};
+    for(int klass=0;klass<3;klass++) {
+        game.enemies.clear();
+        game.player.playerClass=(PlayerClass)klass;
+        game.player.health=0;
+        Controls idle{};
+        UpdateCombat(game,idle,0.016f);
+        assert(near(game.player.health,classHealth[klass]));
+    }
+
+    std::cout << "PASS: city setup, names, XP/skills, movement, jump, dash, melee combat, and boss progression.\\n";
+    return 0;
+}
+
     const float classHealth[3]={125.0f,95.0f,115.0f};
     for(int klass=0;klass<3;klass++) {
         game.enemies.clear();
