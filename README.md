@@ -132,6 +132,10 @@ iOS Safari does not consistently support JavaScript orientation locking. The app
 
 The first visit must download the game assets. The service worker caches the HTML, JS, WASM, stylesheet, manifest and icons for later offline launches. Clear the browser's site data to remove the offline cache.
 
+## Settings and pause
+
+During a run, tap SETTINGS in the upper-right corner to pause the game. The Settings screen shares the saved sound preference with Home and exposes INSTALL ON PHONE only while the Settings screen is open. RESUME returns to the same run without resetting progress. The install action is not shown during active gameplay.
+
 ## Controls
 
 ### Touch
