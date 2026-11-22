@@ -35,18 +35,17 @@ extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
 KEEP void StartGame() {
     game.player.playerClass=(PlayerClass)selectedClass;
-    if(selectedClass==0) { game.player.health=125; game.player.stamina=95; game.player.weapon=ClassWeapon(PlayerClass::Vanguard); }
-    if(selectedClass==1) { game.player.health=95; game.player.stamina=100; game.player.weapon=ClassWeapon(PlayerClass::Skirmisher); }
-    if(selectedClass==2) { game.player.health=115; game.player.stamina=100; game.player.weapon=ClassWeapon(PlayerClass::Warden); }
+    game.player.health=ClassMaxHealth(game.player.playerClass);
+    game.player.stamina=game.player.playerClass==PlayerClass::Vanguard?95.0f:100.0f;
+    game.player.weapon=ClassWeapon(game.player.playerClass);
     int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6), quest=loadLocal(7);
     if(c>=0) {
         game.city=std::clamp(c,0,4); game.unlockedCity=std::clamp(u,0,4);
         game.player.level=std::max(1,l); game.player.xp=std::max(0,x);
         if(!classChosen) {
             game.player.playerClass=(PlayerClass)std::clamp(cl,0,2);
-            if(cl==0) { game.player.health=125; game.player.stamina=95; }
-            if(cl==1) { game.player.health=95; game.player.stamina=100; }
-            if(cl==2) { game.player.health=115; game.player.stamina=100; }
+            game.player.health=ClassMaxHealth(game.player.playerClass);
+            game.player.stamina=game.player.playerClass==PlayerClass::Vanguard?95.0f:100.0f;
         }
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
