@@ -330,6 +330,22 @@ int main() {
     assert(near(game.player.health, 89.0f));
     game.player.blocking = false;
 
+    // A pursuer cannot hit a player through a solid rooftop wall.
+    game.enemies.clear();
+    game.platforms.clear();
+    game.platforms.push_back({{0,1.5f,0.5f},{4,3.0f,0.4f},GRAY});
+    game.player.position={0,0.3f,0};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    game.enemies.push_back({{0,0.3f,1.0f},40,40,0,0,false,true});
+    UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,100.0f));
+
+    // The same pursuer hits normally once the obstructing wall is removed.
+    game.platforms.clear();
+    UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,89.0f));
+
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
     game.player.facing = {0,0,1};
