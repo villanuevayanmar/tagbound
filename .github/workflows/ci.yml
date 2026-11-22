@@ -16,7 +16,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: mymindstorm/setup-emsdk@v14
+      - uses: mymindstorm/setup-emsdk@v16
         with:
           version: latest
           actions-cache-folder: emsdk-cache
@@ -92,6 +92,11 @@ jobs:
         run: |
           python3 -m http.server 4173 --directory dist > /tmp/tagbound-http.log 2>&1 &
           echo $! > /tmp/tagbound-http.pid
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4173/ >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4173/ >/dev/null
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
 
