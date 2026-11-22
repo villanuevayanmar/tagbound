@@ -505,6 +505,7 @@ int main() {
     guardedBoss.variant=0;
     guardedBoss.phase=BossPhase::Strike;
     guardedBoss.phaseTime=1.0f;
+    guardedBoss.strikeDirection={0,0,-1};
     guardedBoss.strikeOrigin=guardedBoss.position;
     game.player.blocking=true;
     game.enemies.push_back(guardedBoss);
