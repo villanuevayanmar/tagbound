@@ -66,6 +66,7 @@ jobs:
             if (!response?.ok()) throw new Error('Production page did not return HTTP 200.');
             await page.waitForFunction(
               () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
               { timeout: 45000 }
             );
 
@@ -132,6 +133,7 @@ jobs:
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(
               () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
               { timeout: 45000 }
             );
             await page.locator('#start').click();
@@ -151,6 +153,7 @@ jobs:
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(
               () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
               { timeout: 45000 }
             );
             const workerInfo = await page.evaluate(async () => {
@@ -192,6 +195,7 @@ jobs:
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(
               () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
               { timeout: 30000 }
             );
             await context.setOffline(false);
