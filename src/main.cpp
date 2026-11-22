@@ -59,6 +59,10 @@ KEEP void StartGame() {
 }
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
 KEEP void SetLook(float x,float y) { lookX+=x; lookY+=y; }
+KEEP int GetQuestProgress() { return game.quest; }
+KEEP int GetActiveBossCount() {
+    return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
+}
 KEEP void ResetProgress() {
     game.city=0; game.unlockedCity=0; game.quest=0; game.bossUnlocked=false;
     game.player.level=1; game.player.xp=0;
