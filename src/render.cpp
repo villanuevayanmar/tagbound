@@ -466,10 +466,11 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawText(TextFormat("TAG DANGER   %d%%",(int)g.danger),w-233,44,15,g.danger>70?RED:ORANGE);
     DrawRectangle(w-233,67,205,8,DARKGRAY);
     DrawRectangle(w-233,67,(int)(205*g.danger/100),8,ORANGE);
-    DrawRectangle(12,h-78,390,65,Fade(BLACK,0.7f));
-    DrawText(TextFormat("%s  |  %s",CityName(g.city),WeaponName(g.player.weapon)),24,h-69,16,GOLD);
-    DrawText(g.quest<3?TextFormat("QUEST %d/3  -  REACH THE BEACON",g.quest+1):TextFormat("BOSS GATE OPEN  -  %s",BossName(g.city)),24,h-44,14,WHITE);
-    DrawText(TextFormat("TAGGERS %d",(int)std::count_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e){return e.alive&&!e.boss;})),24,h-24,12,LIGHTGRAY);
+    int objectiveHudY=h<=440?96:h-78;
+    DrawRectangle(12,objectiveHudY,390,65,Fade(BLACK,0.7f));
+    DrawText(TextFormat("%s  |  %s",CityName(g.city),WeaponName(g.player.weapon)),24,objectiveHudY+9,16,GOLD);
+    DrawText(g.quest<3?TextFormat("QUEST %d/3  -  REACH THE BEACON",g.quest+1):TextFormat("BOSS GATE OPEN  -  %s",BossName(g.city)),24,objectiveHudY+34,14,WHITE);
+    DrawText(TextFormat("TAGGERS %d",(int)std::count_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e){return e.alive&&!e.boss;})),24,objectiveHudY+54,12,LIGHTGRAY);
     if(g.finished) {
         DrawRectangle(0,0,w,h,Fade(BLACK,0.7f));
         DrawText("THE FIVE CITIES ARE FREE",w/2-190,h/2-18,28,GOLD);
