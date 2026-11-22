@@ -145,7 +145,29 @@ jobs:
               () => document.querySelector('#loading')?.classList.contains('hidden'),
               { timeout: 45000 }
             );
-            await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
+            const workerInfo = await page.evaluate(async () => {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              const ready = await navigator.serviceWorker.ready;
+              return {
+                secureContext: isSecureContext,
+                controller: navigator.serviceWorker.controller?.scriptURL || null,
+                readyState: ready.active?.state || null,
+                readyScript: ready.active?.scriptURL || null,
+                registrations: registrations.map(registration => ({
+                  scope: registration.scope,
+                  active: registration.active?.state || null,
+                  script: registration.active?.scriptURL || null,
+                  installing: registration.installing?.state || null,
+                  waiting: registration.waiting?.state || null
+                })),
+                cacheNames: await caches.keys()
+              };
+            });
+            console.log('Live service-worker diagnostics: ' + JSON.stringify(workerInfo));
+            if (!workerInfo.secureContext || !workerInfo.readyScript ||
+                !workerInfo.cacheNames.includes('tagbound-v24')) {
+              throw new Error('Live service-worker registration or precache is missing: ' + JSON.stringify(workerInfo));
+            }
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
               const cache = await caches.open('tagbound-v24');
@@ -232,6 +254,7 @@ jobs:
           JS
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: tagbound-live-review
           path: live-review/
