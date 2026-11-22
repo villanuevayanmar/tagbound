@@ -1,4 +1,5 @@
 #include "game.hpp"
+#include "raymath.h"
 #include <algorithm>
 #include <cassert>
 #include <cmath>
