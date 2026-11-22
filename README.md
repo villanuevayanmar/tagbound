@@ -55,6 +55,19 @@ Install Git, CMake, Python and Ninja, then install Emscripten following the offi
 
 The CMake target emits the generated JavaScript and WebAssembly files in dist/.
 
+## Automated cloud checks
+
+Every push to `main` and pull request runs the GitHub Actions workflow in `.github/workflows/ci.yml`. It configures Emscripten, compiles the WebAssembly game, runs the C++ gameplay regression test executable, assembles and validates the static PWA, and runs Chromium checks for the browser runtime, start flow, saved class/progress, mobile landscape controls, service-worker precache and offline reload. These checks run in hosted CI; they do not replace playtesting on a physical Android device.
+
+The C++ regression tests are in `tests/gameplay.cpp`. To run them locally with an active Emscripten SDK and a configured build directory:
+
+    em++ -std=c++17 -O2 -Isrc -Ibuild-web/_deps/raylib-src/src \
+      src/game.cpp src/systems.cpp tests/gameplay.cpp \
+      -sENVIRONMENT=node -sEXIT_RUNTIME=1 -o gameplay-tests.js
+    node gameplay-tests.js
+
+Check the Actions tab for the result of each commit: https://github.com/villanuevayanmar/tagbound/actions.
+
 ## Test locally
 
 Serve dist/ over HTTP (do not open index.html as a file):
