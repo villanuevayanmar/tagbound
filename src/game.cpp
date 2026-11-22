@@ -23,6 +23,17 @@ bool ReachedQuestBeacon(Vector3 position,int city,int quest) {
     float dx=position.x-target.x, dz=position.z-target.z;
     return dx*dx+dz*dz<=3.4f*3.4f && std::abs(position.y-target.y)<=0.45f;
 }
+Vector3 QuestCheckpoint(int city,int quest) {
+    return quest>0?QuestTarget(city,quest-1):Vector3{0,0.3f,0};
+}
+Vector3 QuestCheckpointFacing(int city,int quest) {
+    Vector3 from=QuestCheckpoint(city,quest);
+    Vector3 to=QuestTarget(city,quest);
+    float dx=to.x-from.x, dz=to.z-from.z;
+    float length=std::sqrt(dx*dx+dz*dz);
+    return length>0.001f?Vector3{dx/length,0,dz/length}:Vector3{0,0,1};
+}
+
 float BossWindupDuration(int variant,bool enraged) {
     static const float duration[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     return duration[std::clamp(variant,0,4)]*(enraged?0.85f:1.0f);

@@ -43,6 +43,18 @@ int main() {
         }
     }
 
+    // Saved quest progress maps back to the latest cleared beacon checkpoint.
+    for(int city=0;city<5;city++) for(int quest=0;quest<4;quest++) {
+        Vector3 checkpoint=QuestCheckpoint(city,quest);
+        Vector3 expected=quest>0?QuestTarget(city,quest-1):Vector3{0,0.3f,0};
+        assert(near(checkpoint.x,expected.x)&&near(checkpoint.y,expected.y)&&near(checkpoint.z,expected.z));
+        Vector3 target=QuestTarget(city,quest);
+        Vector3 facing=QuestCheckpointFacing(city,quest);
+        float dx=target.x-checkpoint.x, dz=target.z-checkpoint.z;
+        float length=std::sqrt(dx*dx+dz*dz);
+        assert(length<0.001f || (near(facing.x,dx/length)&&near(facing.z,dz/length)));
+    }
+
     // Boss warning countdowns use the same durations as combat state transitions.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     for(int variant=0;variant<5;variant++) {

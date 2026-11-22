@@ -56,7 +56,11 @@ KEEP void StartGame() {
     game.player.weapon=ClassWeapon(game.player.playerClass);
     game.started=true; game.finished=finished>0; BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
-    else SetQuestProgress(game,quest<0?0:quest);
+    else {
+        SetQuestProgress(game,quest<0?0:quest);
+        game.player.position=QuestCheckpoint(game.city,game.quest);
+        game.player.facing=QuestCheckpointFacing(game.city,game.quest);
+    }
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
 }

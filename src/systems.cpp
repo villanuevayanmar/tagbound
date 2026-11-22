@@ -506,12 +506,8 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         else { g.city++; BuildCity(g); }
     }
     if(p.health<=0) {
-        Vector3 checkpoint={0,0.3f,0};
-        if(g.quest>0) checkpoint=QuestTarget(g.city,g.quest-1);
-        Vector3 next=QuestTarget(g.city,g.quest);
-        Vector3 facing=Vector3Subtract(next,checkpoint);
-        facing.y=0;
-        if(Vector3Length(facing)>0.001f) p.facing=Vector3Normalize(facing);
+        Vector3 checkpoint=QuestCheckpoint(g.city,g.quest);
+        p.facing=QuestCheckpointFacing(g.city,g.quest);
         p.health=ClassMaxHealth(p.playerClass);
         p.stamina=ClassMaxStamina(p.playerClass);
         p.position=checkpoint;
