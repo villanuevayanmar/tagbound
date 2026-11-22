@@ -20,13 +20,25 @@ int main() {
     assert(std::string(BossName(4)) == "IMPERIAL REGENT");
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
-    // Gameplay, world marker and HUD share one objective target per quest.
-    const Vector3 beacon0=QuestTarget(0), beacon1=QuestTarget(1), beacon2=QuestTarget(2);
-    const Vector3 bossGate=QuestTarget(3);
-    assert(near(beacon0.x,4) && near(beacon0.y,1.7f) && near(beacon0.z,6));
-    assert(near(beacon1.x,10) && near(beacon1.y,2.45f) && near(beacon1.z,13));
-    assert(near(beacon2.x,16) && near(beacon2.y,3.2f) && near(beacon2.z,20));
-    assert(near(bossGate.x,22) && near(bossGate.y,3.95f) && near(bossGate.z,27));
+    // Each city has its own rooftop route with consistent climb spacing.
+    const Vector3 expectedRoutes[5][4]={
+        {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},
+        {{-4,1.7f,6},{-10,2.45f,13},{-14,3.2f,19},{-18,3.95f,25}},
+        {{5,1.7f,3},{12,2.45f,8},{10,3.2f,16},{5,3.95f,24}},
+        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}},
+        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}}
+    };
+    for(int city=0;city<5;city++) {
+        for(int quest=0;quest<4;quest++) {
+            Vector3 actual=QuestTarget(city,quest),expected=expectedRoutes[city][quest];
+            assert(near(actual.x,expected.x)&&near(actual.y,expected.y)&&near(actual.z,expected.z));
+            assert(std::abs(actual.x)<49&&actual.z>-35&&actual.z<42);
+            if(quest>0) {
+                float spacing=Vector3Distance(QuestTarget(city,quest-1),actual);
+                assert(spacing>7.0f&&spacing<11.0f);
+            }
+        }
+    }
 
     // Boss warning countdowns use the same durations as combat state transitions.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
@@ -46,6 +58,13 @@ int main() {
         BuildCity(game);
         assert(game.platforms.size() == 34);
         assert(game.enemies.size() == static_cast<size_t>(2 + city * 2));
+        for(int quest=0;quest<4;quest++) {
+            Vector3 target=QuestTarget(city,quest);
+            const Platform& routePlatform=game.platforms[2+quest];
+            assert(near(routePlatform.position.x,target.x));
+            assert(near(routePlatform.position.y+0.25f,target.y));
+            assert(near(routePlatform.position.z,target.z));
+        }
         assert(game.quest == 0);
         assert(!game.bossUnlocked);
     }
@@ -66,6 +85,8 @@ int main() {
     assert(std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.boss;})==1);
     const Enemy& restoredBoss=game.enemies.back();
     assert(restoredBoss.boss && restoredBoss.variant==2);
+    Vector3 restoredGate=QuestTarget(2,3);
+    assert(near(restoredBoss.position.x,restoredGate.x)&&near(restoredBoss.position.y,restoredGate.y)&&near(restoredBoss.position.z,restoredGate.z));
     assert(near(restoredBoss.hp,520.0f));
     SetQuestProgress(game,3);
     assert(std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.boss;})==1);
