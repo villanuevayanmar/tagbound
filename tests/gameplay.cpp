@@ -272,6 +272,21 @@ int main() {
         assert(game.enemies.front().phase==BossPhase::Recover);
     }
 
+    // The Gilded Charger advances rapidly during its strike before impact.
+    game.enemies.clear();
+    game.player.position={0,0.3f,0};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    Enemy charger{{0,0.3f,4.0f},100,100,3.0f,0,true,true};
+    charger.variant=1;
+    charger.phase=BossPhase::Strike;
+    game.enemies.push_back(charger);
+    UpdatePursuit(game,0.2f);
+    assert(game.enemies.front().position.z<2.0f);
+    assert(near(game.player.health,100.0f));
+    UpdatePursuit(game,0.15f);
+    assert(near(game.player.health,70.0f));
+
     // Defeating each city boss advances the campaign; the fifth ends it.
     game.unlockedCity = 0;
     game.finished = false;
