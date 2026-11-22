@@ -336,15 +336,19 @@ void UpdatePursuit(GameState& g,float dt) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f) {
+                Vector3 desired=Vector3Scale(Vector3Normalize(to),e.speed*dt);
                 Vector3 before=e.position;
-                MoveEnemy(g,e,Vector3Scale(Vector3Normalize(to),e.speed*dt));
-                if(std::abs(e.position.x-before.x)+std::abs(e.position.z-before.z)<0.0001f) {
+                MoveEnemy(g,e,desired);
+                float moved=std::abs(e.position.x-before.x)+std::abs(e.position.z-before.z);
+                float intended=std::abs(desired.x)+std::abs(desired.z);
+                if(moved<intended*0.55f) {
                     Vector3 side={to.z/horizontal,0,-to.x/horizontal};
+                    if(e.position.x<p.position.x) side=Vector3Scale(side,-1.0f);
                     Vector3 detour=Vector3Scale(side,e.speed*dt);
                     Vector3 detourStart=e.position;
                     MoveEnemy(g,e,detour);
-                    if(std::abs(e.position.x-detourStart.x)+std::abs(e.position.z-detourStart.z)<0.0001f)
-                        MoveEnemy(g,e,Vector3Scale(detour,-1.0f));
+                    float detourMoved=std::abs(e.position.x-detourStart.x)+std::abs(e.position.z-detourStart.z);
+                    if(detourMoved<intended*0.55f) MoveEnemy(g,e,Vector3Scale(detour,-1.0f));
                 }
             } else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
                 if(HasLineOfSight(g,e.position,p.position)) {
