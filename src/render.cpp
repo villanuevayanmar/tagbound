@@ -109,11 +109,13 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
 
     Vector3 leftShoulder=BodyPoint(p.position,right,forward,-0.30f,1.35f+breath,0);
     Vector3 rightShoulder=BodyPoint(p.position,right,forward,0.30f,1.35f+breath,0);
+    float attackPhase=p.attackTime>0?std::sin((1.0f-p.attackTime/0.22f)*PI):0.0f;
+    float strikeReach=attackPhase*0.72f;
     float armSwing=p.blocking?0.25f:(p.landingRoll?0.42f:-swing*0.30f);
-    Vector3 leftElbow=BodyPoint(p.position,right,forward,-0.39f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.48f:(1.06f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.22f:(p.blocking?0.34f:armSwing));
-    Vector3 leftHand=BodyPoint(p.position,right,forward,-0.43f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.68f:(0.91f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.34f:(p.blocking?0.52f:armSwing*1.35f));
-    Vector3 rightElbow=BodyPoint(p.position,right,forward,0.39f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.48f:(1.08f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.22f:(p.bowAiming?0.28f:(p.blocking?0.34f:0.12f+swing*0.16f)));
-    Vector3 rightHand=BodyPoint(p.position,right,forward,0.43f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.68f:(0.94f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.34f:(p.bowAiming?0.48f:(p.blocking?0.52f:0.31f+swing*0.18f)));
+    Vector3 leftElbow=BodyPoint(p.position,right,forward,-0.39f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.48f:(1.06f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.22f:(p.blocking?0.34f:armSwing)+strikeReach*0.2f);
+    Vector3 leftHand=BodyPoint(p.position,right,forward,-0.43f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.68f:(0.91f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.34f:(p.blocking?0.52f:armSwing*1.35f)+strikeReach*0.25f);
+    Vector3 rightElbow=BodyPoint(p.position,right,forward,0.39f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.48f:(1.08f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.22f:(p.bowAiming?0.28f:(p.blocking?0.34f:0.12f+swing*0.16f))+strikeReach*0.45f);
+    Vector3 rightHand=BodyPoint(p.position,right,forward,0.43f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.68f:(0.94f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.34f:(p.bowAiming?0.48f:(p.blocking?0.52f:0.31f+swing*0.18f))+strikeReach);
     Color armColor=cloth;
     DrawLimb(leftShoulder,leftElbow,0.13f,0.095f,armColor);
     DrawLimb(leftElbow,leftHand,0.095f,0.065f,armColor);
@@ -135,6 +137,7 @@ static void DrawEnemyModel(const Enemy& e,float time) {
     Color hide=e.boss?Color{82,45,53,255}:Color{105,62,52,255};
     Color armor=e.boss?Color{91,91,105,255}:Color{72,76,78,255};
     Color skin=e.boss?Color{160,111,87,255}:Color{169,128,103,255};
+    if(e.hitTime>0) { hide=Color{255,196,120,255}; armor=Color{255,224,174,255}; skin=WHITE; }
     float scale=e.boss?1.22f:0.82f;
     float swing=std::sin(time*5.0f+e.position.x)*0.18f;
     if(e.phase==BossPhase::Windup) swing=0.55f;
@@ -161,6 +164,7 @@ static void DrawEnemyModel(const Enemy& e,float time) {
         DrawLimb(elbow,hand,0.09f*scale,0.065f*scale,hide);
         DrawSphere(shoulder,0.15f*scale,e.boss?MAROON:armor);
     }
+    if(e.hitTime>0) DrawSphere(BodyPoint(origin,right,forward,0,1.25f*scale,0.28f*scale),0.13f*scale,GOLD);
     if(e.boss) {
         DrawSphere(BodyPoint(origin,right,forward,0,1.95f*scale,0),0.10f*scale,e.phase==BossPhase::Windup?ORANGE:RED);
     } else {
