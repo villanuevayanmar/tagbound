@@ -8,7 +8,7 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `5476f40dd7e897984ef702bbdafc57eec9804b6e`  
+Current main commit: `9f18ad2cd2a3ff0f1f47990e63b30e0881b305d5`  
 Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
 Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
 
@@ -39,13 +39,22 @@ Merged in PR #2, commit `5476f40dd7e897984ef702bbdafc57eec9804b6e`.
 - Added rectangle-based assertions to verify Settings does not overlap the health, level/danger, compass, boss-warning or mobile objective HUD areas.
 - Added screenshot-pixel validation for actual HUD rendering.
 
+### Pause input reset
+
+Merged in PR #3, commit `9f18ad2cd2a3ff0f1f47990e63b30e0881b305d5`.
+
+- Opening Settings clears joystick movement, touch action bits, pending camera-look deltas, active action-button styling, and tracked pointer captures.
+- Added hosted C++ state assertions and desktop/mobile browser tests to prove the input state is cleared when the pause overlay opens.
+
 ## Verified cloud testing
 
 - The Settings feature passed its PR WebAssembly build, C++ gameplay regression tests, and desktop/mobile Chromium checks in run `45073264491`.
 - The HUD rendering fix passed Emscripten compilation and the C++ gameplay regression suite in run `45074237401`.
 - The HUD fix and top-row Settings layout passed desktop/mobile Chromium, including screenshot pixel and no-overlap assertions, in run `45074803692`.
+- The pause input-reset fix passed desktop/mobile Chromium, including explicit touch/look state reset assertions, in run `45075281567`.
 - These are hosted browser checks. They do not replace physical Android playtesting.
-- Main-branch CI for the merged HUD fix: run `45075051487` (check its terminal status before the next release step).
+- Main-branch CI for the merged HUD fix and status-record update: run `45075096367` passed.
+- Main-branch CI for the pause input-reset merge: run `45075464894` (check its terminal status before the next release step).
 
 ## Current deployment blocker — Vercel
 
