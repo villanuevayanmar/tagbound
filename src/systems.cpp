@@ -145,7 +145,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     p.velocity.x*=std::max(0.0f,1.0f-9.0f*dt);
     p.velocity.z*=std::max(0.0f,1.0f-9.0f*dt);
 
-    if(wallContact&&!p.grounded&&!p.ledgeGrabbing&&!p.climbing) {
+    if(wallContact&&!p.grounded&&!p.vaulting&&!p.ledgeGrabbing&&!p.climbing) {
         Vector3 normal{},hang{},target{};
         if(FindLedge(g,p.position,p.facing,normal,hang,target)) {
             p.ledgeNormal=normal;
