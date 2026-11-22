@@ -51,6 +51,7 @@ void UpdatePursuit(GameState& game, float dt);
 void UpdateCombat(GameState& game, const Controls& controls, float dt);
 void UpdateProgression(GameState& game, int amount);
 void BuildCity(GameState& game);
+void SetQuestProgress(GameState& game,int quest);
 void DrawGame(const GameState& game, const Camera3D& camera);
 const char* CityName(int city);
 const char* BossName(int city);
