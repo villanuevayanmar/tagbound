@@ -42,6 +42,7 @@ int main() {
     BuildCity(game);
     SetQuestProgress(game,2);
     assert(game.quest==2);
+    assert(near(game.questLimit,66.0f));
     assert(!game.bossUnlocked);
     assert(std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.boss;})==0);
     SetQuestProgress(game,3);
