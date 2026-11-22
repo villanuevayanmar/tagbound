@@ -52,3 +52,14 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
   .home-utilities{margin-top:6px}
   #sound-toggle{min-width:94px;padding:8px 9px}
 }
+
+
+/* In-game pause and settings controls */
+.game-settings{position:absolute;z-index:4;top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));padding:10px 14px;border:1px solid #d9bd8c99;background:#111b29e8;color:#f2dfbd;font-size:11px;font-weight:900;letter-spacing:.12em;box-shadow:0 3px 12px #0008}
+.game-settings:active{background:#a97143;color:#fff}
+.settings-panel{width:min(460px,92vw);text-align:center}
+.settings-panel .eyebrow{margin-bottom:8px}
+.settings-panel h1{font-size:clamp(32px,7vw,48px)}
+.settings-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:18px}
+.settings-actions .secondary{margin:0}
+.settings-panel .primary{margin-top:12px}
