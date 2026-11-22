@@ -252,6 +252,19 @@ int main() {
     assert(game.city == 1);
     assert(game.unlockedCity == 1);
 
+    // Bosses must begin their telegraphed attacks at their own effective ranges.
+    const float bossWindupRanges[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+    for(int variant=0;variant<5;variant++) {
+        game.enemies.clear();
+        game.player.position={0,0.3f,0};
+        Enemy boss{{0,0.3f,bossWindupRanges[variant]*0.9f},100,100,2.5f,0,true,true};
+        boss.variant=variant;
+        boss.phase=BossPhase::Hunt;
+        game.enemies.push_back(boss);
+        UpdatePursuit(game,0.016f);
+        assert(game.enemies.front().phase==BossPhase::Windup);
+    }
+
     // Each city boss has a distinct attack pattern, range and damage profile.
     const float bossDistances[5]={3.5f,2.2f,5.0f,7.0f,4.0f};
     const float bossDamage[5]={24,30,32,18,28};
