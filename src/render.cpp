@@ -206,8 +206,47 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     DrawSphere(leftHand,0.075f,{194,158,126,255});
     DrawSphere(rightHand,0.075f,{194,158,126,255});
 
-    if (p.playerClass==PlayerClass::Warden) {
-        DrawCubeV(BodyPoint(p.position,right,forward,0,1.08f,-0.19f),{0.48f,0.78f,0.10f},{43,53,75,255});
+    // Class equipment is placed on the back so each silhouette remains readable
+    // from the normal follow-camera angle without changing movement or hitboxes.
+    if (p.playerClass==PlayerClass::Vanguard) {
+        for (int side=-1;side<=1;side+=2) {
+            DrawCubeV(BodyPoint(p.position,right,forward,side*0.31f,1.36f+breath,-0.08f),
+                      {0.34f,0.20f,0.34f},{105,82,69,255});
+            DrawCubeV(BodyPoint(p.position,right,forward,side*0.31f,1.43f+breath,-0.08f),
+                      {0.26f,0.06f,0.28f},{163,132,91,255});
+        }
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.02f+breath,-0.22f),
+                  {0.48f,0.68f,0.10f},{104,48,43,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.05f+breath,-0.28f),
+                  {0.07f,0.48f,0.025f},{190,145,91,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,2.04f+breath,-0.015f),
+                  {0.10f,0.22f,0.25f},{190,145,91,255});
+    } else if (p.playerClass==PlayerClass::Skirmisher) {
+        Vector3 quiver=BodyPoint(p.position,right,forward,-0.23f,1.18f+breath,-0.23f);
+        DrawCylinder(quiver,0.11f,0.15f,0.76f,8,{91,61,43,255});
+        DrawCylinder(BodyPoint(p.position,right,forward,-0.23f,1.57f+breath,-0.23f),
+                     0.15f,0.15f,0.08f,8,{150,111,67,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.30f+breath,-0.20f),
+                  {0.48f,0.08f,0.055f},{121,91,59,255});
+        for (int i=-1;i<=1;i++) {
+            Vector3 arrow=BodyPoint(p.position,right,forward,-0.23f+i*0.055f,1.53f+breath,-0.24f);
+            Vector3 arrowTip=Vector3Add(arrow,Vector3{0,0.20f,0});
+            DrawCylinderEx(arrow,arrowTip,0.018f,0.009f,5,{190,177,145,255});
+            DrawCubeV(Vector3Add(arrow,{0,-0.035f,-0.015f}),{0.045f,0.07f,0.025f},{164,91,65,255});
+        }
+        DrawCubeV(BodyPoint(p.position,right,forward,0.30f,1.19f+breath,-0.12f),
+                  {0.12f,0.42f,0.10f},{45,76,61,255});
+    } else {
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.08f+breath,-0.22f),
+                  {0.54f,0.78f,0.14f},{43,53,75,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.08f+breath,-0.30f),
+                  {0.40f,0.64f,0.035f},{75,88,111,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.08f+breath,-0.325f),
+                  {0.07f,0.53f,0.025f},{190,157,99,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.08f+breath,-0.325f),
+                  {0.34f,0.07f,0.025f},{190,157,99,255});
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.47f+breath,-0.10f),
+                  {0.42f,0.12f,0.12f},{103,116,139,255});
     }
     return rightHand;
 }
