@@ -48,22 +48,24 @@ function playAudio(kind){
 function setAudioEnabled(enabled){
  audioEnabled=!!enabled;
  try { localStorage.setItem('tagbound-sound',audioEnabled?'on':'off'); } catch(e) {}
- if(soundToggle){
-  soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
-  soundToggle.setAttribute('aria-pressed',String(audioEnabled));
- }
+ syncSoundButtons();
  if(audioEnabled)initAudio();
  else if(audioContext?.state==='running')audioContext.suspend().catch(()=>{});
  return audioEnabled;
 }
 const soundToggle=document.getElementById('sound-toggle');
+const settingsSoundToggle=document.getElementById('settings-sound');
+const soundButtons=[soundToggle,settingsSoundToggle].filter(Boolean);
+function syncSoundButtons(){
+ soundButtons.forEach(button=>{
+  button.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
+  button.setAttribute('aria-pressed',String(audioEnabled));
+ });
+}
 try { audioEnabled=localStorage.getItem('tagbound-sound')!=='off'; } catch(e) {}
 window.TagboundAudio={init:initAudio,play:playAudio,getState:()=>audioContext?.state||'uninitialized',setEnabled:setAudioEnabled};
-if(soundToggle){
- soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
- soundToggle.setAttribute('aria-pressed',String(audioEnabled));
- soundToggle.addEventListener('click',()=>setAudioEnabled(!audioEnabled));
-}
+syncSoundButtons();
+soundButtons.forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 document.querySelectorAll('.class-card').forEach(b=>b.addEventListener('click',()=>{
@@ -77,7 +79,46 @@ try {
   if(card){document.querySelectorAll('.class-card').forEach(x=>x.classList.remove('selected'));card.classList.add('selected')}
  }
 } catch(e) {}
-document.getElementById('start').addEventListener('click',()=>{call('StartGame');document.getElementById('intro').classList.add('hidden')});
+const intro=document.getElementById('intro');
+const ending=document.getElementById('ending');
+const settings=document.getElementById('settings');
+const settingsOpenButton=document.getElementById('settings-open');
+const touchControls=document.getElementById('touch-controls');
+const touchHelp=document.getElementById('touch-help');
+const resumeButton=document.getElementById('resume');
+function resetTouchInput(){
+ pointer=null;buttons=0;moveX=moveY=0;
+ knob.style.transform='translate(0,0)';
+ send();
+}
+function openSettings(){
+ resetTouchInput();
+ settings.classList.remove('hidden');
+ settingsOpenButton.classList.add('hidden');
+ settingsOpenButton.setAttribute('aria-expanded','true');
+ touchControls.classList.add('hidden');
+ touchHelp.classList.add('hidden');
+ resumeButton.focus();
+}
+function closeSettings(){
+ settings.classList.add('hidden');
+ touchControls.classList.remove('hidden');
+ touchHelp.classList.remove('hidden');
+ settingsOpenButton.setAttribute('aria-expanded','false');
+ if(intro.classList.contains('hidden')&&ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
+ canvas.focus();
+}
+settingsOpenButton.addEventListener('click',openSettings);
+resumeButton.addEventListener('click',closeSettings);
+document.addEventListener('keydown',event=>{
+ if(event.key==='Escape'&&!settings.classList.contains('hidden'))closeSettings();
+});
+window.TagboundSettings={isOpen:()=>!settings.classList.contains('hidden')};
+document.getElementById('start').addEventListener('click',()=>{
+ call('StartGame');
+ intro.classList.add('hidden');
+ if(ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
+});
 document.getElementById('restart').addEventListener('click',()=>{call('ResetProgress');location.reload()});
 document.querySelectorAll('.action').forEach(b=>{
  const bit=Number(b.dataset.bit);
@@ -99,14 +140,27 @@ canvas.addEventListener('pointermove',e=>{
  const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;lastLook={x:e.clientX,y:e.clientY,id:e.pointerId};call('SetLook',dx,dy);
 });
 ['pointerup','pointercancel','pointerleave'].forEach(n=>canvas.addEventListener(n,e=>{if(lastLook&&lastLook.id===e.pointerId)lastLook=null}));
-let installEvent=null;const installButton=document.getElementById('install');
-if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)installButton.hidden=true;
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e});
-installButton.addEventListener('click',async()=>{
- if(installEvent){installEvent.prompt();await installEvent.userChoice;installEvent=null}
- else alert('iPhone: open Share in Safari, then Add to Home Screen. Android: use the browser menu and choose Install app.');
-});
-window.addEventListener('appinstalled',()=>{installButton.hidden=true});
+let installEvent=null;
+const installButtons=[document.getElementById('install'),document.getElementById('settings-install')].filter(Boolean);
+function updateInstallButtons(){
+ const installed=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+ installButtons.forEach(button=>{button.hidden=installed});
+}
+async function requestInstall(){
+ if(installEvent){
+  const event=installEvent;
+  installEvent=null;
+  await event.prompt();
+  await event.userChoice;
+  updateInstallButtons();
+ }else{
+  alert('iPhone: open Share in Safari, then Add to Home Screen. Android: use the browser menu and choose Install app.');
+ }
+}
+updateInstallButtons();
+window.addEventListener('beforeinstallprompt',event=>{event.preventDefault();installEvent=event});
+installButtons.forEach(button=>button.addEventListener('click',requestInstall));
+window.addEventListener('appinstalled',()=>{installButtons.forEach(button=>{button.hidden=true})});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(console.error));
 const rotate=()=>document.getElementById('rotate').classList.toggle('hidden',window.innerWidth>=window.innerHeight);
 window.addEventListener('resize',rotate);rotate();
