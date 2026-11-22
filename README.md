@@ -7,7 +7,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Three selectable classes: Vanguard, Skirmisher and Warden. Each class has one fixed weapon; players cannot switch weapons.
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
-- Procedurally synthesized ambient music and sound effects for jumps, melee, bow shots, dashes, shield blocks, damage, pursuer warnings and boss telegraphs; no audio downloads required.
+- An original procedural ambient score and synthesized sound effects for jumps, melee, bow shots, dashes, shield blocks, damage, pursuer warnings and boss telegraphs; audio is generated locally with Web Audio and requires no music downloads.
 - Home-screen and in-game settings with a shared sound toggle for music and effects, a real pause state, and PWA installation available only from Home or Settings.
 - Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
@@ -134,7 +134,7 @@ The first visit must download the game assets. The service worker caches the HTM
 
 ## Settings and pause
 
-During a run, tap SETTINGS in the upper-right corner to pause the game. The Settings screen shares the saved sound preference with Home and exposes INSTALL ON PHONE only while the Settings screen is open. RESUME returns to the same run without resetting progress. The install action is not shown during active gameplay.
+During a run, tap SETTINGS in the top HUD row to pause the game. The Settings screen shares the saved sound preference with Home and exposes INSTALL ON PHONE only while the Settings screen is open. RESUME returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. The install action is not shown during active gameplay.
 
 ## Controls
 
