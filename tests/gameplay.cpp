@@ -209,6 +209,26 @@ int main() {
     assert(game.enemies.front().hitTime>0.1f);
     assert(game.enemies.front().stunTime>0.1f);
 
+    // Fast arrows hit the first target along their path and cannot pass through cover.
+    game.projectiles.clear();
+    game.enemies.clear();
+    game.platforms.clear();
+    game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
+    game.enemies.push_back({{0,0.3f,3.0f},100,100,0,0,false,true});
+    Controls fastBow{};
+    fastBow.attack=true;
+    UpdateCombat(game,fastBow,0.1f);
+    assert(near(game.enemies.front().hp,100.0f));
+    assert(game.projectiles.empty());
+
+    // A target in front of cover is hit before the arrow reaches the wall.
+    game.enemies.clear();
+    game.enemies.push_back({{0,0.3f,1.0f},100,100,0,0,false,true});
+    game.projectiles.clear();
+    UpdateCombat(game,fastBow,0.1f);
+    assert(near(game.enemies.front().hp,55.0f));
+    assert(game.projectiles.empty());
+
     // Hit-stunned enemies are pushed back before resuming pursuit.
     game.enemies.clear();
     game.player.position = {0,0.3f,0};

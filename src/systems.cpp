@@ -10,6 +10,47 @@ static bool Inside(Vector3 p,const Platform& b) {
            std::abs(p.z-b.position.z)<=b.size.z*0.5f;
 }
 static float Distance(Vector3 a,Vector3 b) { return Vector3Distance(a,b); }
+
+static bool SegmentSphere(Vector3 from,Vector3 to,Vector3 center,float radius,float& hitTime) {
+    Vector3 delta=Vector3Subtract(to,from);
+    Vector3 offset=Vector3Subtract(from,center);
+    float a=Vector3DotProduct(delta,delta);
+    if(a<0.000001f) return false;
+    float b=2.0f*Vector3DotProduct(offset,delta);
+    float c=Vector3DotProduct(offset,offset)-radius*radius;
+    float discriminant=b*b-4.0f*a*c;
+    if(discriminant<0.0f) return false;
+    float t=(-b-std::sqrt(discriminant))/(2.0f*a);
+    if(t<0.0f) t=(-b+std::sqrt(discriminant))/(2.0f*a);
+    if(t<0.0f||t>1.0f) return false;
+    hitTime=t;
+    return true;
+}
+static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime) {
+    Vector3 low=Vector3Subtract(p.position,Vector3Scale(p.size,0.5f));
+    Vector3 high=Vector3Add(p.position,Vector3Scale(p.size,0.5f));
+    Vector3 delta=Vector3Subtract(to,from);
+    float enter=0.0f,exit=1.0f;
+    const float start[3]={from.x,from.y,from.z};
+    const float step[3]={delta.x,delta.y,delta.z};
+    const float minimum[3]={low.x-0.12f,low.y-0.12f,low.z-0.12f};
+    const float maximum[3]={high.x+0.12f,high.y+0.12f,high.z+0.12f};
+    for(int axis=0;axis<3;axis++) {
+        if(std::abs(step[axis])<0.000001f) {
+            if(start[axis]<minimum[axis]||start[axis]>maximum[axis]) return false;
+            continue;
+        }
+        float a=(minimum[axis]-start[axis])/step[axis];
+        float b=(maximum[axis]-start[axis])/step[axis];
+        if(a>b) std::swap(a,b);
+        enter=std::max(enter,a);
+        exit=std::min(exit,b);
+        if(enter>exit) return false;
+    }
+    if(enter<0.0f||enter>1.0f) return false;
+    hitTime=enter;
+    return true;
+}
 static bool OverlapsWall(Vector3 feet,const Platform& b) {
     const float radius=0.34f, height=1.72f;
     bool x=feet.x+radius>b.position.x-b.size.x*0.5f && feet.x-radius<b.position.x+b.size.x*0.5f;
@@ -331,20 +372,41 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
     }
     for(auto& s:g.projectiles) {
         if(s.life<=0) continue;
-        s.position=Vector3Add(s.position,Vector3Scale(s.velocity,dt)); s.life-=dt;
-        for(auto& e:g.enemies) if(e.alive&&Distance(s.position,Vector3Add(e.position,{0,1,0}))<1.1f) {
-            e.hp-=45; s.life=0;
-            e.hitTime=0.16f;
-            e.stunTime=e.boss?0.08f:0.16f;
-            Vector3 knock=Vector3Subtract(e.position,p.position); knock.y=0;
-            if(Vector3Length(knock)>0.001f)
-                e.knockback=Vector3Scale(Vector3Normalize(knock),e.boss?0.9f:2.4f);
-            if(e.hp<=0&&e.alive) {
-                e.alive=false; g.defeated++; UpdateProgression(g,e.boss?240:45);
-                if(e.boss) bossDefeated=true;
+        Vector3 from=s.position;
+        Vector3 to=Vector3Add(from,Vector3Scale(s.velocity,dt));
+        float firstHit=2.0f;
+        Enemy* target=nullptr;
+        for(auto& e:g.enemies) if(e.alive) {
+            float hitTime=0.0f;
+            if(SegmentSphere(from,to,Vector3Add(e.position,{0,1,0}),1.1f,hitTime)&&hitTime<firstHit) {
+                firstHit=hitTime;
+                target=&e;
             }
-            break;
         }
+        bool blocked=false;
+        for(const auto& platform:g.platforms) {
+            float hitTime=0.0f;
+            if(SegmentPlatform(from,to,platform,hitTime)&&hitTime<firstHit) {
+                firstHit=hitTime;
+                target=nullptr;
+                blocked=true;
+            }
+        }
+        s.position=Vector3Lerp(from,to,std::min(firstHit,1.0f));
+        s.life-=dt;
+        if(target) {
+            target->hp-=45;
+            target->hitTime=0.16f;
+            target->stunTime=target->boss?0.08f:0.16f;
+            Vector3 knock=Vector3Subtract(target->position,p.position); knock.y=0;
+            if(Vector3Length(knock)>0.001f)
+                target->knockback=Vector3Scale(Vector3Normalize(knock),target->boss?0.9f:2.4f);
+            if(target->hp<=0&&target->alive) {
+                target->alive=false; g.defeated++; UpdateProgression(g,target->boss?240:45);
+                if(target->boss) bossDefeated=true;
+            }
+            s.life=0;
+        } else if(blocked) s.life=0;
     }
     g.projectiles.erase(std::remove_if(g.projectiles.begin(),g.projectiles.end(),[](const Projectile& s){return s.life<=0;}),g.projectiles.end());
     if(bossDefeated) {
