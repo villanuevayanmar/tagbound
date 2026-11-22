@@ -100,11 +100,19 @@ jobs:
             if (muted.label !== 'SOUND: OFF' || muted.saved !== 'off') {
               throw new Error('Live sound preference did not persist: ' + JSON.stringify(muted));
             }
+            await page.locator('#sound-toggle').click();
+            const soundOn = await page.evaluate(() => ({
+              label: document.querySelector('#sound-toggle').textContent,
+              saved: localStorage.getItem('tagbound-sound')
+            }));
+            if (soundOn.label !== 'SOUND: ON' || soundOn.saved !== 'on') {
+              throw new Error('Live sound restore did not persist: ' + JSON.stringify(soundOn));
+            }
 
             await page.locator('[data-class="1"]').click();
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
-            await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', { timeout: 5000 });
+            await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
 
             const gameplay = await page.evaluate(() => ({
               canvas: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
@@ -200,6 +208,7 @@ jobs:
             if (!mobileResponse?.ok()) throw new Error('Mobile production page did not return HTTP 200.');
             await mobilePage.waitForFunction(
               () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
               { timeout: 45000 }
             );
 
