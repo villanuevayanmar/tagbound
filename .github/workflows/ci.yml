@@ -202,6 +202,34 @@ jobs:
               await loadoutContext.close();
             }
 
+            // A saved City 0 / Quest 2 run restores the held-beacon objective state.
+            const holdContext = await browser.newContext();
+            const holdPage = await holdContext.newPage();
+            const holdResponse = await holdPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!holdResponse?.ok()) throw new Error('Held-beacon test page did not return HTTP 200.');
+            await holdPage.evaluate(() => localStorage.setItem('tagbound-save', JSON.stringify({
+              city: 0, level: 1, xp: 0, unlocked: 0, klass: 0, weapon: 0, finished: 0, quest: 1
+            })));
+            await holdPage.reload({ waitUntil: 'networkidle' });
+            await holdPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            await holdPage.locator('#start').click();
+            await holdPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const heldObjectiveState = await holdPage.evaluate(() => ({
+              quest: Module.ccall('GetQuestProgress', 'number', [], []),
+              requiresHold: Module.ccall('IsCurrentQuestHoldObjective', 'number', [], []),
+              progress: Module.ccall('GetBeaconHoldProgress', 'number', [], []),
+              duration: Module.ccall('GetCurrentQuestHoldDuration', 'number', [], [])
+            }));
+            if (heldObjectiveState.quest !== 1 || heldObjectiveState.requiresHold !== 1 ||
+                Math.abs(heldObjectiveState.progress) > 0.001 || heldObjectiveState.duration < 2.5) {
+              throw new Error('Held-beacon checkpoint did not restore correctly: ' + JSON.stringify(heldObjectiveState));
+            }
+            await holdContext.close();
+
             await page.locator('#sound-toggle').click();
             const muted = await page.evaluate(() => ({
               label: document.querySelector('#sound-toggle').textContent,
