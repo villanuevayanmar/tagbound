@@ -121,6 +121,29 @@ int main() {
     assert(game.city == 1);
     assert(game.unlockedCity == 1);
 
+    // Defeating each city boss advances the campaign; the fifth ends it.
+    game.unlockedCity = 0;
+    game.finished = false;
+    for (int city = 0; city < 5; ++city) {
+        game.city = city;
+        BuildCity(game);
+        game.enemies.clear();
+        game.player.position = {0,0.3f,0};
+        game.player.facing = {0,0,1};
+        game.player.weapon = Weapon::Axe;
+        game.enemies.push_back({{0,0.3f,1.5f},10,10,0,0,true,true});
+        Controls bossHit{};
+        bossHit.attack = true;
+        UpdateCombat(game, bossHit, 0.016f);
+        if (city < 4) {
+            assert(game.city == city + 1);
+            assert(game.unlockedCity >= city + 1);
+        } else {
+            assert(game.city == 4);
+            assert(game.finished);
+        }
+    }
+
     std::cout << "PASS: city setup, names, XP/skills, movement, jump, dash, melee combat, and boss progression.\\n";
     return 0;
 }
