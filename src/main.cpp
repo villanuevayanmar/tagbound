@@ -115,6 +115,7 @@ static void Frame() {
                 if(game.quest==3) {
                     float hp=280.0f+game.city*120.0f;
                     game.enemies.push_back({{22,3.95f,27},hp,hp,2.4f+game.city*0.38f,0,true,true});
+                    game.enemies.back().variant=game.city;
                     game.bossUnlocked=true;
                 }
                 Save();
