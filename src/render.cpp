@@ -50,6 +50,70 @@ static void DrawCityLandmarks(int city) {
     }
 }
 
+
+static void DrawBuildingDetails(const Platform& p,int city,Vector3 viewer) {
+    if(p.size.x<4.0f||p.size.y<2.0f||p.size.z<4.0f) return;
+    float dx=p.position.x-viewer.x, dz=p.position.z-viewer.z;
+    if(dx*dx+dz*dz>1156.0f) return;
+
+    static const Color glass[5]={{211,166,91,255},{231,190,112,255},{255,117,55,255},{157,190,204,255},{239,177,119,255}};
+    static const Color trim[5]={{105,145,143,255},{183,133,81,255},{118,132,143,255},{143,133,178,255},{171,98,88,255}};
+    int style=std::clamp(city,0,4);
+    float roof=p.position.y+p.size.y*0.5f;
+    float base=p.position.y-p.size.y*0.5f;
+
+    DrawCubeV({p.position.x,roof+0.07f,p.position.z},{p.size.x+0.22f,0.14f,p.size.z+0.22f},trim[style]);
+    DrawCubeV({p.position.x,base+0.16f,p.position.z},{p.size.x+0.12f,0.22f,p.size.z+0.12f},{32,35,43,255});
+
+    int floors=std::clamp((int)(p.size.y/1.55f),1,3);
+    for(int floor=0;floor<floors;floor++) {
+        float y=base+0.92f+floor*1.38f;
+        if(y>roof-0.28f) break;
+        for(int side=-1;side<=1;side+=2) {
+            DrawCubeV({p.position.x+side*0.92f,y,p.position.z+p.size.z*0.505f},
+                      {0.48f,0.58f,0.065f},glass[style]);
+            DrawCubeV({p.position.x+p.size.x*0.505f,y,p.position.z+side*0.92f},
+                      {0.065f,0.58f,0.48f},glass[style]);
+        }
+    }
+
+    Vector3 roofCenter={p.position.x,roof+0.24f,p.position.z};
+    if(style==0) {
+        DrawCubeV({roofCenter.x-0.72f,roofCenter.y,roofCenter.z},{0.9f,0.42f,0.75f},{74,79,83,255});
+        DrawCylinder({roofCenter.x+0.72f,roofCenter.y+0.12f,roofCenter.z},0.38f,0.38f,0.62f,8,{111,126,132,255});
+    } else if(style==1) {
+        DrawCubeV({roofCenter.x,roofCenter.y+0.12f,roofCenter.z},{1.55f,0.12f,1.2f},trim[style]);
+        DrawCylinder({roofCenter.x-0.55f,roofCenter.y-0.04f,roofCenter.z},0.06f,0.06f,0.42f,6,BROWN);
+        DrawCylinder({roofCenter.x+0.55f,roofCenter.y-0.04f,roofCenter.z},0.06f,0.06f,0.42f,6,BROWN);
+    } else if(style==2) {
+        DrawCubeV(roofCenter,{0.9f,0.38f,0.9f},{65,72,79,255});
+        DrawCylinder({roofCenter.x,roofCenter.y+0.35f,roofCenter.z},0.22f,0.30f,0.7f,8,{112,116,120,255});
+        DrawCubeV({roofCenter.x,roofCenter.y+0.72f,roofCenter.z},{0.55f,0.10f,0.55f},ORANGE);
+    } else if(style==3) {
+        DrawCubeV(roofCenter,{0.72f,0.28f,0.72f},{76,73,103,255});
+        DrawCylinder({roofCenter.x,roofCenter.y+0.72f,roofCenter.z},0.025f,0.11f,1.0f,6,trim[style]);
+    } else {
+        for(int side=-1;side<=1;side+=2)
+            DrawCubeV({roofCenter.x+side*0.72f,roofCenter.y+0.12f,roofCenter.z},
+                      {0.42f,0.38f,0.72f},trim[style]);
+        DrawCubeV({roofCenter.x,roofCenter.y+0.12f,roofCenter.z},
+                  {0.42f,0.38f,0.72f},trim[style]);
+    }
+}
+
+static void DrawRooftopProps(const Platform& p,int city) {
+    if(p.size.x<4.0f||p.size.x>8.5f||p.size.y>0.65f||p.position.y<0.0f) return;
+    float top=p.position.y+p.size.y*0.5f;
+    float x=p.position.x-p.size.x*0.31f;
+    float z=p.position.z-p.size.z*0.28f;
+    Color metal=city==2?Color{91,101,108,255}:Color{70,76,82,255};
+    DrawCubeV({x,top+0.16f,z},{0.72f,0.30f,0.62f},metal);
+    DrawCubeV({x,top+0.33f,z},{0.48f,0.06f,0.40f},{133,139,143,255});
+    if(city==0) DrawCylinder({x+0.62f,top+0.34f,z+0.18f},0.18f,0.18f,0.55f,8,{105,123,128,255});
+    else if(city==2) DrawCylinder({x+0.62f,top+0.38f,z+0.18f},0.12f,0.16f,0.72f,8,{112,116,120,255});
+    else if(city==3) DrawCylinder({x+0.62f,top+0.58f,z+0.18f},0.025f,0.09f,0.8f,6,{143,133,178,255});
+}
+
 static Vector3 BodyPoint(Vector3 origin,Vector3 right,Vector3 forward,float side,float height,float depth) {
     return Vector3Add(origin,Vector3Add(Vector3Scale(right,side),Vector3Add(Vector3Scale(forward,depth),Vector3{0,height,0})));
 }
@@ -190,22 +254,19 @@ static void DrawEnemyModel(const Enemy& e,float time) {
 
 void DrawGame(const GameState& g,const Camera3D& camera) {
     static const Color sky[5]={{32,52,68,255},{53,52,69,255},{33,43,54,255},{55,49,77,255},{51,36,46,255}};
+    static const Color horizon[5]={{91,119,126,255},{119,93,87,255},{91,102,107,255},{112,103,137,255},{125,77,77,255}};
+    int screenW=GetScreenWidth(),screenH=GetScreenHeight();
     ClearBackground(sky[g.city]);
+    DrawRectangleGradientV(0,0,screenW,screenH,sky[g.city],horizon[g.city]);
+    Color sunTint=g.city==2?Color{255,142,78,255}:Color{255,205,143,255};
+    DrawCircleGradient((int)(screenW*0.79f),(int)(screenH*0.19f),66,Fade(sunTint,0.34f),Fade(sunTint,0.0f));
     BeginMode3D(camera);
     DrawPlane({0,-0.32f,0},{120,120},{45,50,57,255});
     for(const auto& p:g.platforms) {
         DrawCubeV(p.position,p.size,p.color);
         DrawCubeWiresV(p.position,p.size,{28,29,36,255});
-        if(p.size.x>4.0f&&p.size.y>2.0f&&p.size.z>4.0f) {
-            static const Color windowGlow[5]={{211,166,91,255},{231,190,112,255},{255,117,55,255},{157,190,204,255},{239,177,119,255}};
-            static const Color roofTrim[5]={{105,145,143,255},{183,133,81,255},{118,132,143,255},{143,133,178,255},{171,98,88,255}};
-            Color glass=windowGlow[std::clamp(g.city,0,4)];
-            for(int row=0;row<2;row++) for(int side=-1;side<=1;side+=2)
-                DrawCubeV({p.position.x+side*0.92f,p.position.y-0.25f+row*1.15f,p.position.z+p.size.z*0.505f},
-                          {0.46f,0.62f,0.07f},glass);
-            DrawCubeV({p.position.x,p.position.y+p.size.y*0.5f+0.07f,p.position.z},
-                      {p.size.x+0.22f,0.14f,p.size.z+0.22f},roofTrim[std::clamp(g.city,0,4)]);
-        }
+        DrawBuildingDetails(p,g.city,g.player.position);
+        DrawRooftopProps(p,g.city);
     }
     for(int i=0;i<32;i++) {
         float a=i*0.19635f, r=47.0f+(i%4)*2.0f;
@@ -234,6 +295,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     float bodyBob=std::sin(animationClock*2.2f)*0.018f*(1.0f-stride);
     Vector3 forward=Vector3Length(player.facing)>0.01f?Vector3Normalize(player.facing):Vector3{0,0,1};
     Vector3 right={forward.z,0,-forward.x};
+    DrawCylinder({player.position.x,player.position.y+0.025f,player.position.z},0.38f,0.38f,0.025f,12,Fade(BLACK,0.24f));
     Vector3 hand=DrawHero(player,gait,bodyBob);
     Vector3 tip=Vector3Add(hand,Vector3Scale(forward,0.95f));
     switch(player.weapon) {
@@ -277,6 +339,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
             Color warning=e.phase==BossPhase::Windup?Color{255,166,56,65}:Color{238,62,52,80};
             DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius[std::clamp(e.variant,0,4)],{1,0,0},90,warning);
         }
+        DrawCylinder({e.position.x,e.position.y+0.025f,e.position.z},e.boss?0.62f:0.42f,e.boss?0.62f:0.42f,0.025f,12,Fade(BLACK,0.24f));
         DrawEnemyModel(e,animationClock);
         float width=e.boss?2.0f:1.0f;
         DrawCubeV({e.position.x,e.position.y+2.3f,e.position.z},{width,0.09f,0.1f},DARKGRAY);
