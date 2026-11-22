@@ -33,3 +33,18 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 @media(pointer:fine){#touch-controls,#touch-help{display:none}}
 @media(orientation:portrait) and (pointer:coarse){#rotate{display:grid;visibility:visible}}
 @media(max-height:440px){.stick-area{width:120px;height:120px}.stick-ring{width:98px;height:98px}.stick-knob{width:44px;height:44px}.action-pad{width:250px;gap:4px}.action{font-size:9px}.panel{max-height:91dvh;padding:14px 20px}.story-copy{font-size:13px}.muted{font-size:11px}.class-card{min-height:66px;padding:8px}}
+
+@media(max-height:440px){
+  .overlay{padding:8px}
+  .panel{max-height:calc(100dvh - 16px);padding:10px 16px}
+  .eyebrow{margin:3px 0;font-size:9px}
+  h1{font-size:34px;line-height:1.05;margin:2px 0}
+  h2{font-size:12px;margin:8px 0 5px}
+  .story-copy{font-size:12px;line-height:1.35;margin:5px 0}
+  .muted{font-size:10px;line-height:1.25;margin:4px 0}
+  .class-grid{gap:6px}
+  .class-card{min-height:50px;padding:6px}
+  .class-card strong{font-size:12px}
+  .class-card small{font-size:9px;margin-top:3px}
+  .primary,.secondary{padding:8px 12px;margin-top:6px;font-size:11px}
+}
