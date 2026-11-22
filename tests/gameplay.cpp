@@ -57,6 +57,7 @@ int main() {
     game.player.facing = {1,0,0};
     game.player.stamina = 100;
     Controls vault{};
+    vault.move.x = 1.0f;
     vault.jump = true;
     UpdateMovement(game,vault,camera,0.01f);
     assert(game.player.vaulting);
@@ -67,6 +68,8 @@ int main() {
     UpdateMovement(game,vault,camera,0.2f);
     assert(game.player.position.y > 1.7f);
     assert(game.player.vaultTime > 0.0f);
+    UpdateMovement(game,vault,camera,0.2f);
+    assert(game.player.position.x > 1.5f);
 
     game.player.escapeSkill = 1;
     Controls dash{};
