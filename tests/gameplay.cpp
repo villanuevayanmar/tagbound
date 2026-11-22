@@ -350,6 +350,25 @@ int main() {
     assert(game.projectiles.empty());
 
     game.platforms.clear();
+    // Hitting a pursuer during its warning interrupts the pending strike.
+    game.enemies.clear();
+    game.platforms.clear();
+    game.player.position={0,0.3f,0};
+    game.player.facing={0,0,1};
+    game.player.weapon=Weapon::Sword;
+    game.player.health=100;
+    game.player.invulnerable=0;
+    game.enemies.push_back({{0,0.3f,0.8f},100,100,0,0,false,true});
+    UpdatePursuit(game,0.016f);
+    assert(game.enemies.front().attackWindup>0.35f);
+    Controls interruptAttack{};
+    interruptAttack.attack=true;
+    UpdateCombat(game,interruptAttack,0.016f);
+    assert(game.enemies.front().stunTime>0);
+    UpdatePursuit(game,0.016f);
+    assert(near(game.enemies.front().attackWindup,0.0f));
+    assert(near(game.player.health,100.0f));
+
     // Hit-stunned enemies are pushed back before resuming pursuit.
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
