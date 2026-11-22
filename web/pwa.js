@@ -184,7 +184,7 @@ document.addEventListener('keydown',event=>{
 window.TagboundSettings={isOpen:()=>!settings.classList.contains('hidden')};
 document.getElementById('start').addEventListener('click',()=>{
  call('StartGame');
- window.TagboundAudio?.startMusic?.();
+ if(ending.classList.contains('hidden'))window.TagboundAudio?.startMusic?.();
  intro.classList.add('hidden');
  if(ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
 });
