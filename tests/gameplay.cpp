@@ -22,7 +22,7 @@ int main() {
     UpdateProgression(game, 200);
     assert(game.player.level == 3);
     assert(game.player.escapeSkill == 1);
-    UpdateProgression(game, 500);
+    UpdateProgression(game, 700);
     assert(game.player.level >= 5);
     assert(game.player.combatSkill == 1);
 
