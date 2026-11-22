@@ -10,9 +10,9 @@ Vector3 QuestTarget(int quest) {
     static const Vector3 beacons[3]={{4,1.7f,6},{10,2.45f,13},{16,3.2f,20}};
     return quest<3?beacons[std::clamp(quest,0,2)]:Vector3{22,3.95f,27};
 }
-float BossWindupDuration(int variant) {
+float BossWindupDuration(int variant,bool enraged) {
     static const float duration[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
-    return duration[std::clamp(variant,0,4)];
+    return duration[std::clamp(variant,0,4)]*(enraged?0.85f:1.0f);
 }
 const char* WeaponName(Weapon w) {
     static const char* names[5]={"SWORD","AXE","SHIELD","BOW","SPEAR"};

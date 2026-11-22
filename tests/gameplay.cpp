@@ -30,8 +30,10 @@ int main() {
 
     // Boss warning countdowns use the same durations as combat state transitions.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
-    for(int variant=0;variant<5;variant++)
+    for(int variant=0;variant<5;variant++) {
         assert(near(BossWindupDuration(variant),bossWindups[variant]));
+        assert(near(BossWindupDuration(variant,true),bossWindups[variant]*0.85f));
+    }
 
     // Each class has exactly one assigned weapon.
     assert(ClassWeapon(PlayerClass::Vanguard) == Weapon::Sword);
@@ -480,6 +482,36 @@ int main() {
         assert(near(game.player.health,100.0f-bossDamage[variant]));
         assert(game.enemies.front().phase==BossPhase::Recover);
     }
+
+    // Bosses enter an enrage phase below half health and deal increased strike damage.
+    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,19.8f,30.8f};
+    for(int variant=0;variant<5;variant++) {
+        game.enemies.clear();
+        game.player.position={0,0.3f,0};
+        game.player.health=100;
+        game.player.invulnerable=0;
+        game.player.blocking=false;
+        game.player.stamina=100;
+        Enemy boss{{0,0.3f,bossDistances[variant]},50,100,2.5f,0,true,true};
+        boss.variant=variant;
+        boss.phase=BossPhase::Strike;
+        boss.phaseTime=1.0f;
+        game.enemies.push_back(boss);
+        UpdatePursuit(game,0.05f);
+        assert(near(game.player.health,100.0f-enragedBossDamage[variant]));
+        assert(game.enemies.front().phase==BossPhase::Recover);
+    }
+
+    // An enraged boss completes its windup sooner than the same boss at full health.
+    game.enemies.clear();
+    game.player.position={0,0.3f,0};
+    Enemy enragedWindup{{0,0.3f,3.5f},50,100,2.5f,0,true,true};
+    enragedWindup.variant=0;
+    enragedWindup.phase=BossPhase::Windup;
+    enragedWindup.phaseTime=BossWindupDuration(0,true)-0.01f;
+    game.enemies.push_back(enragedWindup);
+    UpdatePursuit(game,0.02f);
+    assert(game.enemies.front().phase==BossPhase::Strike);
 
     // The Gilded Charger advances rapidly during its strike before impact.
     game.enemies.clear();

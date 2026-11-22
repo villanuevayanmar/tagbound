@@ -365,27 +365,30 @@ void UpdatePursuit(GameState& g,float dt) {
             static const float range[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
             static const float damage[5]={24,30,32,18,28};
             int v=std::clamp(e.variant,0,4);
+            bool enraged=e.hp<=e.maxHp*0.5f;
+            float strikeDuration=strike[v]*(enraged?0.85f:1.0f);
+            float recoverDuration=recover[v]*(enraged?0.85f:1.0f);
             e.phaseTime+=dt;
             if(e.phase==BossPhase::Dormant&&d<20) e.phase=BossPhase::Hunt;
             else if(e.phase==BossPhase::Hunt&&d<range[v]*1.15f) { e.phase=BossPhase::Windup; e.phaseTime=0; }
-            else if(e.phase==BossPhase::Windup&&e.phaseTime>BossWindupDuration(v)) { e.phase=BossPhase::Strike; e.phaseTime=0; }
+            else if(e.phase==BossPhase::Windup&&e.phaseTime>BossWindupDuration(v,enraged)) { e.phase=BossPhase::Strike; e.phaseTime=0; }
             else if(e.phase==BossPhase::Strike) {
-                if(v==1&&e.phaseTime<=strike[v]) {
+                if(v==1&&e.phaseTime<=strikeDuration) {
                     Vector3 charge=Vector3Subtract(p.position,e.position); charge.y=0;
                     if(Vector3Length(charge)>0.001f)
-                        MoveEnemy(g,e,Vector3Scale(Vector3Normalize(charge),e.speed*3.0f*dt));
+                        MoveEnemy(g,e,Vector3Scale(Vector3Normalize(charge),e.speed*3.0f*(enraged?1.15f:1.0f)*dt));
                 }
                 d=Distance(e.position,p.position);
-                if(e.phaseTime>strike[v]) {
+                if(e.phaseTime>strikeDuration) {
                     if(d<range[v]&&HasLineOfSight(g,e.position,p.position)&&p.invulnerable<=0) {
                         float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;
                         if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
-                        else { p.health-=damage[v]; p.invulnerable=0.65f; }
+                        else { p.health-=damage[v]*(enraged?1.1f:1.0f); p.invulnerable=0.65f; }
                     }
                     e.phase=BossPhase::Recover; e.phaseTime=0;
                 }
             }
-            else if(e.phase==BossPhase::Recover&&e.phaseTime>recover[v]) { e.phase=BossPhase::Hunt; e.phaseTime=0; }
+            else if(e.phase==BossPhase::Recover&&e.phaseTime>recoverDuration) { e.phase=BossPhase::Hunt; e.phaseTime=0; }
         }
     }
     g.danger=std::clamp(g.danger+(nearby?18.0f:-12.0f)*dt,0.0f,100.0f);
