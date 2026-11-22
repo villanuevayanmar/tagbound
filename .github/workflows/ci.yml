@@ -164,7 +164,7 @@ jobs:
               installHiddenDuringGameplay: document.querySelector('#install')?.getClientRects().length === 0
             }));
             if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height ||
-                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || !gameplay.installHiddenDuringGameplay) {
+                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || gameplay.save.quest !== 0 || !gameplay.installHiddenDuringGameplay) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
             await page.waitForTimeout(2000);
