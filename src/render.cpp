@@ -50,6 +50,84 @@ static void DrawCityLandmarks(int city) {
     }
 }
 
+static Vector3 BodyPoint(Vector3 origin,Vector3 right,Vector3 forward,float side,float height,float depth) {
+    return Vector3Add(origin,Vector3Add(Vector3Scale(right,side),Vector3Add(Vector3Scale(forward,depth),Vector3{0,height,0})));
+}
+
+static void DrawLimb(Vector3 start,Vector3 end,float startRadius,float endRadius,Color color) {
+    if (Vector3Distance(start,end)>0.01f)
+        DrawCylinderEx(start,end,startRadius,endRadius,7,color);
+    DrawSphere(start,startRadius,color);
+    DrawSphere(end,endRadius,color);
+}
+
+static Vector3 DrawHero(const Player& p,float swing,float bob) {
+    Vector3 forward=Vector3Length(p.facing)>0.01f?Vector3Normalize(p.facing):Vector3{0,0,1};
+    Vector3 right={forward.z,0,-forward.x};
+    Color tunic=p.playerClass==PlayerClass::Vanguard?Color{139,67,58,255}:
+                (p.playerClass==PlayerClass::Skirmisher?Color{58,112,89,255}:Color{78,89,116,255});
+    Color cloth=p.invulnerable>0?WHITE:tunic;
+    Color pants={43,45,53,255}, leather={77,54,39,255}, metal={139,145,151,255};
+    float breath=bob;
+
+    Vector3 waist=BodyPoint(p.position,right,forward,0,0.72f+breath,0);
+    Vector3 chest=BodyPoint(p.position,right,forward,0,1.30f+breath,0);
+    Vector3 neck=BodyPoint(p.position,right,forward,0,1.48f+breath,0);
+    DrawCylinderEx(waist,chest,0.22f,0.29f,8,cloth);
+    DrawCylinderEx(chest,neck,0.29f,0.13f,8,cloth);
+    DrawCylinder(BodyPoint(p.position,right,forward,0,0.78f+breath,0),0.245f,0.245f,0.09f,8,leather);
+    DrawCylinderEx(BodyPoint(p.position,right,forward,-0.19f,1.18f+breath,0.12f),
+                   BodyPoint(p.position,right,forward,0.19f,0.88f+breath,0.13f),0.035f,0.035f,6,leather);
+
+    Vector3 head=BodyPoint(p.position,right,forward,0,1.73f+breath,0.015f);
+    DrawCylinderEx(BodyPoint(p.position,right,forward,0,1.42f+breath,0),
+                   BodyPoint(p.position,right,forward,0,1.56f+breath,0),0.105f,0.11f,7,BEIGE);
+    DrawSphere(head,0.285f,{194,158,126,255});
+    Color headgear=p.playerClass==PlayerClass::Vanguard?Color{85,91,99,255}:
+                   (p.playerClass==PlayerClass::Skirmisher?Color{35,48,43,255}:Color{48,57,77,255});
+    DrawSphere(BodyPoint(p.position,right,forward,0,1.91f+breath,-0.015f),0.235f,headgear);
+    DrawSphere(BodyPoint(p.position,right,forward,-0.105f,1.77f+breath,0.244f),0.035f,{35,31,29,255});
+    DrawSphere(BodyPoint(p.position,right,forward,0.105f,1.77f+breath,0.244f),0.035f,{35,31,29,255});
+    DrawSphere(BodyPoint(p.position,right,forward,0,1.68f+breath,0.278f),0.045f,{167,119,91,255});
+
+    float legLift=p.grounded?0.0f:0.12f;
+    float leftDepth=swing*0.36f, rightDepth=-swing*0.36f;
+    Vector3 leftHip=BodyPoint(p.position,right,forward,-0.145f,0.69f+breath,0);
+    Vector3 rightHip=BodyPoint(p.position,right,forward,0.145f,0.69f+breath,0);
+    Vector3 leftKnee=BodyPoint(p.position,right,forward,-0.18f,0.38f+legLift,leftDepth);
+    Vector3 rightKnee=BodyPoint(p.position,right,forward,0.18f,0.38f+legLift,rightDepth);
+    Vector3 leftAnkle=BodyPoint(p.position,right,forward,-0.18f,0.13f+legLift,leftDepth*0.65f);
+    Vector3 rightAnkle=BodyPoint(p.position,right,forward,0.18f,0.13f+legLift,rightDepth*0.65f);
+    DrawLimb(leftHip,leftKnee,0.145f,0.105f,pants);
+    DrawLimb(rightHip,rightKnee,0.145f,0.105f,pants);
+    DrawLimb(leftKnee,leftAnkle,0.105f,0.075f,pants);
+    DrawLimb(rightKnee,rightAnkle,0.105f,0.075f,pants);
+    DrawSphere(BodyPoint(p.position,right,forward,-0.18f,0.10f+legLift,leftDepth*0.65f+0.08f),0.12f,leather);
+    DrawSphere(BodyPoint(p.position,right,forward,0.18f,0.10f+legLift,rightDepth*0.65f+0.08f),0.12f,leather);
+
+    Vector3 leftShoulder=BodyPoint(p.position,right,forward,-0.30f,1.35f+breath,0);
+    Vector3 rightShoulder=BodyPoint(p.position,right,forward,0.30f,1.35f+breath,0);
+    float armSwing=p.blocking?0.25f:-swing*0.30f;
+    Vector3 leftElbow=BodyPoint(p.position,right,forward,-0.39f,1.06f+breath,p.blocking?0.34f:armSwing);
+    Vector3 leftHand=BodyPoint(p.position,right,forward,-0.43f,0.91f+breath,p.blocking?0.52f:armSwing*1.35f);
+    Vector3 rightElbow=BodyPoint(p.position,right,forward,0.39f,1.08f+breath,p.bowAiming?0.28f:(p.blocking?0.34f:0.12f+swing*0.16f));
+    Vector3 rightHand=BodyPoint(p.position,right,forward,0.43f,0.94f+breath,p.bowAiming?0.48f:(p.blocking?0.52f:0.31f+swing*0.18f));
+    Color armColor=cloth;
+    DrawLimb(leftShoulder,leftElbow,0.13f,0.095f,armColor);
+    DrawLimb(leftElbow,leftHand,0.095f,0.065f,armColor);
+    DrawLimb(rightShoulder,rightElbow,0.13f,0.095f,armColor);
+    DrawLimb(rightElbow,rightHand,0.095f,0.065f,armColor);
+    DrawSphere(leftShoulder,0.16f,p.playerClass==PlayerClass::Skirmisher?cloth:metal);
+    DrawSphere(rightShoulder,0.16f,p.playerClass==PlayerClass::Skirmisher?cloth:metal);
+    DrawSphere(leftHand,0.075f,{194,158,126,255});
+    DrawSphere(rightHand,0.075f,{194,158,126,255});
+
+    if (p.playerClass==PlayerClass::Warden) {
+        DrawCubeV(BodyPoint(p.position,right,forward,0,1.08f,-0.19f),{0.48f,0.78f,0.10f},{43,53,75,255});
+    }
+    return rightHand;
+}
+
 void DrawGame(const GameState& g,const Camera3D& camera) {
     static const Color sky[5]={{32,52,68,255},{53,52,69,255},{33,43,54,255},{55,49,77,255},{51,36,46,255}};
     ClearBackground(sky[g.city]);
@@ -70,12 +148,23 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawSphere(Vector3Add(marker,{0,1.2f,0}),0.5f,g.quest<3?GOLD:MAROON);
 
     const Player& player=g.player;
-    Color tunic=player.playerClass==PlayerClass::Vanguard?Color{139,67,58,255}:(player.playerClass==PlayerClass::Skirmisher?Color{58,112,89,255}:Color{78,89,116,255});
-    Color flash=player.invulnerable>0?WHITE:tunic;
-    DrawCubeV({player.position.x,player.position.y+0.78f,player.position.z},{0.7f,1.55f,0.48f},flash);
-    DrawSphere({player.position.x,player.position.y+1.7f,player.position.z},0.31f,{194,158,126,255});
-    Vector3 forward=Vector3Normalize(player.facing), right={forward.z,0,-forward.x};
-    Vector3 hand=Vector3Add(player.position,{forward.x*0.48f,1.05f,forward.z*0.48f});
+    static float animationClock=0.0f;
+    static Vector3 previousPosition=player.position;
+    static bool hasPreviousPosition=false;
+    float frameDt=std::clamp(GetFrameTime(),0.001f,0.1f);
+    float dx=player.position.x-previousPosition.x, dz=player.position.z-previousPosition.z;
+    float distance=std::sqrt(dx*dx+dz*dz);
+    float moveSpeed=distance/frameDt;
+    if(!hasPreviousPosition||distance>3.0f) moveSpeed=0.0f;
+    previousPosition=player.position;
+    hasPreviousPosition=true;
+    animationClock+=frameDt;
+    float stride=std::clamp(moveSpeed/6.0f,0.0f,1.35f);
+    float gait=std::sin(animationClock*(moveSpeed>7.0f?13.0f:9.0f))*0.48f*stride;
+    float bodyBob=std::sin(animationClock*2.2f)*0.018f*(1.0f-stride);
+    Vector3 forward=Vector3Length(player.facing)>0.01f?Vector3Normalize(player.facing):Vector3{0,0,1};
+    Vector3 right={forward.z,0,-forward.x};
+    Vector3 hand=DrawHero(player,gait,bodyBob);
     Vector3 tip=Vector3Add(hand,Vector3Scale(forward,0.95f));
     switch(player.weapon) {
         case Weapon::Sword:
@@ -100,6 +189,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
             DrawCylinderEx(b,c,0.025f,0.025f,7,BROWN);
             DrawCylinderEx(c,d,0.025f,0.035f,7,BROWN);
             DrawLine3D(a,d,LIGHTGRAY);
+            if(player.bowAiming) DrawLine3D(hand,Vector3Add(hand,Vector3Scale(forward,0.75f)),GOLD);
             break;
         }
         case Weapon::Spear: {
