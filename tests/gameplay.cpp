@@ -51,6 +51,23 @@ int main() {
     assert(!game.player.grounded);
     assert(game.player.position.y > 0.3f);
 
+    // A grounded jump into a reachable rooftop ledge performs a forward vault.
+    BuildCity(game);
+    game.player.position = {1.15f,0.3f,6.0f};
+    game.player.facing = {1,0,0};
+    game.player.stamina = 100;
+    Controls vault{};
+    vault.jump = true;
+    UpdateMovement(game,vault,camera,0.01f);
+    assert(game.player.vaulting);
+    assert(game.player.vaultTime > 0.4f);
+    assert(game.player.velocity.y > 10.0f);
+    assert(game.player.stamina < 100.0f);
+    vault.jump = false;
+    UpdateMovement(game,vault,camera,0.2f);
+    assert(game.player.position.y > 1.7f);
+    assert(game.player.vaultTime > 0.0f);
+
     game.player.escapeSkill = 1;
     Controls dash{};
     dash.skill = true;
