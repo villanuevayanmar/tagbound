@@ -90,7 +90,7 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     DrawSphere(BodyPoint(p.position,right,forward,0.105f,1.77f+breath,0.244f),0.035f,{35,31,29,255});
     DrawSphere(BodyPoint(p.position,right,forward,0,1.68f+breath,0.278f),0.045f,{167,119,91,255});
 
-    float legLift=(p.vaulting||p.climbing)?0.26f:(p.grounded?0.0f:0.12f);
+    float legLift=(p.vaulting||p.ledgeGrabbing||p.climbing)?0.26f:(p.grounded?0.0f:0.12f);
     float leftDepth=swing*0.36f, rightDepth=-swing*0.36f;
     Vector3 leftHip=BodyPoint(p.position,right,forward,-0.145f,0.69f+breath,0);
     Vector3 rightHip=BodyPoint(p.position,right,forward,0.145f,0.69f+breath,0);
