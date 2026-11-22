@@ -9,7 +9,8 @@ const soundProfiles=[
  {wave:'sine',start:145,end:285,duration:0.10,volume:0.032,cutoff:1100},
  {wave:'square',start:105,end:42,duration:0.15,volume:0.04,cutoff:700},
  {wave:'triangle',start:82,end:54,duration:0.34,volume:0.038,cutoff:520},
- {wave:'sine',start:320,end:760,duration:0.25,volume:0.032,cutoff:1700}
+ {wave:'sine',start:320,end:760,duration:0.25,volume:0.032,cutoff:1700},
+ {wave:'triangle',start:680,end:410,duration:0.14,volume:0.024,cutoff:1900}
 ];
 function initAudio(){
  try {

@@ -109,6 +109,11 @@ static unsigned int BossWindupMask() {
     return mask;
 }
 
+static int TaggerWindupCount() {
+    return (int)std::count_if(game.enemies.begin(),game.enemies.end(),
+        [](const Enemy& e){return e.alive&&!e.boss&&e.attackWindup>0;});
+}
+
 static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished) {
@@ -119,11 +124,13 @@ static void Frame() {
         float previousHealth=game.player.health;
         int previousDefeated=game.defeated;
         unsigned int previousWindups=BossWindupMask();
+        int previousTaggerWindups=TaggerWindupCount();
         if(controls.attack) playGameAudio(game.player.weapon==Weapon::Bow?1:0);
         UpdateMovement(game,controls,camera,dt);
         if(controls.jump&&game.player.position.y>previousY+0.01f) playGameAudio(3);
         if(!wasDashing&&game.player.dashTime>0) playGameAudio(2);
         UpdatePursuit(game,dt);
+        if(TaggerWindupCount()>previousTaggerWindups) playGameAudio(7);
         if((BossWindupMask()&~previousWindups)!=0) playGameAudio(5);
         UpdateCombat(game,controls,dt);
         if(game.player.health<previousHealth) playGameAudio(4);
