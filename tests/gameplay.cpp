@@ -352,16 +352,17 @@ int main() {
     assert(game.enemies.front().position.z>hitPosition);
     assert(game.enemies.front().stunTime>0);
 
-    // Pursuers stop at solid rooftop walls instead of walking through them.
+    // Pursuers route around solid rooftop walls without overlapping them.
     game.platforms.clear();
     game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
     game.enemies.clear();
     game.player.position={0,0.3f,6.0f};
     game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
+    float wallStartDistance=Vector3Distance(game.enemies.front().position,game.player.position);
     for(int i=0;i<12;i++) UpdatePursuit(game,0.1f);
-    // The pursuer may detour sideways, but must never cross through the wall volume.
-    assert(!(std::abs(game.enemies.front().position.x)<2.42f &&
-             game.enemies.front().position.z>2.62f));
+    const Vector3 routed=game.enemies.front().position;
+    assert(!(std::abs(routed.x)<2.42f&&routed.z>1.38f&&routed.z<2.62f));
+    assert(Vector3Distance(routed,game.player.position)<wallStartDistance);
 
     // Axis-separated collision lets a pursuer move around the wall's open side.
     game.enemies.clear();
