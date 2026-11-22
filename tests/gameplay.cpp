@@ -276,6 +276,24 @@ int main() {
     assert(game.enemies.front().position.z>hitPosition);
     assert(game.enemies.front().stunTime>0);
 
+    // Pursuers stop at solid rooftop walls instead of walking through them.
+    game.platforms.clear();
+    game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
+    game.enemies.clear();
+    game.player.position={0,0.3f,6.0f};
+    game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
+    for(int i=0;i<12;i++) UpdatePursuit(game,0.1f);
+    assert(game.enemies.front().position.z<1.6f);
+
+    // Axis-separated collision lets a pursuer move around the wall's open side.
+    game.enemies.clear();
+    game.player.position={4.0f,0.3f,5.0f};
+    game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
+    for(int i=0;i<120;i++) UpdatePursuit(game,0.05f);
+    assert(game.enemies.front().position.x>2.2f);
+    assert(game.enemies.front().position.z>2.2f);
+    game.platforms.clear();
+
     // Blocking spends stamina instead of health; an exhausted block does not.
     game.enemies.clear();
     game.player.health = 100;
