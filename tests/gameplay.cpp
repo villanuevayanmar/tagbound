@@ -397,6 +397,19 @@ int main() {
     UpdatePursuit(game,0.15f);
     assert(near(game.player.health,70.0f));
 
+    // A Gilded Charger cannot charge through a solid rooftop wall.
+    game.platforms.clear();
+    game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
+    game.enemies.clear();
+    game.player.position={0,0.3f,6.0f};
+    Enemy coveredCharger{{0,0.3f,0},100,100,3.0f,0,true,true};
+    coveredCharger.variant=1;
+    coveredCharger.phase=BossPhase::Strike;
+    game.enemies.push_back(coveredCharger);
+    for(int i=0;i<4;i++) UpdatePursuit(game,0.05f);
+    assert(game.enemies.front().position.z<1.3f);
+    game.platforms.clear();
+
     // Boss strikes cannot damage a player through a solid rooftop wall.
     game.platforms.clear();
     game.platforms.push_back({{0,1.5f,1.5f},{4,3.0f,0.4f},GRAY});
