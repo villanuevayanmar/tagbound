@@ -115,11 +115,15 @@ static void Frame() {
                 Save();
             }
             if(game.questTime>game.questLimit) {
-                game.questTime=0;
-                float hp=42.0f+game.city*14.0f;
-                Vector3 spawn={game.player.position.x+8,game.player.position.y,game.player.position.z+8};
-                game.enemies.push_back({spawn,hp,hp,2.7f+game.city*0.3f,0,false,true});
-                game.player.stamina=std::max(10.0f,game.player.stamina-18);
+                Vector3 spawn{};
+                if(FindReinforcementSpawn(game,game.player.position,spawn)) {
+                    game.questTime=0;
+                    float hp=42.0f+game.city*14.0f;
+                    game.enemies.push_back({spawn,hp,hp,2.7f+game.city*0.3f,0,false,true});
+                    game.player.stamina=std::max(10.0f,game.player.stamina-18);
+                } else {
+                    game.questTime=std::max(0.0f,game.questLimit-0.75f);
+                }
             }
         }
         saveCooldown+=dt;

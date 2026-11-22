@@ -18,6 +18,40 @@ float ClassMaxHealth(PlayerClass c) {
     static const float health[3]={125.0f,95.0f,115.0f};
     return health[std::clamp((int)c,0,2)];
 }
+
+bool FindReinforcementSpawn(const GameState& g,Vector3 origin,Vector3& spawn) {
+    static const Vector2 directions[8]={
+        {1.0f,0.0f},{0.70710678f,0.70710678f},{0.0f,1.0f},
+        {-0.70710678f,0.70710678f},{-1.0f,0.0f},
+        {-0.70710678f,-0.70710678f},{0.0f,-1.0f},
+        {0.70710678f,-0.70710678f}
+    };
+    static const float rings[3]={8.0f,10.5f,13.0f};
+    constexpr float radius=0.55f;
+    constexpr float height=1.72f;
+    for(float distance:rings) for(const Vector2 direction:directions) {
+        Vector3 candidate={origin.x+direction.x*distance,0.3f,origin.z+direction.y*distance};
+        if(candidate.x < -48.5f || candidate.x > 48.5f ||
+           candidate.z < -34.5f || candidate.z > 41.5f) continue;
+        bool blocked=false;
+        for(const Platform& p:g.platforms) {
+            float minX=p.position.x-p.size.x*0.5f, maxX=p.position.x+p.size.x*0.5f;
+            float minY=p.position.y-p.size.y*0.5f, maxY=p.position.y+p.size.y*0.5f;
+            float minZ=p.position.z-p.size.z*0.5f, maxZ=p.position.z+p.size.z*0.5f;
+            bool x=candidate.x+radius>minX && candidate.x-radius<maxX;
+            bool y=candidate.y+height>minY+0.05f && candidate.y<maxY-0.05f;
+            bool z=candidate.z+radius>minZ && candidate.z-radius<maxZ;
+            if(x&&y&&z) { blocked=true; break; }
+        }
+        if(blocked) continue;
+        for(const Enemy& e:g.enemies) if(e.alive) {
+            float dx=candidate.x-e.position.x, dz=candidate.z-e.position.z;
+            if(dx*dx+dz*dz<1.7f*1.7f) { blocked=true; break; }
+        }
+        if(!blocked) { spawn=candidate; return true; }
+    }
+    return false;
+}
 void BuildCity(GameState& g) {
     g.platforms.clear(); g.enemies.clear(); g.projectiles.clear();
     g.quest=0; g.bossUnlocked=false; g.questTime=0; g.danger=0;

@@ -523,6 +523,36 @@ int main() {
         assert(near(game.player.stamina,classStamina[klass]));
     }
 
+    // Reinforcement spawns stay in bounds and out of solid geometry.
+    GameState spawnGame;
+    spawnGame.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    Vector3 spawn{};
+    assert(FindReinforcementSpawn(spawnGame,{0,0.3f,0},spawn));
+    assert(near(std::sqrt(spawn.x*spawn.x+spawn.z*spawn.z),8.0f));
+    Vector3 firstSpawn=spawn;
+    spawnGame.platforms.push_back({{firstSpawn.x,3.0f,firstSpawn.z},{5,6,5},GRAY});
+    assert(FindReinforcementSpawn(spawnGame,{0,0.3f,0},spawn));
+    assert(std::sqrt((spawn.x-firstSpawn.x)*(spawn.x-firstSpawn.x)+(spawn.z-firstSpawn.z)*(spawn.z-firstSpawn.z))>2.0f);
+
+    // Existing enemies are not overlapped by a new reinforcement.
+    GameState crowdedSpawn=spawnGame;
+    crowdedSpawn.enemies.push_back({spawn,40,40,2.5f,0,false,true});
+    Vector3 nextSpawn{};
+    assert(FindReinforcementSpawn(crowdedSpawn,{0,0.3f,0},nextSpawn));
+    assert(std::sqrt((nextSpawn.x-spawn.x)*(nextSpawn.x-spawn.x)+(nextSpawn.z-spawn.z)*(nextSpawn.z-spawn.z))>=1.7f);
+
+    // Edge-of-map players still receive a clear, in-bounds spawn.
+    Vector3 edgeSpawn{};
+    assert(FindReinforcementSpawn(spawnGame,{48.0f,0.3f,40.0f},edgeSpawn));
+    assert(edgeSpawn.x>=-48.5f && edgeSpawn.x<=48.5f);
+    assert(edgeSpawn.z>=-34.5f && edgeSpawn.z<=41.5f);
+
+    // If every candidate is obstructed, the helper declines to spawn an enemy.
+    GameState closedSpawn;
+    closedSpawn.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    closedSpawn.platforms.push_back({{0,3.0f,0},{120,6.0f,120},GRAY});
+    assert(!FindReinforcementSpawn(closedSpawn,{0,0.3f,0},spawn));
+
     std::cout << "PASS: city setup, names, XP/skills, movement, jump, dash, melee combat, and boss progression.\\n";
     return 0;
 }
