@@ -8,7 +8,7 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `e629ccbecbafed645e593b7040f3ea01f7667dd5`  
+Current main commit: `5479bd3613937f7fc76af346d84fe76f25f846f9`  
 Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
 Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
 
@@ -75,9 +75,17 @@ Merged in commit `805e96887ac4f61e17b1c6dd161c6fe026ab9026`.
 - Latest main commit `e629ccbecbafed645e593b7040f3ea01f7667dd5` is the tested generated `dist/` sync.
 - Hosted browser tests are not physical Android playtesting.
 
+## Current work — fix/no-attack-after-death
+
+Implemented on a feature branch; awaiting hosted tests and PR review:
+
+- Prevent a player whose HP has already reached zero during pursuit from starting a melee hit or spawning a new bow projectile in the same combat frame.
+- Preserve already-fired projectiles, which remain valid in-flight attacks.
+- Add C++ regression tests for both a zero-HP melee attacker and a zero-HP Skirmisher bow user; each test verifies no attack/projectile is created and the correct class health is restored by respawn.
+
 ## Current state
 
-The class-specific BOW feature is merged in PR #5 (merge commit `e4ed14a83bb79533da85ea7ac5f4c9268450dfcd`). No weapon swapping or secondary weapon slot was introduced. The latest tested generated bundle is committed to main at `34f19141704ee4c5e64b02dc391c63eea44d6b17`.
+The class-specific BOW feature is merged in PR #5; no weapon swapping or secondary weapon slot was introduced. Latest tested generated bundle from the prior main workflow was `e629ccbecbafed645e593b7040f3ea01f7667dd5`; main's documentation-only commit after that was `5479bd3613937f7fc76af346d84fe76f25f846f9`.
 
 ## Deployment blocker — Vercel
 
