@@ -16,6 +16,9 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .class-card strong,.class-card small{display:block}.class-card strong{font-size:14px}.class-card small{font-size:11px;color:#aeb8c2;margin-top:7px}
 .primary,.secondary{width:100%;padding:15px 18px;margin-top:14px;letter-spacing:.12em;font-weight:800}
 .primary{border:0;background:#b9854e;color:#171820}.secondary{border:1px solid #687588;background:transparent;color:#e8d7bd}
+.home-utilities{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;margin-top:14px}
+.home-utilities .secondary{margin-top:0}
+#sound-toggle{width:auto;min-width:108px;padding-inline:12px}
 #touch-controls{display:none;position:absolute;inset:0;z-index:3;pointer-events:none;padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)}
 .stick-area{pointer-events:auto;position:absolute;left:3vw;bottom:6vh;width:150px;height:150px;display:grid;place-items:center}
 .stick-ring{width:124px;height:124px;border-radius:50%;border:2px solid #d9c29a66;background:#18233166;display:grid;place-items:center}
@@ -46,4 +49,6 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
   .class-card strong{font-size:12px}
   .class-card small{font-size:9px;margin-top:3px}
   .primary,.secondary{padding:8px 12px;margin-top:6px;font-size:11px}
+  .home-utilities{margin-top:6px}
+  #sound-toggle{min-width:94px;padding:8px 9px}
 }
