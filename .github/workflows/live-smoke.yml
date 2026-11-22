@@ -118,11 +118,16 @@ jobs:
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
               installHidden: document.querySelector('#install')?.getClientRects().length === 0,
               settingsInstallHidden: document.querySelector('#settings-install')?.getClientRects().length === 0,
-              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0
+              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
+              settingsButtonClearOfLevelHud: (() => {
+                const s = document.querySelector('#settings-open').getBoundingClientRect();
+                const l = { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 };
+                return !(s.left < l.right && s.right > l.left && s.top < l.bottom && s.bottom > l.top);
+              })()
             }));
             if (!gameplay.canvas.width || !gameplay.canvas.height || gameplay.save?.klass !== 1 ||
                 gameplay.save?.city !== 0 || gameplay.save?.quest !== 0 || !gameplay.installHidden ||
-                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible) {
+                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfLevelHud) {
               throw new Error('Live class/start/save or install visibility check failed: ' + JSON.stringify(gameplay));
             }
 
@@ -272,6 +277,12 @@ jobs:
 
             await mobilePage.screenshot({ path: 'live-review/production-mobile-home.png', fullPage: true });
             await mobilePage.locator('#start').tap();
+            const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
+              const s = document.querySelector('#settings-open').getBoundingClientRect();
+              const l = { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 };
+              return !(s.left < l.right && s.right > l.left && s.top < l.bottom && s.bottom > l.top);
+            });
+            if (!mobileSettingsButtonClear) throw new Error('Production mobile Settings button overlaps the level/danger HUD.');
             const mobileInstallHidden = await mobilePage.locator('#install')
               .evaluate(element => element.getClientRects().length === 0);
             if (!mobileInstallHidden) throw new Error('Install option remained visible during mobile gameplay.');
