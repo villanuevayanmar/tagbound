@@ -505,6 +505,8 @@ int main() {
     guardedBoss.variant=0;
     guardedBoss.phase=BossPhase::Strike;
     guardedBoss.phaseTime=1.0f;
+    guardedBoss.strikeOrigin=guardedBoss.position;
+    game.player.blocking=true;
     game.enemies.push_back(guardedBoss);
     UpdatePursuit(game,0.05f);
     assert(near(game.player.health,100.0f));
