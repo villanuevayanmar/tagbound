@@ -309,6 +309,38 @@ int main() {
     assert(game.player.dashCooldown > 1.7f);
     assert(game.player.stamina < 100.0f);
 
+    // A player killed by pursuit before combat resolution cannot start a final melee hit.
+    GameState deadMelee;
+    BuildCity(deadMelee);
+    deadMelee.enemies.clear();
+    deadMelee.player.position={0,0.3f,0};
+    deadMelee.player.facing={0,0,1};
+    deadMelee.player.weapon=Weapon::Sword;
+    deadMelee.player.health=0;
+    deadMelee.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+    Controls finalMelee{};
+    finalMelee.attack=true;
+    UpdateCombat(deadMelee,finalMelee,0.016f);
+    assert(near(deadMelee.enemies.front().hp,100.0f));
+    assert(near(deadMelee.player.attackTime,0.0f));
+    assert(near(deadMelee.player.health,ClassMaxHealth(deadMelee.player.playerClass)));
+
+    // A player killed before combat resolution cannot create a new bow projectile.
+    GameState deadBow;
+    BuildCity(deadBow);
+    deadBow.enemies.clear();
+    deadBow.player.position={0,0.3f,0};
+    deadBow.player.facing={0,0,1};
+    deadBow.player.weapon=Weapon::Bow;
+    deadBow.player.playerClass=PlayerClass::Skirmisher;
+    deadBow.player.health=0;
+    Controls finalBow{};
+    finalBow.attack=true;
+    UpdateCombat(deadBow,finalBow,0.016f);
+    assert(deadBow.projectiles.empty());
+    assert(near(deadBow.player.attackTime,0.0f));
+    assert(near(deadBow.player.health,ClassMaxHealth(deadBow.player.playerClass)));
+
     // Every melee weapon must apply its intended damage.
     const Weapon weapons[] = {Weapon::Sword, Weapon::Axe, Weapon::Shield, Weapon::Spear};
     const float expectedDamage[] = {30, 43, 14, 32};
