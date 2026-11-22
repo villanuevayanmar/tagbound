@@ -55,7 +55,7 @@ jobs:
           for asset in ("/", "/styles.css", "/pwa.js", "/manifest.json",
                         "/icons/icon-192.png", "/icons/icon-512.png",
                         "/game.js", "/game.wasm"):
-              path = root / asset.lstrip("/")
+              path = root / ("index.html" if asset == "/" else asset.lstrip("/"))
               assert path.exists() and path.is_file(), f"Missing cached asset: {asset}"
               assert f"'{asset}'" in sw or f'"{asset}"' in sw, f"Not in service-worker core list: {asset}"
           print("Static PWA assets and service-worker precache list are valid.")
