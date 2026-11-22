@@ -452,7 +452,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawRectangle(12,12,250,75,Fade(BLACK,0.65f));
     DrawText(TextFormat("HEALTH  %d",(int)g.player.health),24,20,16,WHITE);
     DrawRectangle(24,42,215,9,DARKGRAY);
-    DrawRectangle(24,42,(int)(215*std::max(0.0f,g.player.health/125.0f)),9,RED);
+    DrawRectangle(24,42,(int)(215*std::clamp(g.player.health/ClassMaxHealth(g.player.playerClass),0.0f,1.0f)),9,RED);
     DrawText(TextFormat("STAMINA  %d",(int)g.player.stamina),24,56,14,WHITE);
     DrawRectangle(112,60,127,7,DARKGRAY);
     DrawRectangle(112,60,(int)(127*g.player.stamina/100.0f),7,GREEN);
