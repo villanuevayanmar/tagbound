@@ -46,6 +46,50 @@ int main() {
     assert(game.player.dashCooldown > 1.7f);
     assert(game.player.stamina < 100.0f);
 
+    // Every melee weapon must apply its intended damage.
+    const Weapon weapons[] = {Weapon::Sword, Weapon::Axe, Weapon::Shield, Weapon::Spear};
+    const float expectedDamage[] = {26, 43, 14, 32};
+    for (int i = 0; i < 4; ++i) {
+        game.enemies.clear();
+        game.player.position = {0,0.3f,0};
+        game.player.facing = {0,0,1};
+        game.player.weapon = weapons[i];
+        game.player.combatSkill = 0;
+        game.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+        Controls hit{};
+        hit.attack = true;
+        UpdateCombat(game, hit, 0.016f);
+        assert(near(game.enemies.front().hp, 100.0f-expectedDamage[i]));
+    }
+
+    // Bow projectiles travel and damage a target in front of the player.
+    game.enemies.clear();
+    game.player.position = {0,0.3f,0};
+    game.player.facing = {0,0,1};
+    game.player.weapon = Weapon::Bow;
+    game.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+    Controls bow{};
+    bow.attack = true;
+    UpdateCombat(game, bow, 0.016f);
+    bow.attack = false;
+    UpdateCombat(game, bow, 0.05f);
+    assert(near(game.enemies.front().hp, 55.0f));
+
+    // Blocking spends stamina instead of health; an exhausted block does not.
+    game.enemies.clear();
+    game.player.health = 100;
+    game.player.stamina = 100;
+    game.player.blocking = true;
+    game.enemies.push_back({{0,0.3f,0.8f},40,40,0,0,false,true});
+    UpdatePursuit(game, 0.016f);
+    assert(near(game.player.health, 100.0f));
+    assert(near(game.player.stamina, 92.0f));
+    game.enemies.front().cooldown = 0;
+    game.player.stamina = 0;
+    UpdatePursuit(game, 0.016f);
+    assert(near(game.player.health, 89.0f));
+    game.player.blocking = false;
+
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
     game.player.facing = {0,0,1};
