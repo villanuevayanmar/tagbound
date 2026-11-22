@@ -36,13 +36,14 @@ canvas.addEventListener('pointermove',e=>{
  const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;lastLook={x:e.clientX,y:e.clientY,id:e.pointerId};call('SetLook',dx,dy);
 });
 ['pointerup','pointercancel','pointerleave'].forEach(n=>canvas.addEventListener(n,e=>{if(lastLook&&lastLook.id===e.pointerId)lastLook=null}));
-let installEvent=null;const installButtons=[document.getElementById('install'),document.getElementById('install-float')];
-window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e;installButtons.forEach(b=>b.hidden=false)});
-installButtons.forEach(b=>b.addEventListener('click',async()=>{
- if(installEvent){installEvent.prompt();await installEvent.userChoice;installEvent=null;installButtons.forEach(x=>x.hidden=true)}
+let installEvent=null;const installButton=document.getElementById('install');
+if(window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true)installButton.hidden=true;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvent=e});
+installButton.addEventListener('click',async()=>{
+ if(installEvent){installEvent.prompt();await installEvent.userChoice;installEvent=null}
  else alert('iPhone: open Share in Safari, then Add to Home Screen. Android: use the browser menu and choose Install app.');
-}));
-window.addEventListener('appinstalled',()=>installButtons.forEach(b=>b.hidden=true));
+});
+window.addEventListener('appinstalled',()=>{installButton.hidden=true});
 if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(console.error));
 const rotate=()=>document.getElementById('rotate').classList.toggle('hidden',window.innerWidth>=window.innerHeight);
 window.addEventListener('resize',rotate);rotate();

@@ -23,11 +23,10 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .action-pad{pointer-events:auto;position:absolute;right:3vw;bottom:4vh;width:min(42vw,310px);display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .action{border:1px solid #e8d0a466;background:#14202dbb;color:#fff2d7;border-radius:50%;aspect-ratio:1;padding:5px;font-size:10px;font-weight:900;letter-spacing:.03em;box-shadow:0 3px 10px #0008}
 .action:active,.action.active{background:#a97143;color:#fff}.action.attack{grid-row:1;grid-column:3;width:78px;justify-self:end;background:#722d2dce}
-.action.jump{grid-row:1;grid-column:2}.action.skill{grid-row:2;grid-column:3}.action.sprint{grid-row:3;grid-column:1}.action.weapon{grid-row:3;grid-column:2}
+.action.jump{grid-row:1;grid-column:2}.action.skill{grid-row:2;grid-column:3}.action.sprint{grid-row:3;grid-column:1}
 .touch-help{display:none;position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font-size:9px;color:#ffffff9a;white-space:nowrap;pointer-events:none;z-index:2}
 .rotate{position:absolute;inset:0;background:#101621;z-index:8;display:grid;align-content:center;justify-items:center;gap:12px;text-align:center}
 .rotate span{font-size:50px;color:#c18a55}.rotate small{color:#a9b4c0}
-.install-float{position:absolute;right:16px;top:14px;z-index:4;border:1px solid #d5ad76;background:#172331;color:#f1d7ad;padding:10px 14px}
 .loading{position:absolute;z-index:7;bottom:50%;left:50%;transform:translate(-50%,50%);background:#101621d9;border:1px solid #6e614c;padding:14px 20px;font-size:12px;letter-spacing:.16em;color:#efd8b2}
 @media(pointer:coarse){#touch-controls{display:block}#touch-help{display:block}}
 @media(pointer:fine){#touch-controls,#touch-help{display:none}}
