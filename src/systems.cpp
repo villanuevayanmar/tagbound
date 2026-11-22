@@ -351,23 +351,30 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
     if(c.attack&&p.weapon==Weapon::Bow) {
         g.projectiles.push_back({Vector3Add(p.position,{0,1.35f,0}),Vector3Scale(p.facing,22),2.0f});
     } else if(c.attack) {
+        const float range=p.weapon==Weapon::Spear?3.1f:2.2f;
+        float nearest=range+0.0001f;
+        Enemy* target=nullptr;
         for(auto& e:g.enemies) {
             if(!e.alive) continue;
             Vector3 to=Vector3Subtract(e.position,p.position);
             float d=Vector3Length(to);
-            if(d>0.001f&&d<=(p.weapon==Weapon::Spear?3.1f:2.2f)&&Vector3DotProduct(p.facing,Vector3Normalize(to))>0.1f) {
-                float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:26));
-                if(p.weapon==Weapon::Shield&&p.combatSkill) damage=29;
-                e.hp-=damage;
-                e.hitTime=0.16f;
-                e.stunTime=e.boss?0.08f:0.18f;
-                Vector3 knock=Vector3Subtract(e.position,p.position); knock.y=0;
-                if(Vector3Length(knock)>0.001f)
-                    e.knockback=Vector3Scale(Vector3Normalize(knock),e.boss?1.1f:3.0f);
-                if(e.hp<=0&&e.alive) {
-                    e.alive=false; g.defeated++; UpdateProgression(g,e.boss?240:45);
-                    if(e.boss) bossDefeated=true;
-                }
+            if(d>0.001f&&d<=range&&d<nearest&&Vector3DotProduct(p.facing,Vector3Normalize(to))>0.1f) {
+                nearest=d;
+                target=&e;
+            }
+        }
+        if(target) {
+            float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:26));
+            if(p.weapon==Weapon::Shield&&p.combatSkill) damage=29;
+            target->hp-=damage;
+            target->hitTime=0.16f;
+            target->stunTime=target->boss?0.08f:0.18f;
+            Vector3 knock=Vector3Subtract(target->position,p.position); knock.y=0;
+            if(Vector3Length(knock)>0.001f)
+                target->knockback=Vector3Scale(Vector3Normalize(knock),target->boss?1.1f:3.0f);
+            if(target->hp<=0&&target->alive) {
+                target->alive=false; g.defeated++; UpdateProgression(g,target->boss?240:45);
+                if(target->boss) bossDefeated=true;
             }
         }
     }
