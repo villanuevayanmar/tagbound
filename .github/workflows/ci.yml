@@ -97,7 +97,7 @@ jobs:
 
       - name: Install Chromium
         run: |
-          npm install --no-save playwright
+          npm install --no-save playwright pngjs
           npx playwright install --with-deps chromium
 
       - name: Serve and test browser runtime and offline cache
@@ -112,6 +112,7 @@ jobs:
           curl -fsS http://127.0.0.1:4173/ >/dev/null
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
+          import { PNG } from 'pngjs';
 
           const browser = await chromium.launch({
             headless: true,
@@ -249,7 +250,20 @@ jobs:
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
-            await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
+            const gameplayImage = await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
+            const gameplayPng = PNG.sync.read(gameplayImage);
+            let healthTextPixels = 0;
+            for (let y = 14; y < 38; y++) {
+              for (let x = 20; x < Math.min(190, gameplayPng.width); x++) {
+                const pixel = (y * gameplayPng.width + x) * 4;
+                if (gameplayPng.data[pixel] > 170 &&
+                    gameplayPng.data[pixel + 1] > 170 &&
+                    gameplayPng.data[pixel + 2] > 170) healthTextPixels++;
+              }
+            }
+            if (healthTextPixels < 12) {
+              throw new Error('The in-game health HUD is not visibly rendered in the gameplay frame.');
+            }
 
             // Seed an old installed-PWA cache, then verify the new worker removes it.
             await page.evaluate(async () => {
