@@ -36,6 +36,25 @@ int main() {
     game.city = 0;
     BuildCity(game);
 
+    // A saved beacon index restores the current objective and exact city boss once.
+    game.city=2;
+    BuildCity(game);
+    SetQuestProgress(game,2);
+    assert(game.quest==2);
+    assert(!game.bossUnlocked);
+    assert(std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.boss;})==0);
+    SetQuestProgress(game,3);
+    assert(game.quest==3);
+    assert(game.bossUnlocked);
+    assert(std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.boss;})==1);
+    const Enemy& restoredBoss=game.enemies.back();
+    assert(restoredBoss.boss && restoredBoss.variant==2);
+    assert(near(restoredBoss.hp,520.0f));
+    SetQuestProgress(game,3);
+    assert(std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.boss;})==1);
+    game.city=0;
+    BuildCity(game);
+
     UpdateProgression(game, 100);
     assert(game.player.level == 2);
     UpdateProgression(game, 200);
