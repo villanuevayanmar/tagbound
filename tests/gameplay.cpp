@@ -376,6 +376,35 @@ int main() {
     UpdatePursuit(game,0.15f);
     assert(near(game.player.health,70.0f));
 
+    // Boss strikes cannot damage a player through a solid rooftop wall.
+    game.platforms.clear();
+    game.platforms.push_back({{0,1.5f,1.5f},{4,3.0f,0.4f},GRAY});
+    game.player.position={0,0.3f,0};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    game.player.blocking=false;
+    Enemy coveredBoss{{0,0.3f,3.5f},100,100,0,0,true,true};
+    coveredBoss.variant=0;
+    coveredBoss.phase=BossPhase::Strike;
+    coveredBoss.phaseTime=1.0f;
+    game.enemies.clear();
+    game.enemies.push_back(coveredBoss);
+    UpdatePursuit(game,0.05f);
+    assert(near(game.player.health,100.0f));
+
+    // The same boss strike still damages a player when no cover separates them.
+    game.player.health=100;
+    game.player.invulnerable=0;
+    Enemy exposedBoss{{0,0.3f,0.7f},100,100,0,0,true,true};
+    exposedBoss.variant=0;
+    exposedBoss.phase=BossPhase::Strike;
+    exposedBoss.phaseTime=1.0f;
+    game.enemies.clear();
+    game.enemies.push_back(exposedBoss);
+    UpdatePursuit(game,0.05f);
+    assert(near(game.player.health,76.0f));
+    game.platforms.clear();
+
     // Defeating each city boss advances the campaign; the fifth ends it.
     game.unlockedCity = 0;
     game.finished = false;
