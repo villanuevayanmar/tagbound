@@ -152,8 +152,9 @@ jobs:
               canvasSize: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
-            if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height || !gameplay.save) {
-              throw new Error('Gameplay start/input/save smoke test failed: ' + JSON.stringify(gameplay));
+            if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height ||
+                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0) {
+              throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
 
             await page.evaluate(async () => {
