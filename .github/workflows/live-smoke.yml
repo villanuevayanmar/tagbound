@@ -119,15 +119,22 @@ jobs:
               installHidden: document.querySelector('#install')?.getClientRects().length === 0,
               settingsInstallHidden: document.querySelector('#settings-install')?.getClientRects().length === 0,
               settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
-              settingsButtonClearOfLevelHud: (() => {
+              settingsButtonClearOfHud: (() => {
                 const s = document.querySelector('#settings-open').getBoundingClientRect();
-                const l = { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 };
-                return !(s.left < l.right && s.right > l.left && s.top < l.bottom && s.bottom > l.top);
+                const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+                const boxes = [
+                  { left: 12, right: 262, top: 12, bottom: 87 },
+                  { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
+                  { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
+                  { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
+                  { left: 12, right: 402, top: h, bottom: h + 65 }
+                ];
+                return boxes.every(b => !(s.left < b.right && s.right > b.left && s.top < b.bottom && s.bottom > b.top));
               })()
             }));
             if (!gameplay.canvas.width || !gameplay.canvas.height || gameplay.save?.klass !== 1 ||
                 gameplay.save?.city !== 0 || gameplay.save?.quest !== 0 || !gameplay.installHidden ||
-                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfLevelHud) {
+                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfHud) {
               throw new Error('Live class/start/save or install visibility check failed: ' + JSON.stringify(gameplay));
             }
 
@@ -279,10 +286,17 @@ jobs:
             await mobilePage.locator('#start').tap();
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
-              const l = { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 };
-              return !(s.left < l.right && s.right > l.left && s.top < l.bottom && s.bottom > l.top);
+              const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+              const boxes = [
+                { left: 12, right: 262, top: 12, bottom: 87 },
+                { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
+                { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
+                { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
+                { left: 12, right: 402, top: h, bottom: h + 65 }
+              ];
+              return boxes.every(b => !(s.left < b.right && s.right > b.left && s.top < b.bottom && s.bottom > b.top));
             });
-            if (!mobileSettingsButtonClear) throw new Error('Production mobile Settings button overlaps the level/danger HUD.');
+            if (!mobileSettingsButtonClear) throw new Error('Production mobile Settings button overlaps a HUD panel.');
             const mobileInstallHidden = await mobilePage.locator('#install')
               .evaluate(element => element.getClientRects().length === 0);
             if (!mobileInstallHidden) throw new Error('Install option remained visible during mobile gameplay.');
