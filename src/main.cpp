@@ -15,6 +15,7 @@ EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hi
 EM_JS(void, showEnding, (), { document.getElementById("ending")?.classList.remove("hidden"); });
 EM_JS(void, initGameAudio, (), { try { window.TagboundAudio?.init?.(); } catch (e) {} });
 EM_JS(void, playGameAudio, (int kind), { try { window.TagboundAudio?.play?.(kind); } catch (e) {} });
+EM_JS(int, isSettingsOpen, (), { return document.getElementById("settings")?.classList.contains("hidden") ? 0 : 1; });
 #else
 #define KEEP
 static void saveLocal(int,int,int,int,int,int,int,int) {}
@@ -23,6 +24,7 @@ static void hideIntro() {}
 static void showEnding() {}
 static void initGameAudio() {}
 static void playGameAudio(int) {}
+static int isSettingsOpen() { return 0; }
 #endif
 
 static GameState game;
@@ -67,6 +69,7 @@ KEEP void StartGame() {
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
 KEEP void SetLook(float x,float y) { lookX+=x; lookY+=y; }
 KEEP int GetQuestProgress() { return game.quest; }
+KEEP float GetPlayerPositionZ() { return game.player.position.z; }
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
 }
@@ -116,7 +119,7 @@ static int TaggerWindupCount() {
 
 static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
-    if(game.started && !game.finished) {
+    if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
         game.player.blocking=controls.block;
         float previousY=game.player.position.y;
