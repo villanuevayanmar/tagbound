@@ -20,6 +20,14 @@ int main() {
     assert(std::string(BossName(4)) == "IMPERIAL REGENT");
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
+    // Gameplay, world marker and HUD share one objective target per quest.
+    const Vector3 beacon0=QuestTarget(0), beacon1=QuestTarget(1), beacon2=QuestTarget(2);
+    const Vector3 bossGate=QuestTarget(3);
+    assert(near(beacon0.x,4) && near(beacon0.y,1.7f) && near(beacon0.z,6));
+    assert(near(beacon1.x,10) && near(beacon1.y,2.45f) && near(beacon1.z,13));
+    assert(near(beacon2.x,16) && near(beacon2.y,3.2f) && near(beacon2.z,20));
+    assert(near(bossGate.x,22) && near(bossGate.y,3.95f) && near(bossGate.z,27));
+
     // Each class has exactly one assigned weapon.
     assert(ClassWeapon(PlayerClass::Vanguard) == Weapon::Sword);
     assert(ClassWeapon(PlayerClass::Skirmisher) == Weapon::Bow);

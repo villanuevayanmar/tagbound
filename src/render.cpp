@@ -371,8 +371,8 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                           {0.42f,0.36f,width*0.7f},{132,83,77,255});
         }
     }
-    const Vector3 points[3]={{4,1.7f,6},{10,2.45f,13},{16,3.2f,20}};
-    Vector3 marker=g.quest<3?Vector3Add(points[g.quest],{0,1.2f,0}):Vector3{22,5.4f,27};
+    const Vector3 objectiveTarget=QuestTarget(g.quest);
+    Vector3 marker=Vector3Add(objectiveTarget,{0,g.quest<3?1.2f:1.45f,0});
     DrawCylinder(marker,0.38f,0.08f,2.1f,8,g.quest<3?GOLD:RED);
     DrawSphere(Vector3Add(marker,{0,1.2f,0}),0.5f,g.quest<3?GOLD:MAROON);
 
@@ -471,7 +471,8 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawText(TextFormat("%s  |  %s",CityName(g.city),WeaponName(g.player.weapon)),24,objectiveHudY+9,16,GOLD);
     DrawText(g.quest<3?TextFormat("QUEST %d/3  -  REACH THE BEACON",g.quest+1):TextFormat("BOSS GATE OPEN  -  %s",BossName(g.city)),24,objectiveHudY+34,14,WHITE);
     int taggers=(int)std::count_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e){return e.alive&&!e.boss;});
-    DrawText(g.quest<3?TextFormat("TAGGERS %d   |   REINFORCEMENTS IN %ds",taggers,std::max(0,(int)std::ceil(g.questLimit-g.questTime))):TextFormat("TAGGERS %d",taggers),24,objectiveHudY+54,12,LIGHTGRAY);
+    int targetDistance=(int)std::round(Vector3Distance(g.player.position,objectiveTarget));
+    DrawText(g.quest<3?TextFormat("BEACON %dm  |  TAGGERS %d  |  WAVE %ds",targetDistance,taggers,std::max(0,(int)std::ceil(g.questLimit-g.questTime))):TextFormat("BOSS %dm  |  TAGGERS %d",targetDistance,taggers),24,objectiveHudY+54,12,LIGHTGRAY);
     if(g.finished) {
         DrawRectangle(0,0,w,h,Fade(BLACK,0.7f));
         DrawText("THE FIVE CITIES ARE FREE",w/2-190,h/2-18,28,GOLD);

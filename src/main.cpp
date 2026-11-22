@@ -128,8 +128,7 @@ static void Frame() {
         game.questTime+=dt;
         if(game.quest<3) {
             Vector3 p=game.player.position;
-            const Vector3 targets[3]={{4,1.7f,6},{10,2.45f,13},{16,3.2f,20}};
-            if(Vector3Distance(p,targets[game.quest])<3.0f) {
+            if(Vector3Distance(p,QuestTarget(game.quest))<3.0f) {
                 game.quest++;
                 UpdateProgression(game,65+game.city*15+game.quest*10);
                 game.questTime=0;

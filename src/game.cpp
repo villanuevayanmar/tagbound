@@ -6,6 +6,10 @@ static const char* cityNames[5]={"PORT TOWN","MERCHANT TIER","CLOCKWORK FOUNDRY"
 const char* CityName(int c) { return cityNames[std::clamp(c,0,4)]; }
 static const char* bossNames[5]={"HARBOR WARDEN","GILDED CHARGER","FOUNDRY COLOSSUS","SPIRE SENTINEL","IMPERIAL REGENT"};
 const char* BossName(int c) { return bossNames[std::clamp(c,0,4)]; }
+Vector3 QuestTarget(int quest) {
+    static const Vector3 beacons[3]={{4,1.7f,6},{10,2.45f,13},{16,3.2f,20}};
+    return quest<3?beacons[std::clamp(quest,0,2)]:Vector3{22,3.95f,27};
+}
 const char* WeaponName(Weapon w) {
     static const char* names[5]={"SWORD","AXE","SHIELD","BOW","SPEAR"};
     return names[std::clamp((int)w,0,4)];
