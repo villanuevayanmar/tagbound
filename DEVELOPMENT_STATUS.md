@@ -8,7 +8,7 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `e4ed14a83bb79533da85ea7ac5f4c9268450dfcd`  
+Current main commit: `34f19141704ee4c5e64b02dc391c63eea44d6b17`  
 Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
 Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
 
@@ -58,13 +58,13 @@ The production URL is still serving the older deployment. Do not send the user t
 - Ambient score PR checks passed in run `45076329628`.
 - Class-specific BOW/loadout PR checks passed in run `45077008462`.
 - Main after ambient-score merge passed WebAssembly compilation, C++ gameplay regressions, generated PWA validation, desktop/mobile Chromium, and publish-dist in run `45076558880`.
-- Main after class-specific BOW merge is running in workflow `45077247867`; check its terminal result before considering this merge fully green.
-- Latest main source commit is `e4ed14a`; its tested generated `dist/` sync will follow successful main CI.
+- Main after class-specific BOW merge passed in run `45077290312`: Emscripten build, C++ gameplay regression tests, static PWA validation, desktop/mobile Chromium, and publish-dist.
+- Latest main commit `34f1914` is the generated build-output sync from that successful run.
 - Hosted browser tests are not physical Android playtesting.
 
 ## Current state
 
-The class-specific BOW feature is merged in PR #5. No weapon swapping or secondary weapon slot was introduced.
+The class-specific BOW feature is merged in PR #5 (merge commit `e4ed14a83bb79533da85ea7ac5f4c9268450dfcd`). No weapon swapping or secondary weapon slot was introduced. The latest tested generated bundle is committed to main at `34f19141704ee4c5e64b02dc391c63eea44d6b17`.
 
 ## Deployment blocker — Vercel
 
@@ -117,7 +117,7 @@ Production still serves commit `a15a767`, not the latest main.
 
 ## Exact next task
 
-1. Check the terminal status of main workflow `45077247867` and verify the generated `dist/` sync commit.
-2. Review city progression, checkpoint/respawn, quest variety, and boss encounters for the next concrete gameplay gap.
-3. Add automated regression and hosted browser tests for the selected change.
+1. Review city progression, checkpoint/respawn, quest variety, and boss encounters for the next concrete gameplay gap.
+2. Add a small, real objective variation to the beacon campaign rather than leaving every quest as the same reach-the-marker task.
+3. Add C++ regression coverage and hosted desktop/mobile checks for the selected objective.
 4. Continue merging tested work while monitoring Vercel's free deployment quota. Android testing remains pending until the latest production build is live.
