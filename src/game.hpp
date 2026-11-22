@@ -14,12 +14,13 @@ struct Enemy {
     float hp=40, maxHp=40, speed=2.5f, cooldown=0;
     bool boss=false, alive=true;
     BossPhase phase=BossPhase::Dormant;
-    float phaseTime=0;
+    float phaseTime=0, hitTime=0, stunTime=0;
+    Vector3 knockback{};
 };
 struct Player {
     Vector3 position{0,1,0}, velocity{0,0,0}, facing{0,0,1};
     float health=100, stamina=100, invulnerable=0;
-    float dashTime=0, dashCooldown=0, vaultTime=0, climbTime=0, landingTime=0;
+    float dashTime=0, dashCooldown=0, vaultTime=0, climbTime=0, landingTime=0, attackTime=0;
     bool landingRoll=false;
     bool wallRunning=false, vaulting=false, ledgeGrabbing=false, climbing=false;
     Vector3 ledgeNormal{}, ledgeHangPosition{}, ledgeTargetPosition{};
