@@ -15,6 +15,8 @@ int main() {
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
     assert(std::string(CityName(4)) == "IMPERIAL CAPITAL");
+    assert(std::string(BossName(0)) == "HARBOR WARDEN");
+    assert(std::string(BossName(4)) == "IMPERIAL REGENT");
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
     // Each campaign city builds its expected pursuer count and full scene.
@@ -249,6 +251,26 @@ int main() {
     UpdateCombat(game, attack, 0.016f);
     assert(game.city == 1);
     assert(game.unlockedCity == 1);
+
+    // Each city boss has a distinct attack pattern, range and damage profile.
+    const float bossDistances[5]={3.5f,2.2f,5.0f,7.0f,4.0f};
+    const float bossDamage[5]={24,30,32,18,28};
+    for(int variant=0;variant<5;variant++) {
+        game.enemies.clear();
+        game.player.position={0,0.3f,0};
+        game.player.health=100;
+        game.player.invulnerable=0;
+        game.player.blocking=false;
+        game.player.stamina=100;
+        Enemy boss{{0,0.3f,bossDistances[variant]},100,100,2.5f,0,true,true};
+        boss.variant=variant;
+        boss.phase=BossPhase::Strike;
+        boss.phaseTime=1.0f;
+        game.enemies.push_back(boss);
+        UpdatePursuit(game,0.05f);
+        assert(near(game.player.health,100.0f-bossDamage[variant]));
+        assert(game.enemies.front().phase==BossPhase::Recover);
+    }
 
     // Defeating each city boss advances the campaign; the fifth ends it.
     game.unlockedCity = 0;
