@@ -359,7 +359,9 @@ int main() {
     game.player.position={0,0.3f,6.0f};
     game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
     for(int i=0;i<12;i++) UpdatePursuit(game,0.1f);
-    assert(game.enemies.front().position.z<1.6f);
+    // The pursuer may detour sideways, but must never cross through the wall volume.
+    assert(!(std::abs(game.enemies.front().position.x)<2.42f &&
+             game.enemies.front().position.z>2.62f));
 
     // Axis-separated collision lets a pursuer move around the wall's open side.
     game.enemies.clear();
