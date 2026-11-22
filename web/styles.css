@@ -52,3 +52,19 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
   .home-utilities{margin-top:6px}
   #sound-toggle{min-width:94px;padding:8px 9px}
 }
+
+.settings-open{position:absolute;top:max(12px,env(safe-area-inset-top));right:max(12px,env(safe-area-inset-right));z-index:4;border:1px solid #e8d0a477;background:#14202ddd;color:#f7e5c8;padding:9px 13px;font-size:10px;font-weight:900;letter-spacing:.14em}
+#settings.overlay{z-index:9;background:rgba(7,11,18,.84)}
+.settings-panel{width:min(440px,92vw);text-align:center}
+.settings-panel h1{font-size:clamp(34px,6vw,48px)}
+.settings-panel .muted{margin:8px auto 14px;max-width:290px}
+.settings-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.settings-actions .secondary{margin-top:10px}
+@media(max-height:440px){
+  .settings-panel{padding:12px 18px}
+  .settings-panel .eyebrow{margin:2px 0}
+  .settings-panel .muted{margin:4px auto 8px;font-size:10px}
+  .settings-panel h1{font-size:30px}
+  .settings-panel .primary,.settings-actions .secondary{margin-top:5px;padding:8px;font-size:10px}
+  .settings-open{top:8px;right:8px;padding:7px 9px;font-size:9px}
+}
