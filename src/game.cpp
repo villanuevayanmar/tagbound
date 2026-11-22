@@ -6,9 +6,15 @@ static const char* cityNames[5]={"PORT TOWN","MERCHANT TIER","CLOCKWORK FOUNDRY"
 const char* CityName(int c) { return cityNames[std::clamp(c,0,4)]; }
 static const char* bossNames[5]={"HARBOR WARDEN","GILDED CHARGER","FOUNDRY COLOSSUS","SPIRE SENTINEL","IMPERIAL REGENT"};
 const char* BossName(int c) { return bossNames[std::clamp(c,0,4)]; }
-Vector3 QuestTarget(int quest) {
-    static const Vector3 beacons[3]={{4,1.7f,6},{10,2.45f,13},{16,3.2f,20}};
-    return quest<3?beacons[std::clamp(quest,0,2)]:Vector3{22,3.95f,27};
+Vector3 QuestTarget(int city,int quest) {
+    static const Vector3 routes[5][4]={
+        {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},
+        {{-4,1.7f,6},{-10,2.45f,13},{-14,3.2f,19},{-18,3.95f,25}},
+        {{5,1.7f,3},{12,2.45f,8},{10,3.2f,16},{5,3.95f,24}},
+        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}},
+        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}}
+    };
+    return routes[std::clamp(city,0,4)][std::clamp(quest,0,3)];
 }
 float BossWindupDuration(int variant,bool enraged) {
     static const float duration[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
@@ -67,13 +73,15 @@ void BuildCity(GameState& g) {
     Color tint[5]={{73,132,135,255},{167,123,75,255},{91,119,132,255},{111,103,151,255},{143,76,69,255}};
     g.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},{44,49,59,255}});
     g.platforms.push_back({{0,0.0f,0},{8,0.5f,8},{106,84,68,255}});
-    g.platforms.push_back({{4,1.45f,6},{5,0.5f,5},tint[g.city]});
-    g.platforms.push_back({{10,2.2f,13},{5,0.5f,5},tint[g.city]});
-    g.platforms.push_back({{16,2.95f,20},{5,0.5f,5},tint[g.city]});
-    g.platforms.push_back({{22,3.7f,27},{8,0.5f,8},{160,139,96,255}});
-    // Decorative low-poly buildings, placed away from the quest route.
+    for(int quest=0;quest<3;quest++) {
+        Vector3 target=QuestTarget(g.city,quest);
+        g.platforms.push_back({{target.x,target.y-0.25f,target.z},{5,0.5f,5},tint[g.city]});
+    }
+    Vector3 gate=QuestTarget(g.city,3);
+    g.platforms.push_back({{gate.x,gate.y-0.25f,gate.z},{8,0.5f,8},{160,139,96,255}});
+    // Keep skyline buildings outside the central rooftop routes.
     for(int i=0;i<28;i++) {
-        float a=i*0.2244f, r=18.0f+(i%5)*4.2f;
+        float a=i*0.2244f+g.city*0.08f, r=38.0f+(i%3)*1.0f;
         float h=4.0f+(i*3%7)*1.45f+g.city*0.55f;
         Vector3 p={std::cos(a)*r,h*0.5f,std::sin(a)*r-3.0f};
         g.platforms.push_back({p,{4.5f,h,4.5f},Color{(unsigned char)std::min(235,(int)tint[g.city].r+(i%3)*8),(unsigned char)std::min(235,(int)tint[g.city].g+(i%4)*6),(unsigned char)std::min(235,(int)tint[g.city].b+(i%2)*9),255}});
@@ -103,7 +111,7 @@ void SetQuestProgress(GameState& g,int quest) {
         return;
     }
     float hp=280.0f+g.city*120.0f;
-    g.enemies.push_back({{22,3.95f,27},hp,hp,2.4f+g.city*0.38f,0,true,true});
+    g.enemies.push_back({QuestTarget(g.city,3),hp,hp,2.4f+g.city*0.38f,0,true,true});
     g.enemies.back().variant=g.city;
     g.bossUnlocked=true;
 }
