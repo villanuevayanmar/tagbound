@@ -19,8 +19,8 @@ struct Enemy {
 struct Player {
     Vector3 position{0,1,0}, velocity{0,0,0}, facing{0,0,1};
     float health=100, stamina=100, invulnerable=0;
-    float dashTime=0, dashCooldown=0;
-    bool wallRunning=false;
+    float dashTime=0, dashCooldown=0, vaultTime=0;
+    bool wallRunning=false, vaulting=false;
     int level=1, xp=0;
     PlayerClass playerClass=PlayerClass::Vanguard;
     Weapon weapon=Weapon::Sword;
