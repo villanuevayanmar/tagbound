@@ -45,7 +45,7 @@ struct GameState {
     std::vector<Enemy> enemies;
     std::vector<Projectile> projectiles;
     int city=0, unlockedCity=0, quest=0, totalQuests=3, defeated=0;
-    float danger=0, questTime=0, questLimit=110;
+    float danger=0, questTime=0, questLimit=110, beaconHoldTime=0;
     bool started=false, finished=false, bossUnlocked=false;
 };
 
@@ -62,6 +62,9 @@ Vector3 QuestTarget(int city,int quest);
 Vector3 QuestCheckpoint(int city,int quest);
 Vector3 QuestCheckpointFacing(int city,int quest);
 bool ReachedQuestBeacon(Vector3 position,int city,int quest);
+bool QuestRequiresHold(int city,int quest);
+float QuestHoldDuration(int city,int quest);
+bool UpdateQuestObjective(GameState& game,float dt);
 float BossWindupDuration(int variant,bool enraged=false);
 const char* WeaponName(Weapon weapon);
 Weapon ClassWeapon(PlayerClass playerClass);

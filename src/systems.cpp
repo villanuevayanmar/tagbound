@@ -559,6 +559,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         p.blocking=false; p.bowAiming=false;
         p.invulnerable=1.2f;
         g.questTime=0;
+        g.beaconHoldTime=0;
         g.danger=15;
     }
 }

@@ -23,6 +23,47 @@ bool ReachedQuestBeacon(Vector3 position,int city,int quest) {
     float dx=position.x-target.x, dz=position.z-target.z;
     return dx*dx+dz*dz<=3.4f*3.4f && std::abs(position.y-target.y)<=0.45f;
 }
+bool QuestRequiresHold(int city,int quest) {
+    static const bool holds[5][3]={
+        {false,true,false},
+        {true,false,false},
+        {false,false,true},
+        {false,true,false},
+        {true,false,true}
+    };
+    return city>=0&&city<5&&quest>=0&&quest<3?holds[city][quest]:false;
+}
+float QuestHoldDuration(int city,int quest) {
+    static const float durations[5][3]={
+        {0.0f,2.5f,0.0f},
+        {2.75f,0.0f,0.0f},
+        {0.0f,0.0f,3.25f},
+        {0.0f,3.5f,0.0f},
+        {3.75f,0.0f,4.0f}
+    };
+    return city>=0&&city<5&&quest>=0&&quest<3?durations[city][quest]:0.0f;
+}
+bool UpdateQuestObjective(GameState& g,float dt) {
+    if(g.quest<0||g.quest>=3) {
+        g.beaconHoldTime=0.0f;
+        return false;
+    }
+    if(!QuestRequiresHold(g.city,g.quest)) {
+        g.beaconHoldTime=0.0f;
+        return ReachedQuestBeacon(g.player.position,g.city,g.quest);
+    }
+    if(!ReachedQuestBeacon(g.player.position,g.city,g.quest)) {
+        g.beaconHoldTime=0.0f;
+        return false;
+    }
+    const float duration=QuestHoldDuration(g.city,g.quest);
+    g.beaconHoldTime=std::min(duration,g.beaconHoldTime+std::max(0.0f,dt));
+    if(g.beaconHoldTime+0.0001f>=duration) {
+        g.beaconHoldTime=0.0f;
+        return true;
+    }
+    return false;
+}
 Vector3 QuestCheckpoint(int city,int quest) {
     return quest>0?QuestTarget(city,quest-1):Vector3{0,0.3f,0};
 }
@@ -86,7 +127,7 @@ bool FindReinforcementSpawn(const GameState& g,Vector3 origin,Vector3& spawn) {
 }
 void BuildCity(GameState& g) {
     g.platforms.clear(); g.enemies.clear(); g.projectiles.clear();
-    g.quest=0; g.bossUnlocked=false; g.questTime=0; g.danger=0;
+    g.quest=0; g.bossUnlocked=false; g.questTime=0; g.beaconHoldTime=0; g.danger=0;
     g.questLimit=110.0f-g.city*7.0f;
     Color tint[5]={{73,132,135,255},{167,123,75,255},{91,119,132,255},{111,103,151,255},{143,76,69,255}};
     g.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},{44,49,59,255}});
@@ -118,7 +159,9 @@ void BuildCity(GameState& g) {
 }
 
 void SetQuestProgress(GameState& g,int quest) {
-    g.quest=std::clamp(quest,0,3);
+    const int nextQuest=std::clamp(quest,0,3);
+    if(nextQuest!=g.quest) g.beaconHoldTime=0.0f;
+    g.quest=nextQuest;
     if(g.quest<3) {
         g.bossUnlocked=false;
         if(g.quest>0) g.questLimit=100.0f-g.city*8.0f-g.quest*9.0f;

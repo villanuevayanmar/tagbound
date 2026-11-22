@@ -117,7 +117,7 @@ Production still serves commit `a15a767`, not the latest main.
 
 ## Exact next task
 
-1. Review city progression, checkpoint/respawn, quest variety, and boss encounters for the next concrete gameplay gap.
-2. Add a small, real objective variation to the beacon campaign rather than leaving every quest as the same reach-the-marker task.
-3. Add C++ regression coverage and hosted desktop/mobile checks for the selected objective.
-4. Continue merging tested work while monitoring Vercel's free deployment quota. Android testing remains pending until the latest production build is live.
+1. Finish hosted tests for `feat/varied-beacon-objectives`.
+2. Fix any Emscripten, C++ regression or Chromium failures, then merge only after the checks pass.
+3. Check main CI and ensure the generated `dist/` bundle is synchronized.
+4. Continue reviewing checkpoint/respawn and boss encounters while monitoring Vercel's free deployment quota. Android testing remains pending until the latest production build is live.

@@ -55,6 +55,55 @@ int main() {
         assert(length<0.001f || (near(facing.x,dx/length)&&near(facing.z,dz/length)));
     }
 
+    // Each city has a deliberate mix of reach and hold-beacon objectives.
+    const bool holdStages[5][3]={
+        {false,true,false},
+        {true,false,false},
+        {false,false,true},
+        {false,true,false},
+        {true,false,true}
+    };
+    for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
+        assert(QuestRequiresHold(city,quest)==holdStages[city][quest]);
+        if(holdStages[city][quest]) {
+            float duration=QuestHoldDuration(city,quest);
+            assert(duration>=2.5f&&duration<=4.0f);
+        } else assert(near(QuestHoldDuration(city,quest),0.0f));
+    }
+
+    // Reach objectives complete as soon as the beacon radius is entered.
+    GameState reachObjective;
+    BuildCity(reachObjective);
+    reachObjective.player.position=QuestTarget(0,0);
+    assert(!QuestRequiresHold(0,0));
+    assert(UpdateQuestObjective(reachObjective,0.016f));
+    assert(near(reachObjective.beaconHoldTime,0.0f));
+
+    // Hold objectives accumulate only while the player remains inside the beacon.
+    GameState holdObjective;
+    BuildCity(holdObjective);
+    SetQuestProgress(holdObjective,1);
+    const Vector3 holdTarget=QuestTarget(0,1);
+    const float holdDuration=QuestHoldDuration(0,1);
+    holdObjective.player.position=holdTarget;
+    assert(!UpdateQuestObjective(holdObjective,holdDuration*0.4f));
+    assert(near(holdObjective.beaconHoldTime,holdDuration*0.4f));
+    holdObjective.player.position.x+=5.0f;
+    assert(!UpdateQuestObjective(holdObjective,0.1f));
+    assert(near(holdObjective.beaconHoldTime,0.0f));
+    holdObjective.player.position=holdTarget;
+    assert(!UpdateQuestObjective(holdObjective,holdDuration*0.5f));
+    assert(UpdateQuestObjective(holdObjective,holdDuration*0.5f+0.01f));
+    assert(near(holdObjective.beaconHoldTime,0.0f));
+
+    // Changing the quest or rebuilding the city never carries old capture time forward.
+    holdObjective.beaconHoldTime=0.9f;
+    SetQuestProgress(holdObjective,2);
+    assert(near(holdObjective.beaconHoldTime,0.0f));
+    holdObjective.beaconHoldTime=0.9f;
+    BuildCity(holdObjective);
+    assert(near(holdObjective.beaconHoldTime,0.0f));
+
     // Boss warning countdowns use the same durations as combat state transitions.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     for(int variant=0;variant<5;variant++) {
@@ -917,6 +966,7 @@ int main() {
                 player.climbing=true;
                 player.blocking=true;
                 player.bowAiming=true;
+                checkpointGame.beaconHoldTime=1.0f;
                 int xpBefore=player.xp, levelBefore=player.level;
                 int defeatedBefore=checkpointGame.defeated;
                 UpdateCombat(checkpointGame,idle,0.016f);
@@ -927,6 +977,7 @@ int main() {
                 assert(player.grounded&&!player.wallRunning&&!player.vaulting&&!player.ledgeGrabbing&&!player.climbing);
                 assert(!player.blocking&&!player.bowAiming&&near(player.dashTime,0));
                 assert(near(player.invulnerable,1.2f));
+                assert(near(checkpointGame.beaconHoldTime,0.0f));
                 assert(checkpointGame.city==city&&checkpointGame.quest==quest);
                 assert(player.xp==xpBefore&&player.level==levelBefore&&checkpointGame.defeated==defeatedBefore);
                 assert(near(checkpointGame.questTime,0));
@@ -969,6 +1020,6 @@ int main() {
     closedSpawn.platforms.push_back({{0,3.0f,0},{120,6.0f,120},GRAY});
     assert(!FindReinforcementSpawn(closedSpawn,{0,0.3f,0},spawn));
 
-    std::cout << "PASS: city setup, names, XP/skills, movement, jump, dash, melee combat, and boss progression.\\n";
+    std::cout << "PASS: city setup, mixed beacon objectives, hold resets, XP/skills, movement, combat, and boss progression.\\n";
     return 0;
 }
