@@ -61,7 +61,7 @@ int main() {
     UpdateMovement(game,vault,camera,0.01f);
     assert(game.player.vaulting);
     assert(game.player.vaultTime > 0.4f);
-    assert(game.player.velocity.y > 10.0f);
+    assert(game.player.velocity.y > 12.0f);
     assert(game.player.stamina < 100.0f);
     vault.jump = false;
     UpdateMovement(game,vault,camera,0.2f);
