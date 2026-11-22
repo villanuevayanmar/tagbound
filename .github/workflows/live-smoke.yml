@@ -138,6 +138,13 @@ jobs:
             await page.screenshot({ path: 'live-review/production-gameplay.png', fullPage: true });
 
             await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+            // The first document installs the worker but is not controlled by it.
+            // Reload once after activation so this page is served under the worker.
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              { timeout: 45000 }
+            );
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
