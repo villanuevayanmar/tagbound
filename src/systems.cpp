@@ -32,6 +32,8 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     p.invulnerable=std::max(0.0f,p.invulnerable-dt);
     p.dashCooldown=std::max(0.0f,p.dashCooldown-dt);
     p.dashTime=std::max(0.0f,p.dashTime-dt);
+    p.vaultTime=std::max(0.0f,p.vaultTime-dt);
+    p.vaulting=p.vaultTime>0;
 
     cameraYaw-=c.lookX*0.008f;
     cameraPitch=std::clamp(cameraPitch-c.lookY*0.008f,-0.48f,0.42f);
@@ -79,15 +81,34 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
         p.velocity.x=wallAway.x*5.5f; p.velocity.z=wallAway.z*5.5f;
         p.grounded=false; p.wallRunning=false;
     } else if(c.jump&&p.grounded&&p.stamina>=8) {
-        p.velocity.y=p.playerClass==PlayerClass::Skirmisher?10.0f:8.8f;
-        p.grounded=false; p.stamina-=8;
+        bool vaulted=false;
         Vector3 wallAway{};
         for(const auto& b:g.platforms) {
-            if(NearWall(p.position,b,wallAway)&&Vector3DotProduct(p.facing,Vector3Scale(wallAway,-1.0f))>0.25f) {
-                p.velocity.x=p.facing.x*5.0f; p.velocity.z=p.facing.z*5.0f;
+            float rise=b.position.y+b.size.y*0.5f-p.position.y;
+            bool facingWall=NearWall(p.position,b,wallAway)&&
+                Vector3DotProduct(p.facing,Vector3Scale(wallAway,-1.0f))>0.25f;
+            if(facingWall&&rise>0.25f&&rise<=1.55f) {
+                p.velocity.y=11.0f;
+                p.velocity.x=p.facing.x*6.0f;
+                p.velocity.z=p.facing.z*6.0f;
+                p.vaultTime=0.46f;
+                p.vaulting=true;
+                p.stamina-=10;
+                vaulted=true;
                 break;
             }
         }
+        if(!vaulted) {
+            p.velocity.y=p.playerClass==PlayerClass::Skirmisher?10.0f:8.8f;
+            p.stamina-=8;
+            for(const auto& b:g.platforms) {
+                if(NearWall(p.position,b,wallAway)&&Vector3DotProduct(p.facing,Vector3Scale(wallAway,-1.0f))>0.25f) {
+                    p.velocity.x=p.facing.x*5.0f; p.velocity.z=p.facing.z*5.0f;
+                    break;
+                }
+            }
+        }
+        p.grounded=false;
     }
 
     p.velocity.y-=22.0f*dt;
