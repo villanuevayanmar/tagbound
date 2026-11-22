@@ -280,9 +280,9 @@ jobs:
             const resumedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
             if (resumedState !== 1) throw new Error('C++ simulation did not resume after closing Settings.');
             await page.waitForFunction(
-              () => window.TagboundAudio?.getMusicState?.() === 'playing' &&
-                window.TagboundAudio?.getMusicNoteCount?.() > pausedMusicNotes,
-              null,
+              (previousCount) => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previousCount,
+              pausedMusicNotes,
               { timeout: 5000 }
             );
 
@@ -450,9 +450,9 @@ jobs:
             }
             await mobilePage.locator('#resume').tap();
             await mobilePage.waitForFunction(
-              () => window.TagboundAudio?.getMusicState?.() === 'playing' &&
-                window.TagboundAudio?.getMusicNoteCount?.() > pausedMobileMusicNotes,
-              null,
+              (previousCount) => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previousCount,
+              pausedMobileMusicNotes,
               { timeout: 5000 }
             );
             if (await mobilePage.locator('#settings-install').evaluate(e => e.getClientRects().length !== 0)) {
