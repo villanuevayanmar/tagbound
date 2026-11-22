@@ -168,11 +168,13 @@ static void Frame() {
         if(saveCooldown>4.0f) { Save(); saveCooldown=0; }
         if(game.finished) { Save(); showEnding(); }
     }
+    BeginDrawing();
     DrawGame(game,camera);
     if(!game.started) {
         DrawRectangle(0,0,GetScreenWidth(),GetScreenHeight(),Fade(BLACK,0.4f));
         DrawText("A FUGITIVE. FIVE CITIES. NO WAY BACK.",GetScreenWidth()/2-245,GetScreenHeight()/2-12,22,GOLD);
     }
+    EndDrawing();
 }
 
 int main() {
