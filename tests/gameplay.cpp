@@ -17,6 +17,18 @@ int main() {
     assert(std::string(CityName(4)) == "IMPERIAL CAPITAL");
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
+    // Each campaign city builds its expected pursuer count and full scene.
+    for (int city = 0; city < 5; ++city) {
+        game.city = city;
+        BuildCity(game);
+        assert(game.platforms.size() == 34);
+        assert(game.enemies.size() == static_cast<size_t>(2 + city * 2));
+        assert(game.quest == 0);
+        assert(!game.bossUnlocked);
+    }
+    game.city = 0;
+    BuildCity(game);
+
     UpdateProgression(game, 100);
     assert(game.player.level == 2);
     UpdateProgression(game, 200);
