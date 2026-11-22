@@ -61,6 +61,39 @@ static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to) {
     }
     return true;
 }
+
+static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target,Vector3& waypoint) {
+    Vector3 from=e.position; from.y+=1.0f;
+    Vector3 to=target; to.y+=1.0f;
+    const Platform* blocker=nullptr;
+    float nearest=1.0f;
+    for(const auto& platform:g.platforms) {
+        float hit=0.0f;
+        if(SegmentPlatform(from,to,platform,hit)&&hit<nearest) {
+            nearest=hit;
+            blocker=&platform;
+        }
+    }
+    if(!blocker) return false;
+
+    float clearance=(e.boss?0.62f:0.42f)+0.72f;
+    float minX=blocker->position.x-blocker->size.x*0.5f-clearance;
+    float maxX=blocker->position.x+blocker->size.x*0.5f+clearance;
+    float minZ=blocker->position.z-blocker->size.z*0.5f-clearance;
+    float maxZ=blocker->position.z+blocker->size.z*0.5f+clearance;
+    Vector3 corners[4]={
+        {minX,e.position.y,minZ},{maxX,e.position.y,minZ},
+        {minX,e.position.y,maxZ},{maxX,e.position.y,maxZ}
+    };
+    float best=1000000.0f;
+    bool found=false;
+    for(Vector3 corner:corners) {
+        if(!HasLineOfSight(g,e.position,corner)||!HasLineOfSight(g,corner,target)) continue;
+        float route=Distance(e.position,corner)+Distance(corner,target);
+        if(route<best) { best=route; waypoint=corner; found=true; }
+    }
+    return found;
+}
 static bool OverlapsWall(Vector3 feet,const Platform& b,float radius=0.34f,float height=1.72f) {
     bool x=feet.x+radius>b.position.x-b.size.x*0.5f && feet.x-radius<b.position.x+b.size.x*0.5f;
     bool z=feet.z+radius>b.position.z-b.size.z*0.5f && feet.z-radius<b.position.z+b.size.z*0.5f;
@@ -336,19 +369,12 @@ void UpdatePursuit(GameState& g,float dt) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f) {
-                Vector3 desired=Vector3Scale(Vector3Normalize(to),e.speed*dt);
-                Vector3 before=e.position;
-                MoveEnemy(g,e,desired);
-                float moved=std::abs(e.position.x-before.x)+std::abs(e.position.z-before.z);
-                float intended=std::abs(desired.x)+std::abs(desired.z);
-                if(moved<intended*0.55f) {
-                    Vector3 side={to.z/horizontal,0,-to.x/horizontal};
-                    Vector3 detour=Vector3Scale(side,e.speed*dt);
-                    Vector3 detourStart=e.position;
-                    MoveEnemy(g,e,detour);
-                    float detourMoved=std::abs(e.position.x-detourStart.x)+std::abs(e.position.z-detourStart.z);
-                    if(detourMoved<intended*0.55f) MoveEnemy(g,e,Vector3Scale(detour,-1.0f));
-                }
+                Vector3 destination=p.position,waypoint{};
+                if(!HasLineOfSight(g,e.position,p.position)&&FindPursuitWaypoint(g,e,p.position,waypoint))
+                    destination=waypoint;
+                Vector3 route=Vector3Subtract(destination,e.position); route.y=0;
+                if(Vector3Length(route)>0.001f)
+                    MoveEnemy(g,e,Vector3Scale(Vector3Normalize(route),e.speed*dt));
             } else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
                 if(HasLineOfSight(g,e.position,p.position)) {
                     e.cooldown=1.0f;
