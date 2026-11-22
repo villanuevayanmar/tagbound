@@ -134,8 +134,11 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
 
 static void DrawEnemyModel(const Enemy& e,float time) {
     Vector3 forward={0,0,-1}, right={1,0,0};
-    Color hide=e.boss?Color{82,45,53,255}:Color{105,62,52,255};
-    Color armor=e.boss?Color{91,91,105,255}:Color{72,76,78,255};
+    static const Color bossHide[5]={{82,45,53,255},{91,66,49,255},{58,68,83,255},{50,77,78,255},{105,46,48,255}};
+    static const Color bossArmor[5]={{91,91,105,255},{145,111,67,255},{105,119,133,255},{66,113,111,255},{153,79,72,255}};
+    int variant=std::clamp(e.variant,0,4);
+    Color hide=e.boss?bossHide[variant]:Color{105,62,52,255};
+    Color armor=e.boss?bossArmor[variant]:Color{72,76,78,255};
     Color skin=e.boss?Color{160,111,87,255}:Color{169,128,103,255};
     if(e.hitTime>0) { hide=Color{255,196,120,255}; armor=Color{255,224,174,255}; skin=WHITE; }
     float scale=e.boss?1.22f:0.82f;
@@ -166,6 +169,19 @@ static void DrawEnemyModel(const Enemy& e,float time) {
     }
     if(e.hitTime>0) DrawSphere(BodyPoint(origin,right,forward,0,1.25f*scale,0.28f*scale),0.13f*scale,GOLD);
     if(e.boss) {
+        if(variant==1) {
+            for(int side=-1;side<=1;side+=2)
+                DrawCylinderEx(BodyPoint(origin,right,forward,side*0.17f*scale,1.78f*scale,0),
+                               BodyPoint(origin,right,forward,side*0.28f*scale,2.08f*scale,0.02f),0.09f*scale,0.015f,6,GOLD);
+        } else if(variant==2) {
+            DrawCubeV(BodyPoint(origin,right,forward,0,1.22f*scale,-0.18f),{0.78f*scale,0.84f*scale,0.18f*scale},armor);
+        } else if(variant==3) {
+            DrawCubeV(BodyPoint(origin,right,forward,0,0.96f*scale,-0.22f),{0.62f*scale,1.15f*scale,0.12f*scale},hide);
+        } else if(variant==4) {
+            for(int side=-1;side<=1;side++)
+                DrawCylinderEx(BodyPoint(origin,right,forward,side*0.16f*scale,1.94f*scale,0),
+                               BodyPoint(origin,right,forward,side*0.16f*scale,2.2f*scale,0),0.07f*scale,0.0f,6,GOLD);
+        }
         DrawSphere(BodyPoint(origin,right,forward,0,1.95f*scale,0),0.10f*scale,e.phase==BossPhase::Windup?ORANGE:RED);
     } else {
         DrawSphere(BodyPoint(origin,right,forward,0,1.38f*scale,0.25f*scale),0.055f*scale,RED);
@@ -246,6 +262,11 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
 
     for(const auto& e:g.enemies) {
         if(!e.alive) continue;
+        if(e.boss&&(e.phase==BossPhase::Windup||e.phase==BossPhase::Strike)) {
+            static const float warningRadius[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+            Color warning=e.phase==BossPhase::Windup?Color{255,166,56,65}:Color{238,62,52,80};
+            DrawCircle3D({e.position.x,0.025f,e.position.z},warningRadius[std::clamp(e.variant,0,4)],{1,0,0},90,warning);
+        }
         DrawEnemyModel(e,animationClock);
         float width=e.boss?2.0f:1.0f;
         DrawCubeV({e.position.x,e.position.y+2.3f,e.position.z},{width,0.09f,0.1f},DARKGRAY);
@@ -276,7 +297,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawRectangle(w-233,67,(int)(205*g.danger/100),8,ORANGE);
     DrawRectangle(12,h-78,390,65,Fade(BLACK,0.7f));
     DrawText(TextFormat("%s  |  %s",CityName(g.city),WeaponName(g.player.weapon)),24,h-69,16,GOLD);
-    DrawText(g.quest<3?TextFormat("QUEST %d/3  -  REACH THE BEACON",g.quest+1):"BOSS GATE OPEN  -  DEFEAT THE CITY WARDEN",24,h-44,14,WHITE);
+    DrawText(g.quest<3?TextFormat("QUEST %d/3  -  REACH THE BEACON",g.quest+1):TextFormat("BOSS GATE OPEN  -  %s",BossName(g.city)),24,h-44,14,WHITE);
     DrawText(TextFormat("TAGGERS %d",(int)std::count_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e){return e.alive&&!e.boss;})),24,h-24,12,LIGHTGRAY);
     if(g.finished) {
         DrawRectangle(0,0,w,h,Fade(BLACK,0.7f));
