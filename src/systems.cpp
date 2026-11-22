@@ -365,7 +365,9 @@ void UpdatePursuit(GameState& g,float dt) {
         e.hitTime=std::max(0.0f,e.hitTime-dt);
         e.stunTime=std::max(0.0f,e.stunTime-dt);
         if(d<25) nearby++;
+        if(!e.boss&&(d>1.45f||e.stunTime>0)) e.attackWindup=0;
         if(e.stunTime>0) {
+            e.attackWindup=0;
             MoveEnemy(g,e,Vector3Scale(e.knockback,dt));
             e.knockback=Vector3Scale(e.knockback,std::max(0.0f,1.0f-8.0f*dt));
         } else if(d<24) {
@@ -378,16 +380,21 @@ void UpdatePursuit(GameState& g,float dt) {
                 Vector3 route=Vector3Subtract(destination,e.position); route.y=0;
                 if(Vector3Length(route)>0.001f)
                     MoveEnemy(g,e,Vector3Scale(Vector3Normalize(route),e.speed*dt));
-            } else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
-                if(HasLineOfSight(g,e.position,p.position)) {
-                    e.cooldown=1.0f;
-                    float guardCost=p.playerClass==PlayerClass::Warden?5.0f:8.0f;
-                    if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
-                    else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
+            } else if(!e.boss) {
+                bool canStrike=d<=1.45f&&HasLineOfSight(g,e.position,p.position);
+                if(!canStrike||e.cooldown>0) e.attackWindup=0;
+                else if(e.attackWindup<=0) e.attackWindup=0.42f;
+                else {
+                    e.attackWindup=std::max(0.0f,e.attackWindup-dt);
+                    if(e.attackWindup<=0) {
+                        e.cooldown=1.0f;
+                        float guardCost=p.playerClass==PlayerClass::Warden?5.0f:8.0f;
+                        if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
+                        else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
+                    }
                 }
             }
         }
-        e.cooldown=std::max(0.0f,e.cooldown-dt);
         if(e.boss) {
             static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
             static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};

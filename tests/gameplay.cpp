@@ -425,13 +425,19 @@ int main() {
     game.player.stamina = 100;
     game.player.blocking = true;
     game.enemies.push_back({{0,0.3f,0.8f},40,40,0,0,false,true});
-    UpdatePursuit(game, 0.016f);
-    assert(near(game.player.health, 100.0f));
-    assert(near(game.player.stamina, 92.0f));
-    game.enemies.front().cooldown = 0;
-    game.player.stamina = 0;
-    UpdatePursuit(game, 0.016f);
-    assert(near(game.player.health, 89.0f));
+    UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,100.0f));
+    assert(near(game.player.stamina,100.0f));
+    assert(game.enemies.front().attackWindup>0.35f);
+    UpdatePursuit(game,0.45f);
+    assert(near(game.player.health,100.0f));
+    assert(near(game.player.stamina,92.0f));
+    game.enemies.front().cooldown=0;
+    game.player.stamina=0;
+    UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,100.0f));
+    UpdatePursuit(game,0.45f);
+    assert(near(game.player.health,89.0f));
     game.player.blocking = false;
 
     // Warden's shield reduces guard stamina costs against both taggers and bosses.
@@ -444,6 +450,9 @@ int main() {
     game.player.blocking=true;
     game.enemies.push_back({{0,0.3f,0.8f},40,40,0,0,false,true});
     UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,100.0f));
+    assert(near(game.player.stamina,100.0f));
+    UpdatePursuit(game,0.45f);
     assert(near(game.player.health,100.0f));
     assert(near(game.player.stamina,95.0f));
 
@@ -470,6 +479,9 @@ int main() {
     game.player.blocking=true;
     game.enemies.push_back({{0,0.3f,0.8f},40,40,0,0,false,true});
     UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,100.0f));
+    assert(near(game.player.stamina,4.0f));
+    UpdatePursuit(game,0.45f);
     assert(near(game.player.health,89.0f));
     assert(near(game.player.stamina,4.0f));
     game.player.blocking=false;
@@ -484,10 +496,19 @@ int main() {
     game.enemies.push_back({{0,0.3f,1.0f},40,40,0,0,false,true});
     UpdatePursuit(game,0.016f);
     assert(near(game.player.health,100.0f));
+    assert(near(game.enemies.front().attackWindup,0.0f));
 
-    // The same pursuer hits normally once the obstructing wall is removed.
+    // Breaking line of sight cancels an active warning and requires a fresh windup.
     game.platforms.clear();
     UpdatePursuit(game,0.016f);
+    assert(game.enemies.front().attackWindup>0.35f);
+    game.platforms.push_back({{0,1.5f,0.5f},{4,3.0f,0.4f},GRAY});
+    UpdatePursuit(game,0.05f);
+    assert(near(game.enemies.front().attackWindup,0.0f));
+    game.platforms.clear();
+    UpdatePursuit(game,0.016f);
+    assert(game.enemies.front().attackWindup>0.35f);
+    UpdatePursuit(game,0.45f);
     assert(near(game.player.health,89.0f));
 
     game.enemies.clear();

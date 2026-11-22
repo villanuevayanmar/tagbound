@@ -262,6 +262,7 @@ static void DrawEnemyModel(const Enemy& e,float time) {
     if(e.hitTime>0) { hide=Color{255,196,120,255}; armor=Color{255,224,174,255}; skin=WHITE; }
     float scale=e.boss?1.22f:0.82f;
     float swing=std::sin(time*5.0f+e.position.x)*0.18f;
+    if(!e.boss&&e.attackWindup>0) swing=0.55f;
     if(e.phase==BossPhase::Windup) swing=0.55f;
     if(e.phase==BossPhase::Strike) swing=-0.42f;
     Vector3 origin=e.position;
@@ -432,6 +433,11 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
 
     for(const auto& e:g.enemies) {
         if(!e.alive) continue;
+        if(!e.boss&&e.attackWindup>0) {
+            float pulse=0.9f+0.1f*std::sin(animationClock*8.0f);
+            DrawCircle3D({e.position.x,e.position.y+0.05f,e.position.z},1.45f*pulse,
+                         {1,0,0},48,Color{255,150,55,85});
+        }
         if(e.boss&&e.hp<=e.maxHp*0.5f) {
             float pulse=0.9f+0.1f*std::sin(animationClock*5.0f);
             DrawCircle3D({e.position.x,e.position.y+0.05f,e.position.z},0.88f*pulse,
