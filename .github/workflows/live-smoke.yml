@@ -1,0 +1,232 @@
+name: TAGBOUND live production smoke test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/live-smoke.yml'
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Production URL to test
+        required: false
+        default: https://tagbound.vercel.app
+        type: string
+
+concurrency:
+  group: tagbound-live-smoke
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  live-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Test the deployed production game
+        env:
+          BASE_URL: ${{ github.event.inputs.base_url || 'https://tagbound.vercel.app' }}
+        run: |
+          mkdir -p live-review
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+
+          const baseUrl = process.env.BASE_URL;
+          const browser = await chromium.launch({
+            headless: true,
+            args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist']
+          });
+          const errors = [];
+          const recordErrors = page => {
+            page.on('pageerror', error => errors.push(error.message));
+            page.on('console', message => {
+              if (message.type() === 'error') errors.push(message.text());
+            });
+          };
+
+          try {
+            const context = await browser.newContext();
+            const page = await context.newPage();
+            recordErrors(page);
+
+            const response = await page.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
+            if (!response?.ok()) throw new Error('Production page did not return HTTP 200.');
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              { timeout: 45000 }
+            );
+
+            const runtime = await page.evaluate(() => {
+              const canvas = document.querySelector('#canvas');
+              const install = document.querySelector('#install');
+              const rect = install?.getBoundingClientRect();
+              return {
+                canvas: !!canvas,
+                webAssembly: typeof WebAssembly === 'object',
+                webgl: !!(canvas?.getContext('webgl2') || canvas?.getContext('webgl')),
+                introVisible: !document.querySelector('#intro').classList.contains('hidden'),
+                installVisible: !!install && !install.hidden && rect.width > 0 && rect.height > 0,
+                floatingInstallPresent: !!document.querySelector('#install-float'),
+                installOutsideHome: [...document.querySelectorAll('[id^="install"]')]
+                  .some(element => !document.querySelector('#intro').contains(element))
+              };
+            });
+            const classCards = await page.locator('.class-card').allTextContents();
+            if (!runtime.canvas || !runtime.webAssembly || !runtime.webgl || !runtime.introVisible ||
+                !runtime.installVisible || runtime.floatingInstallPresent || runtime.installOutsideHome ||
+                classCards.length !== 3) {
+              throw new Error('Live startup or home-screen check failed: ' + JSON.stringify({ runtime, classCards }));
+            }
+
+            await page.screenshot({ path: 'live-review/production-home.png', fullPage: true });
+            await page.locator('#sound-toggle').click();
+            const muted = await page.evaluate(() => ({
+              label: document.querySelector('#sound-toggle').textContent,
+              saved: localStorage.getItem('tagbound-sound')
+            }));
+            if (muted.label !== 'SOUND: OFF' || muted.saved !== 'off') {
+              throw new Error('Live sound preference did not persist: ' + JSON.stringify(muted));
+            }
+
+            await page.locator('[data-class="1"]').click();
+            await page.locator('#start').click();
+            await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', { timeout: 5000 });
+
+            const gameplay = await page.evaluate(() => ({
+              canvas: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
+              installHidden: document.querySelector('#install')?.getClientRects().length === 0
+            }));
+            if (!gameplay.canvas.width || !gameplay.canvas.height || gameplay.save?.klass !== 1 ||
+                gameplay.save?.city !== 0 || gameplay.save?.quest !== 0 || !gameplay.installHidden) {
+              throw new Error('Live class/start/save or install visibility check failed: ' + JSON.stringify(gameplay));
+            }
+
+            await page.evaluate(() => {
+              const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
+              save.quest = 3;
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            });
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              { timeout: 45000 }
+            );
+            await page.locator('#start').click();
+            await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const restored = await page.evaluate(() => ({
+              quest: Module.ccall('GetQuestProgress', 'number', [], []),
+              bosses: Module.ccall('GetActiveBossCount', 'number', [], [])
+            }));
+            if (restored.quest !== 3 || restored.bosses !== 1) {
+              throw new Error('Live saved boss-gate restoration failed: ' + JSON.stringify(restored));
+            }
+            await page.screenshot({ path: 'live-review/production-gameplay.png', fullPage: true });
+
+            await page.evaluate(async () => { await navigator.serviceWorker.ready; });
+            await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
+            const cacheState = await page.evaluate(async () => {
+              const keys = await caches.keys();
+              const cache = await caches.open('tagbound-v24');
+              const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
+                '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
+              const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
+              return { keys, cached };
+            });
+            if (!cacheState.keys.includes('tagbound-v24') || cacheState.cached.some(value => !value)) {
+              throw new Error('Live service-worker precache failed: ' + JSON.stringify(cacheState));
+            }
+
+            await context.setOffline(true);
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              { timeout: 30000 }
+            );
+            await context.setOffline(false);
+
+            const mobileContext = await browser.newContext({
+              viewport: { width: 844, height: 390 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const mobilePage = await mobileContext.newPage();
+            recordErrors(mobilePage);
+            const mobileResponse = await mobilePage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
+            if (!mobileResponse?.ok()) throw new Error('Mobile production page did not return HTTP 200.');
+            await mobilePage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              { timeout: 45000 }
+            );
+
+            const mobile = await mobilePage.evaluate(() => ({
+              controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
+              installVisible: document.querySelector('#install')?.getClientRects().length > 0,
+              floatingInstallPresent: !!document.querySelector('#install-float'),
+              actionCount: document.querySelectorAll('#touch-controls .action').length,
+              weaponButtonPresent: !!document.querySelector('#touch-controls [data-bit="128"]'),
+              startVisible: (() => {
+                const rect = document.querySelector('#start').getBoundingClientRect();
+                return rect.top >= 0 && rect.bottom <= innerHeight;
+              })()
+            }));
+            if (!mobile.controlsVisible || !mobile.installVisible || mobile.floatingInstallPresent ||
+                mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.startVisible) {
+              throw new Error('Live mobile layout check failed: ' + JSON.stringify(mobile));
+            }
+
+            await mobilePage.screenshot({ path: 'live-review/production-mobile-home.png', fullPage: true });
+            await mobilePage.locator('#start').tap();
+            const mobileInstallHidden = await mobilePage.locator('#install')
+              .evaluate(element => element.getClientRects().length === 0);
+            if (!mobileInstallHidden) throw new Error('Install option remained visible during mobile gameplay.');
+            await mobilePage.locator('[data-bit="4"]').tap();
+            await mobilePage.waitForTimeout(1200);
+            await mobilePage.screenshot({ path: 'live-review/production-mobile-gameplay.png', fullPage: true });
+            await mobileContext.close();
+
+            const portraitContext = await browser.newContext({
+              viewport: { width: 390, height: 844 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const portraitPage = await portraitContext.newPage();
+            await portraitPage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
+            const portraitGuidance = await portraitPage.evaluate(() => ({
+              visible: !document.querySelector('#rotate').classList.contains('hidden'),
+              message: document.querySelector('#rotate strong')?.textContent || ''
+            }));
+            if (!portraitGuidance.visible || !portraitGuidance.message.includes('ROTATE')) {
+              throw new Error('Live portrait rotation guidance failed: ' + JSON.stringify(portraitGuidance));
+            }
+            await portraitContext.close();
+
+            if (errors.length) throw new Error('Live browser errors: ' + errors.join(' | '));
+            console.log('PASS: live production startup, WebAssembly/WebGL, class selection, gameplay, save restore, install visibility, service-worker cache, offline reload, mobile controls and portrait guidance.');
+          } finally {
+            await browser.close();
+          }
+          JS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tagbound-live-review
+          path: live-review/
+          if-no-files-found: error
+          retention-days: 3
