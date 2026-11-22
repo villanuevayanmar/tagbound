@@ -203,7 +203,7 @@ jobs:
               startVisible: (() => { const r=document.querySelector('#start').getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })(),
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
-            if (!mobile.controlsVisible || mobile.actionCount !== 8 || !mobile.rotateHidden ||
+            if (!mobile.controlsVisible || mobile.actionCount !== 7 || mobilePage.locator('[data-bit="128"]').count() !== 0 || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
