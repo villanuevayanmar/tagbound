@@ -447,15 +447,24 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
             static const float warningRadius[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
             Color warning=e.phase==BossPhase::Windup?Color{255,166,56,65}:Color{238,62,52,80};
             int variant=std::clamp(e.variant,0,4);
-            if(variant==1||variant==3) {
+            if(variant==0||variant==1||variant==3) {
                 Vector3 direction=e.strikeDirection; direction.y=0;
                 float length=Vector3Length(direction);
                 direction=length>0.001f?Vector3Scale(direction,1.0f/length):Vector3{0,0,1};
                 Vector3 origin=e.strikeOrigin;
                 Vector3 start={origin.x,origin.y+0.06f,origin.z};
-                Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
-                float width=variant==1?0.38f:0.45f;
-                DrawCylinderEx(start,end,width,width*0.75f,8,warning);
+                if(variant==0) {
+                    Vector3 right={direction.z,0,-direction.x};
+                    Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
+                    Vector3 side=Vector3Scale(right,warningRadius[variant]*0.38f);
+                    DrawCylinderEx(start,end,0.13f,0.13f,8,warning);
+                    DrawCylinderEx(start,Vector3Add(end,side),0.055f,0.055f,6,warning);
+                    DrawCylinderEx(start,Vector3Subtract(end,side),0.055f,0.055f,6,warning);
+                } else {
+                    Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
+                    float width=variant==1?0.38f:0.45f;
+                    DrawCylinderEx(start,end,width,width*0.75f,8,warning);
+                }
             } else {
                 DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius[variant],{1,0,0},90,warning);
             }
