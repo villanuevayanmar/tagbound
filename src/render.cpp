@@ -262,6 +262,32 @@ static void DrawEnemyModel(const Enemy& e,float time) {
                 DrawCylinderEx(BodyPoint(origin,right,forward,side*0.16f*scale,1.94f*scale,0),
                                BodyPoint(origin,right,forward,side*0.16f*scale,2.2f*scale,0),0.07f*scale,0.0f,6,GOLD);
         }
+        // Give each city's boss a readable weapon or silhouette at gameplay distance.
+        if(variant==0) {
+            Vector3 grip=BodyPoint(origin,right,forward,-0.48f*scale,0.76f*scale,0.12f);
+            Vector3 anchor=Vector3Add(grip,{0.0f,-0.72f*scale,0.0f});
+            DrawCylinderEx(grip,anchor,0.075f*scale,0.06f*scale,7,BROWN);
+            DrawCubeV(Vector3Add(anchor,{0.0f,-0.18f*scale,0.0f}),{0.48f*scale,0.30f*scale,0.18f*scale},LIGHTGRAY);
+            DrawCubeV(Vector3Add(anchor,{-0.22f*scale,0.02f*scale,0.0f}),{0.12f*scale,0.38f*scale,0.18f*scale},LIGHTGRAY);
+        } else if(variant==2) {
+            Vector3 grip=BodyPoint(origin,right,forward,0.48f*scale,0.78f*scale,0.08f);
+            Vector3 head=Vector3Add(grip,{0.0f,0.82f*scale,0.0f});
+            DrawCylinderEx(grip,head,0.075f*scale,0.06f*scale,7,{76,61,49,255});
+            DrawCubeV(head,{0.58f*scale,0.52f*scale,0.48f*scale},{112,124,132,255});
+            DrawCubeV(Vector3Add(head,{0.0f,0.0f,0.25f*scale}),{0.28f*scale,0.28f*scale,0.10f*scale},ORANGE);
+        } else if(variant==3) {
+            for(int side=-1;side<=1;side+=2) {
+                DrawCubeV(BodyPoint(origin,right,forward,side*0.38f*scale,1.35f*scale,-0.30f*scale),
+                          {0.34f*scale,0.92f*scale,0.16f*scale},armor);
+                DrawCylinderEx(BodyPoint(origin,right,forward,side*0.42f*scale,1.72f*scale,-0.28f*scale),
+                               BodyPoint(origin,right,forward,side*0.58f*scale,2.12f*scale,-0.32f*scale),
+                               0.075f*scale,0.0f,6,GOLD);
+            }
+        } else if(variant==4) {
+            DrawSphere(BodyPoint(origin,right,forward,0,1.18f*scale,0.28f*scale),0.14f*scale,GOLD);
+            DrawCubeV(BodyPoint(origin,right,forward,0,0.98f*scale,0.23f*scale),
+                      {0.40f*scale,0.08f*scale,0.08f*scale},GOLD);
+        }
         DrawSphere(BodyPoint(origin,right,forward,0,1.95f*scale,0),0.10f*scale,e.phase==BossPhase::Windup?ORANGE:RED);
     } else {
         DrawSphere(BodyPoint(origin,right,forward,0,1.38f*scale,0.25f*scale),0.055f*scale,RED);
