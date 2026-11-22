@@ -128,6 +128,44 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     return rightHand;
 }
 
+static void DrawEnemyModel(const Enemy& e,float time) {
+    Vector3 forward={0,0,-1}, right={1,0,0};
+    Color hide=e.boss?Color{82,45,53,255}:Color{105,62,52,255};
+    Color armor=e.boss?Color{91,91,105,255}:Color{72,76,78,255};
+    Color skin=e.boss?Color{160,111,87,255}:Color{169,128,103,255};
+    float scale=e.boss?1.22f:0.82f;
+    float swing=std::sin(time*5.0f+e.position.x)*0.18f;
+    if(e.phase==BossPhase::Windup) swing=0.55f;
+    if(e.phase==BossPhase::Strike) swing=-0.42f;
+    Vector3 origin=e.position;
+    Vector3 hip=BodyPoint(origin,right,forward,0,0.66f*scale,0);
+    Vector3 chest=BodyPoint(origin,right,forward,0,1.18f*scale,0);
+    Vector3 head=BodyPoint(origin,right,forward,0,1.58f*scale,0);
+    DrawCylinderEx(hip,chest,0.22f*scale,0.29f*scale,8,hide);
+    DrawSphere(head,0.25f*scale,skin);
+    DrawSphere(BodyPoint(origin,right,forward,0,1.76f*scale,-0.02f),0.22f*scale,armor);
+    DrawCubeV(BodyPoint(origin,right,forward,0,1.18f*scale,0.15f),{0.52f*scale,0.72f*scale,0.12f*scale},armor);
+    DrawCubeV(BodyPoint(origin,right,forward,0,0.72f*scale,0.15f),{0.48f*scale,0.10f*scale,0.12f*scale},BROWN);
+    for(int side=-1;side<=1;side+=2) {
+        float x=side*0.14f*scale;
+        Vector3 thigh=BodyPoint(origin,right,forward,x,0.36f*scale,swing*side);
+        Vector3 foot=BodyPoint(origin,right,forward,x,0.08f*scale,swing*side*0.7f);
+        DrawLimb(BodyPoint(origin,right,forward,x,0.65f*scale,0),thigh,0.13f*scale,0.095f*scale,hide);
+        DrawLimb(thigh,foot,0.095f*scale,0.07f*scale,armor);
+        Vector3 shoulder=BodyPoint(origin,right,forward,side*0.31f*scale,1.28f*scale,0);
+        Vector3 elbow=BodyPoint(origin,right,forward,side*0.39f*scale,0.95f*scale,swing*side);
+        Vector3 hand=BodyPoint(origin,right,forward,side*0.42f*scale,0.76f*scale,swing*side*1.2f);
+        DrawLimb(shoulder,elbow,0.13f*scale,0.09f*scale,armor);
+        DrawLimb(elbow,hand,0.09f*scale,0.065f*scale,hide);
+        DrawSphere(shoulder,0.15f*scale,e.boss?MAROON:armor);
+    }
+    if(e.boss) {
+        DrawSphere(BodyPoint(origin,right,forward,0,1.95f*scale,0),0.10f*scale,e.phase==BossPhase::Windup?ORANGE:RED);
+    } else {
+        DrawSphere(BodyPoint(origin,right,forward,0,1.38f*scale,0.25f*scale),0.055f*scale,RED);
+    }
+}
+
 void DrawGame(const GameState& g,const Camera3D& camera) {
     static const Color sky[5]={{32,52,68,255},{53,52,69,255},{33,43,54,255},{55,49,77,255},{51,36,46,255}};
     ClearBackground(sky[g.city]);
@@ -202,10 +240,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
 
     for(const auto& e:g.enemies) {
         if(!e.alive) continue;
-        Color enemyColor=e.boss?(e.phase==BossPhase::Windup?ORANGE:(e.phase==BossPhase::Strike?RED:MAROON)):Color{124,54,49,255};
-        float scale=e.boss?1.25f:0.72f;
-        DrawCubeV({e.position.x,e.position.y+0.76f,e.position.z},{scale,e.boss?1.9f:1.5f,e.boss?1.0f:0.48f},enemyColor);
-        DrawSphere({e.position.x,e.position.y+(e.boss?1.78f:1.7f),e.position.z},e.boss?0.42f:0.29f,BEIGE);
+        DrawEnemyModel(e,animationClock);
         float width=e.boss?2.0f:1.0f;
         DrawCubeV({e.position.x,e.position.y+2.3f,e.position.z},{width,0.09f,0.1f},DARKGRAY);
         DrawCubeV({e.position.x-width*0.5f*(1-e.hp/e.maxHp),e.position.y+2.3f,e.position.z},{width*(e.hp/e.maxHp),0.1f,0.12f},RED);
