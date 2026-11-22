@@ -147,8 +147,7 @@ static void Frame() {
         if(game.city!=savedCity) { savedCity=game.city; Save(); }
         game.questTime+=dt;
         if(game.quest<3) {
-            Vector3 p=game.player.position;
-            if(ReachedQuestBeacon(p,game.city,game.quest)) {
+            if(UpdateQuestObjective(game,dt)) {
                 game.quest++;
                 UpdateProgression(game,65+game.city*15+game.quest*10);
                 game.questTime=0;
