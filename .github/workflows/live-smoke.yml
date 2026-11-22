@@ -146,15 +146,15 @@ jobs:
             }
             await page.locator('#settings-sound').click();
             const pausedBefore = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
-            await page.keyboard.down('w');
+            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,-1,0]));
             await page.waitForTimeout(250);
-            await page.keyboard.up('w');
+            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,0,0]));
             const pausedAfter = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
             if (Math.abs(pausedAfter - pausedBefore) > 0.01) throw new Error('Live gameplay did not pause in Settings.');
             await page.locator('#resume').click();
-            await page.keyboard.down('w');
+            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,-1,0]));
             await page.waitForTimeout(250);
-            await page.keyboard.up('w');
+            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,0,0]));
             const resumedAfter = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
             if (resumedAfter <= pausedAfter + 0.1) throw new Error('Live Resume did not restart movement.');
 
