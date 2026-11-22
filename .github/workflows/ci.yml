@@ -444,7 +444,7 @@ jobs:
               throw new Error('Mobile ambient score resumed before the Resume action.');
             }
             await mobilePage.locator('#settings-sound').tap();
-            await page.waitForTimeout(550);
+            await mobilePage.waitForTimeout(550);
             if (await mobilePage.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.()) !== pausedMobileMusicNotes) {
               throw new Error('Mobile ambient score generated notes while Settings was open.');
             }
