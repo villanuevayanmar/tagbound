@@ -87,7 +87,17 @@ const touchControls=document.getElementById('touch-controls');
 const touchHelp=document.getElementById('touch-help');
 const resumeButton=document.getElementById('resume');
 function resetTouchInput(){
- pointer=null;buttons=0;moveX=moveY=0;
+ const stickPointer=pointer,lookPointer=lastLook?.id;
+ pointer=null;lastLook=null;buttons=0;moveX=moveY=0;
+ if(stickPointer!==null&&stick.hasPointerCapture(stickPointer))stick.releasePointerCapture(stickPointer);
+ if(lookPointer!==undefined&&canvas.hasPointerCapture(lookPointer))canvas.releasePointerCapture(lookPointer);
+ document.querySelectorAll('.action').forEach(button=>{
+  const id=button.dataset.pointerId;
+  if(id!==undefined&&button.hasPointerCapture(Number(id)))button.releasePointerCapture(Number(id));
+  button.classList.remove('active');
+  delete button.dataset.pointerId;
+ });
+ call('ResetLook');
  knob.style.transform='translate(0,0)';
  send();
 }
@@ -122,8 +132,8 @@ document.getElementById('start').addEventListener('click',()=>{
 document.getElementById('restart').addEventListener('click',()=>{call('ResetProgress');location.reload()});
 document.querySelectorAll('.action').forEach(b=>{
  const bit=Number(b.dataset.bit);
- const down=e=>{e.preventDefault();if(b.setPointerCapture)b.setPointerCapture(e.pointerId);buttons|=bit;b.classList.add('active');send()};
- const up=e=>{e.preventDefault();buttons&=~bit;b.classList.remove('active');send()};
+ const down=e=>{e.preventDefault();if(b.setPointerCapture)b.setPointerCapture(e.pointerId);b.dataset.pointerId=String(e.pointerId);buttons|=bit;b.classList.add('active');send()};
+ const up=e=>{e.preventDefault();buttons&=~bit;b.classList.remove('active');delete b.dataset.pointerId;send()};
  b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up);
 });
 stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);updateStick(e)});
