@@ -88,7 +88,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             bool facingWall=NearWall(p.position,b,wallAway)&&
                 Vector3DotProduct(p.facing,Vector3Scale(wallAway,-1.0f))>0.25f;
             if(facingWall&&rise>0.25f&&rise<=1.55f) {
-                p.velocity.y=11.0f;
+                p.velocity.y=13.0f;
                 p.velocity.x=p.facing.x*6.0f;
                 p.velocity.z=p.facing.z*6.0f;
                 p.vaultTime=0.46f;
