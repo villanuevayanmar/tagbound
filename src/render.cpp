@@ -459,6 +459,28 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     if(g.player.escapeSkill) DrawText(g.player.dashCooldown<=0?"DASH READY":TextFormat("DASH %.1fs",g.player.dashCooldown),24,73,10,GOLD);
     else DrawText("DASH UNLOCKS AT LVL 3",24,73,10,GRAY);
     if(g.player.wallRunning) DrawText("WALL RUN",180,73,10,ORANGE);
+    if(!g.finished) {
+        Vector3 toward=Vector3Subtract(objectiveTarget,g.player.position);
+        toward.y=0;
+        Vector3 facing=g.player.facing;
+        facing.y=0;
+        if(Vector3Length(facing)<0.001f) facing={0,0,1};
+        facing=Vector3Normalize(facing);
+        if(Vector3Length(toward)>0.001f) {
+            toward=Vector3Normalize(toward);
+            Vector3 right={facing.z,0,-facing.x};
+            float angle=std::atan2(Vector3DotProduct(toward,right),Vector3DotProduct(toward,facing));
+            float s=std::sin(angle),c=std::cos(angle);
+            int cx=w/2,cy=43;
+            DrawRectangle(cx-56,12,112,52,Fade(BLACK,0.68f));
+            DrawText("OBJECTIVE",cx-34,17,10,LIGHTGRAY);
+            Vector2 tip={(float)cx+s*15.0f,(float)cy-c*15.0f};
+            Vector2 back={(float)cx-s*8.0f,(float)cy+c*8.0f};
+            Vector2 side={c*6.0f,s*6.0f};
+            DrawCircleLines(cx,cy,16,Fade(GOLD,0.48f));
+            DrawTriangle(tip,{back.x+side.x,back.y+side.y},{back.x-side.x,back.y-side.y},GOLD);
+        }
+    }
     if(g.player.ledgeGrabbing) DrawText("HANGING - JUMP: CLIMB / DOWN: DROP",w/2-155,28,14,GOLD);
     else if(g.player.climbing) DrawText("CLIMBING...",w/2-55,28,14,GOLD);
     DrawRectangle(w-245,12,233,76,Fade(BLACK,0.65f));
