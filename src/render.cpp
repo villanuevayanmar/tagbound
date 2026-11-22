@@ -440,7 +440,17 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         if(e.boss&&(e.phase==BossPhase::Windup||e.phase==BossPhase::Strike)) {
             static const float warningRadius[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
             Color warning=e.phase==BossPhase::Windup?Color{255,166,56,65}:Color{238,62,52,80};
-            DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius[std::clamp(e.variant,0,4)],{1,0,0},90,warning);
+            int variant=std::clamp(e.variant,0,4);
+            if(variant==3) {
+                Vector3 direction=e.strikeDirection; direction.y=0;
+                float length=Vector3Length(direction);
+                direction=length>0.001f?Vector3Scale(direction,1.0f/length):Vector3{0,0,1};
+                Vector3 start={e.position.x,e.position.y+0.06f,e.position.z};
+                Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
+                DrawCylinderEx(start,end,0.45f,0.34f,8,warning);
+            } else {
+                DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius[variant],{1,0,0},90,warning);
+            }
         }
         DrawCylinder({e.position.x,e.position.y+0.025f,e.position.z},e.boss?0.62f:0.42f,e.boss?0.62f:0.42f,0.025f,12,Fade(BLACK,0.24f));
         DrawEnemyModel(e,animationClock);

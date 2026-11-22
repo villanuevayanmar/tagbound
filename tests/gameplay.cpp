@@ -522,6 +522,54 @@ int main() {
         assert(game.enemies.front().phase==BossPhase::Windup);
     }
 
+    // The Spire Sentinel locks a narrow attack lane when its windup begins.
+    game.platforms.clear();
+    game.enemies.clear();
+    game.player.position={0,0.3f,7.0f};
+    Enemy spireWindup{{0,0.3f,0},100,100,2.5f,0,true,true};
+    spireWindup.variant=3;
+    spireWindup.phase=BossPhase::Hunt;
+    game.enemies.push_back(spireWindup);
+    UpdatePursuit(game,0.016f);
+    assert(game.enemies.front().phase==BossPhase::Windup);
+    assert(near(game.enemies.front().strikeDirection.x,0.0f));
+    assert(near(game.enemies.front().strikeDirection.z,1.0f));
+    game.player.position={1.1f,0.3f,7.0f};
+    UpdatePursuit(game,0.05f);
+    assert(near(game.enemies.front().strikeDirection.x,0.0f));
+    assert(near(game.enemies.front().strikeDirection.z,1.0f));
+
+    // An aligned Spire Sentinel thrust hits, but a lateral dodge escapes its lane.
+    game.enemies.clear();
+    game.player.position={0,0.3f,7.0f};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    game.player.blocking=false;
+    game.player.stamina=100;
+    Enemy alignedSpire{{0,0.3f,0},100,100,0,0,true,true};
+    alignedSpire.variant=3;
+    alignedSpire.phase=BossPhase::Strike;
+    alignedSpire.phaseTime=0.23f;
+    alignedSpire.strikeDirection={0,0,1};
+    game.enemies.push_back(alignedSpire);
+    UpdatePursuit(game,0.01f);
+    assert(near(game.player.health,82.0f));
+    assert(game.enemies.front().phase==BossPhase::Recover);
+
+    game.enemies.clear();
+    game.player.position={1.1f,0.3f,7.0f};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    Enemy dodgedSpire{{0,0.3f,0},100,100,0,0,true,true};
+    dodgedSpire.variant=3;
+    dodgedSpire.phase=BossPhase::Strike;
+    dodgedSpire.phaseTime=0.23f;
+    dodgedSpire.strikeDirection={0,0,1};
+    game.enemies.push_back(dodgedSpire);
+    UpdatePursuit(game,0.01f);
+    assert(near(game.player.health,100.0f));
+    assert(game.enemies.front().phase==BossPhase::Recover);
+
     // Each city boss has a distinct attack pattern, range and damage profile.
     const float bossDistances[5]={3.5f,2.2f,5.0f,7.0f,4.0f};
     const float bossDamage[5]={24,30,32,18,28};
@@ -536,6 +584,7 @@ int main() {
         boss.variant=variant;
         boss.phase=BossPhase::Strike;
         boss.phaseTime=1.0f;
+        boss.strikeDirection={0,0,-1};
         game.enemies.push_back(boss);
         UpdatePursuit(game,0.05f);
         assert(near(game.player.health,100.0f-bossDamage[variant]));
@@ -555,6 +604,7 @@ int main() {
         boss.variant=variant;
         boss.phase=BossPhase::Strike;
         boss.phaseTime=1.0f;
+        boss.strikeDirection={0,0,-1};
         game.enemies.push_back(boss);
         UpdatePursuit(game,0.05f);
         assert(near(game.player.health,100.0f-enragedBossDamage[variant]));
