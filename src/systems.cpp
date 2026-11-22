@@ -451,7 +451,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         else { g.city++; BuildCity(g); }
     }
     if(p.health<=0) {
-        p.health=p.playerClass==PlayerClass::Vanguard?125.0f:(p.playerClass==PlayerClass::Skirmisher?95.0f:115.0f); p.position={0,0.3f,0}; p.velocity={0,0,0};
+        p.health=ClassMaxHealth(p.playerClass); p.position={0,0.3f,0}; p.velocity={0,0,0};
         p.vaulting=false; p.vaultTime=0; p.ledgeGrabbing=false; p.climbing=false;
         p.landingTime=0; p.landingRoll=false; p.attackTime=0;
         p.climbTime=0; p.ledgeNormal={}; p.ledgeHangPosition={}; p.ledgeTargetPosition={};
@@ -464,7 +464,7 @@ void UpdateProgression(GameState& g,int amount) {
     p.xp=std::max(0,p.xp+amount);
     while(p.xp>=p.level*100) {
         p.xp-=p.level*100; p.level++;
-        p.health=std::min(125.0f,p.health+12); p.stamina=100;
+        p.health=std::min(ClassMaxHealth(p.playerClass),p.health+12); p.stamina=100;
     }
     if(p.level>=3) p.escapeSkill=1;
     if(p.level>=5) p.combatSkill=1;
