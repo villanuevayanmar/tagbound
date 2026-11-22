@@ -167,6 +167,24 @@ jobs:
                 !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || gameplay.save.quest !== 0 || !gameplay.installHiddenDuringGameplay) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
+            // Reopen from a saved boss-gate state and confirm C++ restored the boss.
+            await page.evaluate(() => {
+              const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
+              save.quest = 3;
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            });
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 45000 });
+            await page.locator('#start').click();
+            await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const restored = await page.evaluate(() => ({
+              quest: Module.ccall('GetQuestProgress', 'number', [], []),
+              bosses: Module.ccall('GetActiveBossCount', 'number', [], []),
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (restored.quest !== 3 || restored.bosses !== 1 || restored.save?.quest !== 3) {
+              throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
+            }
             await page.waitForTimeout(2000);
             await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
 
