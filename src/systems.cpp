@@ -353,7 +353,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         else { g.city++; BuildCity(g); }
     }
     if(p.health<=0) {
-        p.health=100; p.position={0,0.3f,0}; p.velocity={0,0,0};
+        p.health=p.playerClass==PlayerClass::Vanguard?125.0f:(p.playerClass==PlayerClass::Skirmisher?95.0f:115.0f); p.position={0,0.3f,0}; p.velocity={0,0,0};
         p.vaulting=false; p.vaultTime=0; p.ledgeGrabbing=false; p.climbing=false;
         p.landingTime=0; p.landingRoll=false; p.attackTime=0;
         p.climbTime=0; p.ledgeNormal={}; p.ledgeHangPosition={}; p.ledgeTargetPosition={};
