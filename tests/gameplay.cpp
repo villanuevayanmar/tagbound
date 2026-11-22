@@ -73,11 +73,11 @@ int main() {
 
     // Airborne contact with a reachable roof edge enters a stable ledge hang.
     BuildCity(game);
-    game.player.position = {6.49f,0.3f,6.0f};
-    game.player.facing = {1,0,0};
+    game.player.position = {6.51f,0.3f,6.0f};
+    game.player.facing = {-1,0,0};
     game.player.grounded = false;
     Controls grab{};
-    grab.move.x = 1.0f;
+    grab.move.x = -1.0f;
     UpdateMovement(game,grab,camera,0.01f);
     assert(game.player.ledgeGrabbing);
     assert(near(game.player.velocity.x,0.0f));
