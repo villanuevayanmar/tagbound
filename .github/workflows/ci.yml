@@ -305,6 +305,8 @@ jobs:
               controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
               installVisible: (() => { const b=document.querySelector('#install'); const r=b?.getBoundingClientRect(); return !!b && !b.hidden && r.width>0 && r.height>0; })(),
               soundToggleVisible: (() => { const b=document.querySelector('#sound-toggle'); const r=b?.getBoundingClientRect(); return !!b && r.width>0 && r.height>0; })(),
+              settingsInstallHidden: document.querySelector('#settings-install').getClientRects().length === 0,
+              settingsButtonHidden: document.querySelector('#settings-open').getClientRects().length === 0,
               floatingInstallPresent: !!document.querySelector('#install-float'),
               actionCount: document.querySelectorAll('#touch-controls .action').length,
               weaponButtonPresent: !!document.querySelector('#touch-controls [data-bit="128"]'),
