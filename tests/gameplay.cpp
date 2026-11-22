@@ -34,7 +34,9 @@ int main() {
             assert(near(actual.x,expected.x)&&near(actual.y,expected.y)&&near(actual.z,expected.z));
             assert(std::abs(actual.x)<49&&actual.z>-35&&actual.z<42);
             if(quest>0) {
-                float spacing=Vector3Distance(QuestTarget(city,quest-1),actual);
+                Vector3 previous=QuestTarget(city,quest-1);
+                float dx=actual.x-previous.x,dy=actual.y-previous.y,dz=actual.z-previous.z;
+                float spacing=std::sqrt(dx*dx+dy*dy+dz*dz);
                 assert(spacing>7.0f&&spacing<11.0f);
             }
         }
