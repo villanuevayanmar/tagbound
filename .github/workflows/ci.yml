@@ -12,7 +12,6 @@ permissions:
 
 jobs:
   build:
-    if: github.event_name != 'push' || startsWith(github.event.head_commit.message, 'chore: sync built WebAssembly output') == false
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -226,7 +225,7 @@ jobs:
 
   publish-dist:
     needs: [build, browser-smoke]
-    if: (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')) && (github.event_name != 'push' || startsWith(github.event.head_commit.message, 'chore: sync built WebAssembly output') == false)
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.event.head_commit.message != 'chore: sync built WebAssembly output')
     runs-on: ubuntu-latest
     permissions:
       contents: write
