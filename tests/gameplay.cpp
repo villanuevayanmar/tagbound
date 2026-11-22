@@ -132,6 +132,33 @@ int main() {
     assert(!game.player.ledgeGrabbing);
     assert(game.player.position.x > 6.8f);
 
+    // A hard fall triggers a short landing roll when slide is held.
+    game.platforms.clear();
+    game.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},{44,49,59,255}});
+    game.player.position = {0,1.0f,0};
+    game.player.velocity = {0,-10.0f,0};
+    game.player.facing = {0,0,1};
+    game.player.grounded = false;
+    Controls roll{};
+    roll.slide = true;
+    UpdateMovement(game,roll,camera,0.1f);
+    assert(game.player.grounded);
+    assert(game.player.landingTime > 0.25f);
+    assert(game.player.landingRoll);
+    assert(game.player.velocity.z > 2.0f);
+
+    // A normal landing gets recovery pose without the forward roll impulse.
+    game.player.position = {0,0.8f,0};
+    game.player.velocity = {0,-3.0f,0};
+    game.player.grounded = false;
+    Controls land{};
+    UpdateMovement(game,land,camera,0.1f);
+    assert(!game.player.grounded);
+    UpdateMovement(game,land,camera,0.1f);
+    assert(game.player.grounded);
+    assert(game.player.landingTime > 0.25f);
+    assert(!game.player.landingRoll);
+
     game.player.escapeSkill = 1;
     Controls dash{};
     dash.skill = true;
