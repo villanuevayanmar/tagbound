@@ -1,6 +1,47 @@
 (() => {
 const canvas=document.getElementById('canvas'),stick=document.getElementById('stick'),knob=document.getElementById('knob');
 let pointer=null,buttons=0,moveX=0,moveY=0,lastLook=null;
+let audioContext=null;
+const soundProfiles=[
+ {wave:'sawtooth',start:520,end:115,duration:0.13,volume:0.035,cutoff:1800},
+ {wave:'triangle',start:980,end:280,duration:0.11,volume:0.03,cutoff:2400},
+ {wave:'sawtooth',start:180,end:48,duration:0.19,volume:0.04,cutoff:850},
+ {wave:'sine',start:145,end:285,duration:0.10,volume:0.032,cutoff:1100},
+ {wave:'square',start:105,end:42,duration:0.15,volume:0.04,cutoff:700},
+ {wave:'triangle',start:82,end:54,duration:0.34,volume:0.038,cutoff:520},
+ {wave:'sine',start:320,end:760,duration:0.25,volume:0.032,cutoff:1700}
+];
+function initAudio(){
+ try {
+  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+  if(!AudioContextClass)return false;
+  if(!audioContext)audioContext=new AudioContextClass();
+  if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});
+  return true;
+ } catch(e) { return false; }
+}
+function playAudio(kind){
+ try {
+  const sound=soundProfiles[kind];
+  if(!sound||!audioContext||audioContext.state==='closed')return false;
+  if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});
+  const now=audioContext.currentTime;
+  const oscillator=audioContext.createOscillator();
+  const filter=audioContext.createBiquadFilter();
+  const gain=audioContext.createGain();
+  filter.type='lowpass';filter.frequency.setValueAtTime(sound.cutoff,now);
+  oscillator.type=sound.wave;
+  oscillator.frequency.setValueAtTime(sound.start,now);
+  oscillator.frequency.exponentialRampToValueAtTime(sound.end,now+sound.duration);
+  gain.gain.setValueAtTime(0.0001,now);
+  gain.gain.exponentialRampToValueAtTime(sound.volume,now+0.008);
+  gain.gain.exponentialRampToValueAtTime(0.0001,now+sound.duration);
+  oscillator.connect(filter);filter.connect(gain);gain.connect(audioContext.destination);
+  oscillator.start(now);oscillator.stop(now+sound.duration+0.01);
+  return true;
+ } catch(e) { return false; }
+}
+window.TagboundAudio={init:initAudio,play:playAudio,getState:()=>audioContext?.state||'uninitialized'};
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 document.querySelectorAll('.class-card').forEach(b=>b.addEventListener('click',()=>{
