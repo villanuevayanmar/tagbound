@@ -7,7 +7,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Three selectable classes: Vanguard, Skirmisher and Warden.
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
-- Forward mantle vaults for reachable rooftop ledges, with a dedicated airborne pose.
+- Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
 - Pursuit pressure, health, stamina, five weapon slots and ranged bow projectiles.
 - Three beacon quests per city, followed by a city boss gate with telegraphed strikes and stamina-based blocking.
@@ -15,7 +15,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
 
-This is an early playable foundation, not a finished commercial game. Character models, animation, detailed city layouts, full parkour vault/climb interactions, sound design, quest variety and complete boss encounter tuning remain development work. The current renderer uses procedural low-poly geometry. No online accounts or game server are required.
+This is an early playable foundation, not a finished commercial game. Character models, animation, detailed city layouts, advanced parkour traversal, sound design, quest variety and complete boss encounter tuning remain development work. The current renderer uses procedural low-poly geometry. No online accounts or game server are required.
 
 ## Requirements
 
@@ -127,8 +127,8 @@ The first visit must download the game assets. The service worker caches the HTM
 
 - Left joystick: move
 - Right side of the screen: swipe to look
-- Vault: jump; near a wall, face it and jump to vault over the edge
-- Slide: short speed boost while grounded
+- Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
+- Slide: short speed boost while grounded; while hanging, slide or push down on the joystick to drop
 - Attack: use equipped weapon
 - Block: shield/block
 - Bow: aim while selected / shoot with Attack
