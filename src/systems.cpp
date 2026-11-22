@@ -55,6 +55,9 @@ static bool FindLedge(const GameState& g,Vector3 p,Vector3 facing,
 
 void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     Player& p=g.player;
+    bool wasGrounded=p.grounded;
+    p.landingTime=std::max(0.0f,p.landingTime-dt);
+    if(p.landingTime<=0) p.landingRoll=false;
     p.invulnerable=std::max(0.0f,p.invulnerable-dt);
     p.dashCooldown=std::max(0.0f,p.dashCooldown-dt);
     p.dashTime=std::max(0.0f,p.dashTime-dt);
@@ -223,8 +226,19 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
         if(Inside(p.position,b)&&previousY>=top-0.08f&&p.position.y<=top&&p.velocity.y<=0)
             floor=std::max(floor,top);
     }
-    if(p.position.y<floor) { p.position.y=floor; p.velocity.y=0; p.grounded=true; }
-    else p.grounded=false;
+    if(p.position.y<floor) {
+        p.position.y=floor;
+        if(!wasGrounded&&p.velocity.y<-4.0f) {
+            p.landingTime=0.28f;
+            p.landingRoll=c.slide&&p.velocity.y<-7.0f;
+            if(p.landingRoll) {
+                p.velocity.x+=p.facing.x*2.8f;
+                p.velocity.z+=p.facing.z*2.8f;
+            }
+        }
+        p.velocity.y=0;
+        p.grounded=true;
+    } else p.grounded=false;
 
     p.position.x=std::clamp(p.position.x,-49.0f,49.0f);
     p.position.z=std::clamp(p.position.z,-35.0f,42.0f);
