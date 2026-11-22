@@ -82,9 +82,12 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             p.climbTime=0.0f;
         } else if(c.slide||c.move.y<-0.55f) {
             p.ledgeGrabbing=false;
-            p.velocity={0,-1.5f,0};
+            p.position=Vector3Add(p.position,Vector3Scale(p.ledgeNormal,0.42f));
+            p.velocity=Vector3Add(Vector3Scale(p.ledgeNormal,2.0f),Vector3{0,-1.5f,0});
             p.grounded=false;
             p.ledgeNormal={};
+            p.ledgeHangPosition={};
+            p.ledgeTargetPosition={};
         } else {
             p.position=p.ledgeHangPosition;
             p.velocity={0,0,0};
