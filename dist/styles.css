@@ -55,7 +55,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 
 
 /* In-game pause and settings controls */
-.game-settings{position:absolute;z-index:4;top:calc(12px + env(safe-area-inset-top));right:calc(12px + env(safe-area-inset-right));padding:10px 14px;border:1px solid #d9bd8c99;background:#111b29e8;color:#f2dfbd;font-size:11px;font-weight:900;letter-spacing:.12em;box-shadow:0 3px 12px #0008}
+.game-settings{position:absolute;z-index:4;top:calc(12px + env(safe-area-inset-top));left:calc(50% - 152px);right:auto;transform:none;width:92px;padding:10px 4px;text-align:center;border:1px solid #d9bd8c99;background:#111b29e8;color:#f2dfbd;font-size:11px;font-weight:900;letter-spacing:.12em;box-shadow:0 3px 12px #0008}
 .game-settings:active{background:#a97143;color:#fff}
 .settings-panel{width:min(460px,92vw);text-align:center}
 .settings-panel .eyebrow{margin-bottom:8px}
@@ -63,3 +63,8 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .settings-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:18px}
 .settings-actions .secondary{margin:0}
 .settings-panel .primary{margin-top:12px}
+
+@media(max-width:760px){
+  .game-settings{width:42px;left:calc(50% - 98px);padding:7px 0;font-size:0;letter-spacing:0}
+  .game-settings::after{content:"⚙";font-size:16px}
+}
