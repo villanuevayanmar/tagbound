@@ -196,6 +196,16 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     for(const auto& p:g.platforms) {
         DrawCubeV(p.position,p.size,p.color);
         DrawCubeWiresV(p.position,p.size,{28,29,36,255});
+        if(p.size.x>4.0f&&p.size.y>2.0f&&p.size.z>4.0f) {
+            static const Color windowGlow[5]={{211,166,91,255},{231,190,112,255},{255,117,55,255},{157,190,204,255},{239,177,119,255}};
+            static const Color roofTrim[5]={{105,145,143,255},{183,133,81,255},{118,132,143,255},{143,133,178,255},{171,98,88,255}};
+            Color glass=windowGlow[std::clamp(g.city,0,4)];
+            for(int row=0;row<2;row++) for(int side=-1;side<=1;side+=2)
+                DrawCubeV({p.position.x+side*0.92f,p.position.y-0.25f+row*1.15f,p.position.z+p.size.z*0.505f},
+                          {0.46f,0.62f,0.07f},glass);
+            DrawCubeV({p.position.x,p.position.y+p.size.y*0.5f+0.07f,p.position.z},
+                      {p.size.x+0.22f,0.14f,p.size.z+0.22f},roofTrim[std::clamp(g.city,0,4)]);
+        }
     }
     for(int i=0;i<32;i++) {
         float a=i*0.19635f, r=47.0f+(i%4)*2.0f;
