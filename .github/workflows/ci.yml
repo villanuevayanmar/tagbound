@@ -199,11 +199,17 @@ jobs:
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
               installHiddenDuringGameplay: document.querySelector('#install')?.getClientRects().length === 0,
               settingsInstallHiddenDuringGameplay: document.querySelector('#settings-install')?.getClientRects().length === 0,
-              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0
+              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
+              settingsButtonClearOfLevelHud: (() => {
+                const s = document.querySelector('#settings-open').getBoundingClientRect();
+                const l = { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 };
+                return !(s.left < l.right && s.right > l.left && s.top < l.bottom && s.bottom > l.top);
+              })()
             }));
             if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height ||
                 !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || gameplay.save.quest !== 0 ||
-                !gameplay.installHiddenDuringGameplay || !gameplay.settingsInstallHiddenDuringGameplay || !gameplay.settingsButtonVisible) {
+                !gameplay.installHiddenDuringGameplay || !gameplay.settingsInstallHiddenDuringGameplay ||
+                !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfLevelHud) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
 
@@ -323,6 +329,12 @@ jobs:
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             await mobilePage.locator('#start').tap();
+            const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
+              const s = document.querySelector('#settings-open').getBoundingClientRect();
+              const l = { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 };
+              return !(s.left < l.right && s.right > l.left && s.top < l.bottom && s.bottom > l.top);
+            });
+            if (!mobileSettingsButtonClear) throw new Error('Mobile Settings button overlaps the level/danger HUD.');
             const installHiddenDuringGameplay = await mobilePage.locator('#install').evaluate(e => e.getClientRects().length === 0);
             if (!installHiddenDuringGameplay) throw new Error('PWA install action remained visible during mobile gameplay.');
             await mobilePage.locator('#settings-open').tap();
