@@ -81,14 +81,15 @@ jobs:
                 introVisible: !document.querySelector('#intro').classList.contains('hidden'),
                 installVisible: !!install && !install.hidden && rect.width > 0 && rect.height > 0,
                 floatingInstallPresent: !!document.querySelector('#install-float'),
-                installOutsideHome: [...document.querySelectorAll('[id^="install"]')]
-                  .some(element => !document.querySelector('#intro').contains(element))
+                settingsInstallScoped: document.querySelector('#settings').contains(document.querySelector('#settings-install')),
+                settingsInstallHiddenAtHome: document.querySelector('#settings-install').getClientRects().length === 0,
+                settingsButtonHiddenAtHome: document.querySelector('#settings-open').getClientRects().length === 0
               };
             });
             const classCards = await page.locator('.class-card').allTextContents();
             if (!runtime.canvas || !runtime.webAssembly || !runtime.webgl || !runtime.introVisible ||
-                !runtime.installVisible || runtime.floatingInstallPresent || runtime.installOutsideHome ||
-                classCards.length !== 3) {
+                !runtime.installVisible || runtime.floatingInstallPresent || !runtime.settingsInstallScoped ||
+                !runtime.settingsInstallHiddenAtHome || !runtime.settingsButtonHiddenAtHome || classCards.length !== 3) {
               throw new Error('Live startup or home-screen check failed: ' + JSON.stringify({ runtime, classCards }));
             }
 
@@ -118,12 +119,37 @@ jobs:
             const gameplay = await page.evaluate(() => ({
               canvas: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
-              installHidden: document.querySelector('#install')?.getClientRects().length === 0
+              installHidden: document.querySelector('#install')?.getClientRects().length === 0,
+              settingsInstallHidden: document.querySelector('#settings-install')?.getClientRects().length === 0,
+              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0
             }));
             if (!gameplay.canvas.width || !gameplay.canvas.height || gameplay.save?.klass !== 1 ||
-                gameplay.save?.city !== 0 || gameplay.save?.quest !== 0 || !gameplay.installHidden) {
+                gameplay.save?.city !== 0 || gameplay.save?.quest !== 0 || !gameplay.installHidden ||
+                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible) {
               throw new Error('Live class/start/save or install visibility check failed: ' + JSON.stringify(gameplay));
             }
+
+            await page.locator('#settings-open').click();
+            const settingsVisible = await page.evaluate(() => ({
+              open: !document.querySelector('#settings').classList.contains('hidden'),
+              installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
+              homeInstallHidden: document.querySelector('#install').getClientRects().length === 0,
+              controlsHidden: document.querySelector('#touch-controls').classList.contains('hidden')
+            }));
+            if (!settingsVisible.open || !settingsVisible.installVisible || !settingsVisible.homeInstallHidden) {
+              throw new Error('Live settings/install placement failed: ' + JSON.stringify(settingsVisible));
+            }
+            await page.locator('#settings-sound').click();
+            if (await page.locator('#sound-toggle').textContent() !== 'SOUND: OFF' ||
+                await page.locator('#settings-sound').textContent() !== 'SOUND: OFF') {
+              throw new Error('Live settings sound toggle did not synchronize.');
+            }
+            await page.locator('#settings-sound').click();
+            const pausedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
+            if (pausedState !== 0) throw new Error('Live C++ simulation was not paused in Settings.');
+            await page.locator('#resume').click();
+            const resumedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
+            if (resumedState !== 1) throw new Error('Live C++ simulation did not resume after Settings.');
 
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
@@ -176,18 +202,18 @@ jobs:
             });
             console.log('Live service-worker diagnostics: ' + JSON.stringify(workerInfo));
             if (!workerInfo.secureContext || !workerInfo.readyScript ||
-                !workerInfo.cacheNames.includes('tagbound-v24')) {
+                !workerInfo.cacheNames.includes('tagbound-v25')) {
               throw new Error('Live service-worker registration or precache is missing: ' + JSON.stringify(workerInfo));
             }
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v24');
+              const cache = await caches.open('tagbound-v25');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v24') || cacheState.cached.some(value => !value)) {
+            if (!cacheState.keys.includes('tagbound-v25') || cacheState.cached.some(value => !value)) {
               throw new Error('Live service-worker precache failed: ' + JSON.stringify(cacheState));
             }
 
@@ -219,6 +245,8 @@ jobs:
             const mobile = await mobilePage.evaluate(() => ({
               controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
               installVisible: document.querySelector('#install')?.getClientRects().length > 0,
+              settingsInstallHidden: document.querySelector('#settings-install').getClientRects().length === 0,
+              settingsButtonHidden: document.querySelector('#settings-open').getClientRects().length === 0,
               floatingInstallPresent: !!document.querySelector('#install-float'),
               actionCount: document.querySelectorAll('#touch-controls .action').length,
               weaponButtonPresent: !!document.querySelector('#touch-controls [data-bit="128"]'),
@@ -227,8 +255,8 @@ jobs:
                 return rect.top >= 0 && rect.bottom <= innerHeight;
               })()
             }));
-            if (!mobile.controlsVisible || !mobile.installVisible || mobile.floatingInstallPresent ||
-                mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.startVisible) {
+            if (!mobile.controlsVisible || !mobile.installVisible || !mobile.settingsInstallHidden ||
+                !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.startVisible) {
               throw new Error('Live mobile layout check failed: ' + JSON.stringify(mobile));
             }
 
@@ -237,6 +265,19 @@ jobs:
             const mobileInstallHidden = await mobilePage.locator('#install')
               .evaluate(element => element.getClientRects().length === 0);
             if (!mobileInstallHidden) throw new Error('Install option remained visible during mobile gameplay.');
+            await mobilePage.locator('#settings-open').tap();
+            const mobileSettings = await mobilePage.evaluate(() => ({
+              open: !document.querySelector('#settings').classList.contains('hidden'),
+              installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
+              controlsHidden: document.querySelector('#touch-controls').classList.contains('hidden')
+            }));
+            if (!mobileSettings.open || !mobileSettings.installVisible || !mobileSettings.controlsHidden) {
+              throw new Error('Live mobile settings failed: ' + JSON.stringify(mobileSettings));
+            }
+            await mobilePage.locator('#resume').tap();
+            if (await mobilePage.locator('#settings-install').evaluate(e => e.getClientRects().length !== 0)) {
+              throw new Error('Settings install remained visible after resume.');
+            }
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobilePage.waitForTimeout(1200);
             await mobilePage.screenshot({ path: 'live-review/production-mobile-gameplay.png', fullPage: true });
