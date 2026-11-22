@@ -359,8 +359,20 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
             Vector3 to=Vector3Subtract(e.position,p.position);
             float d=Vector3Length(to);
             if(d>0.001f&&d<=range&&d<nearest&&Vector3DotProduct(p.facing,Vector3Normalize(to))>0.1f) {
-                nearest=d;
-                target=&e;
+                Vector3 attackFrom=Vector3Add(p.position,{0,1.0f,0});
+                Vector3 attackTo=Vector3Add(e.position,{0,1.0f,0});
+                bool blocked=false;
+                for(const auto& platform:g.platforms) {
+                    float hitTime=0.0f;
+                    if(SegmentPlatform(attackFrom,attackTo,platform,hitTime)) {
+                        blocked=true;
+                        break;
+                    }
+                }
+                if(!blocked) {
+                    nearest=d;
+                    target=&e;
+                }
             }
         }
         if(target) {
