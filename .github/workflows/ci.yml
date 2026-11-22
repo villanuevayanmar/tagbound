@@ -176,13 +176,13 @@ jobs:
             });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v5');
+              const cache = await caches.open('tagbound-v6');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v5') || cacheState.cached.some(value => !value)) {
+            if (!cacheState.keys.includes('tagbound-v6') || cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker precache is incomplete: ' + JSON.stringify(cacheState));
             }
 
