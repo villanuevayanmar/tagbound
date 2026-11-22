@@ -19,6 +19,11 @@ int main() {
     assert(std::string(BossName(4)) == "IMPERIAL REGENT");
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
+    // Each class has exactly one assigned weapon.
+    assert(ClassWeapon(PlayerClass::Vanguard) == Weapon::Sword);
+    assert(ClassWeapon(PlayerClass::Skirmisher) == Weapon::Bow);
+    assert(ClassWeapon(PlayerClass::Warden) == Weapon::Shield);
+
     // Each campaign city builds its expected pursuer count and full scene.
     for (int city = 0; city < 5; ++city) {
         game.city = city;

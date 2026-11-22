@@ -25,7 +25,7 @@ static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
 static float touchX=0,touchY=0,lookX=0,lookY=0,attackCooldown=0,saveCooldown=0;
-static bool skillWasDown=false,jumpWasDown=false,weaponWasDown=false,classChosen=false;
+static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
@@ -35,27 +35,27 @@ extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
 KEEP void StartGame() {
     game.player.playerClass=(PlayerClass)selectedClass;
-    if(selectedClass==0) { game.player.health=125; game.player.stamina=95; game.player.weapon=Weapon::Sword; }
-    if(selectedClass==1) { game.player.health=95; game.player.stamina=100; game.player.weapon=Weapon::Bow; }
-    if(selectedClass==2) { game.player.health=115; game.player.stamina=100; game.player.weapon=Weapon::Shield; }
-    int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), w=loadLocal(5), finished=loadLocal(6);
+    if(selectedClass==0) { game.player.health=125; game.player.stamina=95; game.player.weapon=ClassWeapon(PlayerClass::Vanguard); }
+    if(selectedClass==1) { game.player.health=95; game.player.stamina=100; game.player.weapon=ClassWeapon(PlayerClass::Skirmisher); }
+    if(selectedClass==2) { game.player.health=115; game.player.stamina=100; game.player.weapon=ClassWeapon(PlayerClass::Warden); }
+    int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6);
     if(c>=0) {
         game.city=std::clamp(c,0,4); game.unlockedCity=std::clamp(u,0,4);
         game.player.level=std::max(1,l); game.player.xp=std::max(0,x);
         if(!classChosen) {
-            game.player.playerClass=(PlayerClass)std::clamp(cl,0,2); game.player.weapon=(Weapon)std::clamp(w,0,4);
+            game.player.playerClass=(PlayerClass)std::clamp(cl,0,2);
             if(cl==0) { game.player.health=125; game.player.stamina=95; }
             if(cl==1) { game.player.health=95; game.player.stamina=100; }
             if(cl==2) { game.player.health=115; game.player.stamina=100; }
         }
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
+    game.player.weapon=ClassWeapon(game.player.playerClass);
     game.started=true; game.finished=finished>0; BuildCity(game); savedCity=game.city; hideIntro(); Save();
     if(game.finished) showEnding();
 }
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
 KEEP void SetLook(float x,float y) { lookX+=x; lookY+=y; }
-KEEP void SelectWeapon(int w) { game.player.weapon=(Weapon)std::clamp(w,0,4); }
 KEEP void ResetProgress() {
     game.city=0; game.unlockedCity=0; game.player.level=1; game.player.xp=0;
     game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; savedCity=0; Save();
@@ -76,14 +76,6 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
-    bool weaponDown=(touchButtons&128)!=0;
-    if(weaponDown&&!weaponWasDown) SelectWeapon(((int)game.player.weapon+1)%5);
-    weaponWasDown=weaponDown;
-    if(IsKeyPressed(KEY_ONE)) SelectWeapon(0);
-    if(IsKeyPressed(KEY_TWO)) SelectWeapon(1);
-    if(IsKeyPressed(KEY_THREE)) SelectWeapon(2);
-    if(IsKeyPressed(KEY_FOUR)) SelectWeapon(3);
-    if(IsKeyPressed(KEY_FIVE)) SelectWeapon(4);
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         Vector2 d=GetMouseDelta(); c.lookX+=d.x*0.7f; c.lookY+=d.y*0.7f;
