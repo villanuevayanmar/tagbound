@@ -13,12 +13,16 @@ EM_JS(int, loadLocal, (int field), {
 });
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { document.getElementById("ending")?.classList.remove("hidden"); });
+EM_JS(void, initGameAudio, (), { try { window.TagboundAudio?.init?.(); } catch (e) {} });
+EM_JS(void, playGameAudio, (int kind), { try { window.TagboundAudio?.play?.(kind); } catch (e) {} });
 #else
 #define KEEP
 static void saveLocal(int,int,int,int,int,int,int,int) {}
 static int loadLocal(int) { return -1; }
 static void hideIntro() {}
 static void showEnding() {}
+static void initGameAudio() {}
+static void playGameAudio(int) {}
 #endif
 
 static GameState game;
@@ -53,7 +57,7 @@ KEEP void StartGame() {
     game.started=true; game.finished=finished>0; BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
     else SetQuestProgress(game,quest<0?0:quest);
-    savedCity=game.city; hideIntro(); Save();
+    savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
 }
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
@@ -93,14 +97,33 @@ static Controls ReadControls() {
     return c;
 }
 
+static unsigned int BossWindupMask() {
+    unsigned int mask=0;
+    for(const Enemy& e:game.enemies)
+        if(e.alive&&e.boss&&e.phase==BossPhase::Windup)
+            mask|=1u<<std::clamp(e.variant,0,4);
+    return mask;
+}
+
 static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished) {
         Controls controls=ReadControls();
         game.player.blocking=controls.block;
+        float previousY=game.player.position.y;
+        bool wasDashing=game.player.dashTime>0;
+        float previousHealth=game.player.health;
+        int previousDefeated=game.defeated;
+        unsigned int previousWindups=BossWindupMask();
+        if(controls.attack) playGameAudio(game.player.weapon==Weapon::Bow?1:0);
         UpdateMovement(game,controls,camera,dt);
+        if(controls.jump&&game.player.position.y>previousY+0.01f) playGameAudio(3);
+        if(!wasDashing&&game.player.dashTime>0) playGameAudio(2);
         UpdatePursuit(game,dt);
+        if((BossWindupMask()&~previousWindups)!=0) playGameAudio(5);
         UpdateCombat(game,controls,dt);
+        if(game.player.health<previousHealth) playGameAudio(4);
+        if(game.defeated>previousDefeated) playGameAudio(6);
         if(game.city!=savedCity) { savedCity=game.city; Save(); }
         game.questTime+=dt;
         if(game.quest<3) {

@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v7';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v8';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -158,6 +158,9 @@ jobs:
             await page.locator('[data-class="1"]').click();
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', { timeout: 5000 });
+            const audioPlayed = await page.evaluate(() => window.TagboundAudio.play(0));
+            if (!audioPlayed) throw new Error('Synthesized combat audio did not start after the Home-screen click.');
             await page.keyboard.down('w');
             await page.waitForTimeout(250);
             await page.keyboard.up('w');
@@ -200,7 +203,7 @@ jobs:
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
               await navigator.serviceWorker.ready;
-              await caches.open('tagbound-v6');
+              await caches.open('tagbound-v7');
               const registrations = await navigator.serviceWorker.getRegistrations();
               await Promise.all(registrations.map(registration => registration.unregister()));
             });
@@ -209,13 +212,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v7');
+              const cache = await caches.open('tagbound-v8');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v7') || cacheState.keys.includes('tagbound-v6') ||
+            if (!cacheState.keys.includes('tagbound-v8') || cacheState.keys.includes('tagbound-v7') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
