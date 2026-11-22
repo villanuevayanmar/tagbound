@@ -183,7 +183,8 @@ int main() {
         assert(game.player.attackTime>0.2f);
         assert(game.enemies.front().hitTime>0.1f);
         assert(game.enemies.front().stunTime>0.1f);
-        assert(Vector3Length(game.enemies.front().knockback)>0.5f);
+        const Vector3 knockback=game.enemies.front().knockback;
+        assert(std::sqrt(knockback.x*knockback.x+knockback.y*knockback.y+knockback.z*knockback.z)>0.5f);
     }
 
     // Bow projectiles travel and damage a target in front of the player.
