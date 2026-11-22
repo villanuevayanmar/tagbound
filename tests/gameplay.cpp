@@ -73,6 +73,21 @@ int main() {
     UpdateMovement(game, move, camera, 0.1f);
     assert(game.player.position.z > 0.4f);
 
+    // A high-speed Skirmisher dash cannot tunnel through a thin wall.
+    GameState dashCollision;
+    dashCollision.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    dashCollision.platforms.push_back({{1.0f,1.5f,0},{0.2f,3.0f,4.0f},GRAY});
+    dashCollision.player.playerClass=PlayerClass::Skirmisher;
+    dashCollision.player.position={0.3f,0.3f,0};
+    dashCollision.player.stamina=100;
+    dashCollision.player.escapeSkill=1;
+    Controls fastDash{};
+    fastDash.move.x=1.0f;
+    fastDash.sprint=true;
+    fastDash.skill=true;
+    UpdateMovement(dashCollision,fastDash,camera,0.04f);
+    assert(dashCollision.player.position.x<0.56f);
+
     Controls jump{};
     jump.jump = true;
     UpdateMovement(game, jump, camera, 0.01f);

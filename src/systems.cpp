@@ -204,16 +204,25 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     }
     if(p.dashTime>0) speed*=2.7f;
 
-    float oldX=p.position.x,oldZ=p.position.z;
-    bool wallContact=false;
-    p.position.x+=(direction.x*speed+p.velocity.x)*dt;
-    for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) {
-        p.position.x=oldX; p.velocity.x=0; wallContact=true; break;
-    }
-    p.position.z+=(direction.z*speed+p.velocity.z)*dt;
-    for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) {
-        p.position.z=oldZ; p.velocity.z=0; wallContact=true; break;
-    }
+    auto moveAxis=[&](float amount,bool xAxis) {
+        if(std::abs(amount)<0.000001f) return false;
+        int steps=std::max(1,(int)std::ceil(std::abs(amount)/0.12f));
+        float step=amount/steps;
+        for(int i=0;i<steps;i++) {
+            if(xAxis) p.position.x+=step;
+            else p.position.z+=step;
+            bool blocked=false;
+            for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) { blocked=true; break; }
+            if(blocked) {
+                if(xAxis) { p.position.x-=step; p.velocity.x=0; }
+                else { p.position.z-=step; p.velocity.z=0; }
+                return true;
+            }
+        }
+        return false;
+    };
+    bool wallContact=moveAxis((direction.x*speed+p.velocity.x)*dt,true);
+    wallContact=moveAxis((direction.z*speed+p.velocity.z)*dt,false)||wallContact;
     p.velocity.x*=std::max(0.0f,1.0f-9.0f*dt);
     p.velocity.z*=std::max(0.0f,1.0f-9.0f*dt);
 
