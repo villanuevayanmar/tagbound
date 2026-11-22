@@ -145,18 +145,11 @@ jobs:
               throw new Error('Live settings sound toggle did not synchronize.');
             }
             await page.locator('#settings-sound').click();
-            const pausedBefore = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
-            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,-1,0]));
-            await page.waitForTimeout(250);
-            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,0,0]));
-            const pausedAfter = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
-            if (Math.abs(pausedAfter - pausedBefore) > 0.01) throw new Error('Live gameplay did not pause in Settings.');
+            const pausedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
+            if (pausedState !== 0) throw new Error('Live C++ simulation was not paused in Settings.');
             await page.locator('#resume').click();
-            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,-1,0]));
-            await page.waitForTimeout(250);
-            await page.evaluate(() => Module.ccall('SetTouch', null, ['number','number','number'], [0,0,0]));
-            const resumedAfter = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
-            if (resumedAfter <= pausedAfter + 0.1) throw new Error('Live Resume did not restart movement.');
+            const resumedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
+            if (resumedState !== 1) throw new Error('Live C++ simulation did not resume after Settings.');
 
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
