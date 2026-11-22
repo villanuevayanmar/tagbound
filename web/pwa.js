@@ -106,7 +106,7 @@ function closeSettings(){
  touchHelp.classList.remove('hidden');
  settingsOpenButton.setAttribute('aria-expanded','false');
  if(intro.classList.contains('hidden')&&ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
- settingsOpenButton.focus();
+ canvas.focus();
 }
 settingsOpenButton.addEventListener('click',openSettings);
 resumeButton.addEventListener('click',closeSettings);
