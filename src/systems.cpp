@@ -196,7 +196,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     float speed=p.playerClass==PlayerClass::Skirmisher?7.5f:6.0f;
     float sprintCost=18.0f*dt;
     if(c.sprint&&p.stamina>=sprintCost) { speed*=1.5f; p.stamina-=sprintCost; }
-    else p.stamina=std::min(100.0f,p.stamina+13*dt);
+    else p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
     if(c.slide&&p.grounded) speed*=1.22f;
     if(c.skill&&p.escapeSkill>0&&p.stamina>=20&&p.dashCooldown<=0) {
         p.dashTime=0.24f; p.dashCooldown=1.8f; p.stamina-=20;
@@ -455,7 +455,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         p.vaulting=false; p.vaultTime=0; p.ledgeGrabbing=false; p.climbing=false;
         p.landingTime=0; p.landingRoll=false; p.attackTime=0;
         p.climbTime=0; p.ledgeNormal={}; p.ledgeHangPosition={}; p.ledgeTargetPosition={};
-        p.stamina=100; p.invulnerable=1.2f; g.danger=15;
+        p.stamina=ClassMaxStamina(p.playerClass); p.invulnerable=1.2f; g.danger=15;
     }
 }
 
@@ -464,7 +464,7 @@ void UpdateProgression(GameState& g,int amount) {
     p.xp=std::max(0,p.xp+amount);
     while(p.xp>=p.level*100) {
         p.xp-=p.level*100; p.level++;
-        p.health=std::min(ClassMaxHealth(p.playerClass),p.health+12); p.stamina=100;
+        p.health=std::min(ClassMaxHealth(p.playerClass),p.health+12); p.stamina=ClassMaxStamina(p.playerClass);
     }
     if(p.level>=3) p.escapeSkill=1;
     if(p.level>=5) p.combatSkill=1;
