@@ -126,17 +126,28 @@ syncSoundButtons();
 soundButtons.forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
 const send=()=>call('SetTouch',moveX,moveY,buttons);
-document.querySelectorAll('.class-card').forEach(b=>b.addEventListener('click',()=>{
- document.querySelectorAll('.class-card').forEach(x=>x.classList.remove('selected'));
- b.classList.add('selected');call('ChooseClass',Number(b.dataset.class));
+const classCards=[...document.querySelectorAll('.class-card')];
+const bowAction=document.querySelector('.action[data-bit="16"]');
+let selectedClass=0;
+function syncClassControls(){
+ if(bowAction)bowAction.hidden=selectedClass!==1;
+}
+classCards.forEach(button=>button.addEventListener('click',()=>{
+ classCards.forEach(card=>card.classList.remove('selected'));
+ button.classList.add('selected');
+ selectedClass=Number(button.dataset.class);
+ call('ChooseClass',selectedClass);
+ syncClassControls();
 }));
 try {
  const saved=JSON.parse(localStorage.getItem('tagbound-save')||'{}');
  if(Number.isInteger(saved.klass)&&saved.klass>=0&&saved.klass<3) {
-  const card=document.querySelector('.class-card[data-class="'+saved.klass+'"]');
-  if(card){document.querySelectorAll('.class-card').forEach(x=>x.classList.remove('selected'));card.classList.add('selected')}
+  selectedClass=saved.klass;
+  const card=document.querySelector('.class-card[data-class="'+selectedClass+'"]');
+  if(card){classCards.forEach(x=>x.classList.remove('selected'));card.classList.add('selected')}
  }
 } catch(e) {}
+syncClassControls();
 const intro=document.getElementById('intro');
 const ending=document.getElementById('ending');
 const settings=document.getElementById('settings');
