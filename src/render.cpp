@@ -371,7 +371,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                           {0.42f,0.36f,width*0.7f},{132,83,77,255});
         }
     }
-    const Vector3 objectiveTarget=QuestTarget(g.quest);
+    const Vector3 objectiveTarget=QuestTarget(g.city,g.quest);
     Vector3 marker=Vector3Add(objectiveTarget,{0,g.quest<3?1.2f:1.45f,0});
     DrawCylinder(marker,0.38f,0.08f,2.1f,8,g.quest<3?GOLD:RED);
     DrawSphere(Vector3Add(marker,{0,1.2f,0}),0.5f,g.quest<3?GOLD:MAROON);
