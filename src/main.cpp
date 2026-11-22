@@ -36,7 +36,7 @@ KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true
 KEEP void StartGame() {
     game.player.playerClass=(PlayerClass)selectedClass;
     game.player.health=ClassMaxHealth(game.player.playerClass);
-    game.player.stamina=game.player.playerClass==PlayerClass::Vanguard?95.0f:100.0f;
+    game.player.stamina=ClassMaxStamina(game.player.playerClass);
     game.player.weapon=ClassWeapon(game.player.playerClass);
     int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6), quest=loadLocal(7);
     if(c>=0) {
@@ -45,7 +45,7 @@ KEEP void StartGame() {
         if(!classChosen) {
             game.player.playerClass=(PlayerClass)std::clamp(cl,0,2);
             game.player.health=ClassMaxHealth(game.player.playerClass);
-            game.player.stamina=game.player.playerClass==PlayerClass::Vanguard?95.0f:100.0f;
+            game.player.stamina=ClassMaxStamina(game.player.playerClass);
         }
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
