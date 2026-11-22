@@ -44,3 +44,19 @@ void BuildCity(GameState& g) {
     g.player.landingTime=0; g.player.landingRoll=false; g.player.attackTime=0;
     g.player.climbTime=0; g.player.ledgeNormal={}; g.player.ledgeHangPosition={}; g.player.ledgeTargetPosition={};
 }
+
+void SetQuestProgress(GameState& g,int quest) {
+    g.quest=std::clamp(quest,0,3);
+    if(g.quest<3) {
+        g.bossUnlocked=false;
+        return;
+    }
+    for(const auto& e:g.enemies) if(e.boss) {
+        g.bossUnlocked=true;
+        return;
+    }
+    float hp=280.0f+g.city*120.0f;
+    g.enemies.push_back({{22,3.95f,27},hp,hp,2.4f+g.city*0.38f,0,true,true});
+    g.enemies.back().variant=g.city;
+    g.bossUnlocked=true;
+}
