@@ -18,12 +18,11 @@ The production URL is still serving the older deployment. Do not send the user t
 
 ### Settings and pause system — PR #1
 
-- Added an in-game Settings entry point and overlay.
-- Added Resume without restarting the run.
+- Added an in-game Settings entry point and overlay, with Resume.
 - Pauses the actual C++ simulation while Settings is open.
 - Home and Settings share the saved sound preference.
 - PWA installation appears only on Home and Settings, never during active gameplay.
-- Updated the service-worker cache to `tagbound-v25`.
+- Bumped the service-worker cache to `tagbound-v25`.
 
 ### Gameplay HUD rendering and Settings layout — PR #2
 
@@ -35,29 +34,27 @@ The production URL is still serving the older deployment. Do not send the user t
 ### Pause input reset — PR #3
 
 - Opening Settings clears joystick movement, touch action bits, camera-look deltas, active-button styling and tracked pointer captures.
-- Added hosted C++ state assertions and desktop/mobile browser checks proving all touch/look state is cleared.
+- Hosted desktop/mobile browser tests prove all touch/look state is cleared.
 
 ## Current work — feat/procedural-background-score
 
 Implemented on a feature branch; awaiting hosted CI and PR review:
 
-- Added an original ambient score synthesized locally in the browser through the Web Audio API.
-- No downloaded music assets, external audio API, or paid dependency.
-- Music starts only after the player taps Start.
-- Music pauses immediately when Settings opens and resumes after Resume.
-- The existing saved sound toggle controls both effects and music.
-- Turning sound OFF during a pause does not restart music while the Settings overlay remains open.
-- The score stops when the five-city victory ending appears.
-- Extended hosted desktop and mobile browser tests to verify Home stopped, Start playing, Settings paused, sound toggle remains paused, and Resume playing.
+- Added an original ambient score using Web Audio oscillators and filters. It is generated locally; no downloaded music assets, external audio API, or paid dependency is added.
+- The score remains stopped on Home and starts only after the user taps Start.
+- Opening Settings pauses the score; Resume continues the same motif.
+- Toggling the shared sound setting OFF and ON while paused does not restart the score before Resume.
+- The score stops when the five-city victory ending appears and does not start for an already-completed saved run.
+- Extended hosted desktop and mobile tests to check Home stopped → Start playing → Settings paused → sound toggle remains paused → Resume playing.
+- The same lifecycle checks are included in the manual live-production smoke workflow.
 
 ## Verified cloud testing
 
 - Settings feature passed WebAssembly build, C++ gameplay regression and desktop/mobile Chromium checks in run `45073264491`.
-- HUD drawing fix and Settings layout passed browser screenshot pixel/no-overlap checks in run `45074803692`.
-- Pause input reset passed desktop/mobile touch/look assertions in run `45075281567`.
-- Previous main CI for the merged HUD fix passed in run `45075096367`.
-- A new CI run for the procedural score will be recorded after the PR branch workflow completes.
-- Hosted CI is not physical Android playtesting.
+- HUD rendering fix and Settings layout passed screenshot-pixel/no-overlap checks in run `45074803692`.
+- Pause input reset passed desktop/mobile input-state assertions in run `45075281567`.
+- The procedural-score branch is awaiting hosted CI. Record the run ID/result after it completes.
+- Hosted browser checks are not physical Android playtesting.
 
 ## Deployment blocker — Vercel
 
@@ -65,9 +62,9 @@ The current production deployment is still the old SHA `a15a767`.
 
 - The Vercel deployment API rejected manual deployment creation with HTTP 402, resource `api-deployments-free-per-day`; the free deployment API allowance exceeded its 24-hour request cap.
 - Vercel Git checks report `build-rate-limit`.
-- A minimal, temporary Vercel Sandbox was used only to check for an existing CLI login. No Vercel CLI/token was configured; the Sandbox was stopped without deploying.
-- No paid plan, payment method, usage override, or quota bypass was enabled.
-- The latest source and PWA bundle are in GitHub. That does not mean they are deployed.
+- A minimal temporary Vercel Sandbox was used only to check for an existing CLI login. No Vercel CLI/token was configured; the Sandbox was stopped without deploying.
+- No paid plan, payment method, usage override or quota bypass was enabled.
+- Latest source and generated `dist/` files are in GitHub. That does not mean they are deployed.
 
 ## Remaining development work
 
@@ -89,19 +86,18 @@ The current production deployment is still the old SHA `a15a767`.
 
 ### Audio
 
-- Tune ambient score note progression, loudness and how it sits behind gameplay effects.
-- Test autoplay/unlock behavior on real Android Chrome after deployment.
-- Ensure mute preference, Settings pause/resume and victory ending continue to behave correctly.
+- Tune ambient score melody/spacing, loudness and its balance against combat effects.
+- Test Web Audio unlock/resume behavior on a real Android device after deployment.
+- Confirm sound mute preference, Settings pause/resume and victory-ending stop behavior remain correct.
 
 ### Release readiness
 
-- Merge procedural music only after hosted WebAssembly and desktop/mobile browser tests pass.
-- Check current main CI after merge.
+- Merge the procedural score only after the hosted WebAssembly build, C++ regression tests and desktop/mobile browser lifecycle tests pass.
+- Check main CI after merge.
 - When free Vercel deployment limits permit, obtain a READY deployment for latest main without upgrading or paying.
 - Confirm `tagbound.vercel.app` points to that exact deployment.
-- Run the manual live-production Chromium suite only after deployment is READY.
-- Only then ask the user to test on Android.
-- Record device bugs, fix through GitHub, redeploy and repeat until release criteria are met.
+- Run manual live-production Chromium only after deployment READY.
+- Only then ask the user to test on Android; record device bugs, fix through GitHub, redeploy, and repeat.
 
 ## Testing and development constraints
 
@@ -114,7 +110,8 @@ The current production deployment is still the old SHA `a15a767`.
 ## Exact next task
 
 1. Open a PR from `feat/procedural-background-score` to `main`.
-2. Inspect GitHub Actions results. Fix any TypeScript/JS, timing, or mobile audio-policy issues.
-3. Verify score transitions on both desktop and mobile: stopped Home → playing on Start → paused in Settings → stays paused if muted/unmuted → playing on Resume; victory ending stops it.
-4. Merge only after the WebAssembly build, C++ regression and desktop/mobile Chromium checks pass.
-5. Check Vercel deployment status but do not exceed free quotas. Android testing remains pending until latest main is live.
+2. Inspect the GitHub Actions results and fix any JS/audio timing or browser-policy failures.
+3. Require desktop and landscape-mobile tests for Home stopped → Start playing → Settings paused → sound OFF/ON while still paused → Resume playing.
+4. Require the victory-ending check to confirm the ambient score is stopped.
+5. Merge only after all hosted build and browser tests pass.
+6. Recheck Vercel later, but do not exceed its free quota. Android testing stays pending until latest main is deployed READY.
