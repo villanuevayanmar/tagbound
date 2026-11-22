@@ -1,7 +1,7 @@
 (() => {
 const canvas=document.getElementById('canvas'),stick=document.getElementById('stick'),knob=document.getElementById('knob');
 let pointer=null,buttons=0,moveX=0,moveY=0,lastLook=null;
-let audioContext=null;
+let audioContext=null,audioEnabled=true;
 const soundProfiles=[
  {wave:'sawtooth',start:520,end:115,duration:0.13,volume:0.035,cutoff:1800},
  {wave:'triangle',start:980,end:280,duration:0.11,volume:0.03,cutoff:2400},
@@ -13,6 +13,7 @@ const soundProfiles=[
 ];
 function initAudio(){
  try {
+  if(!audioEnabled)return false;
   const AudioContextClass=window.AudioContext||window.webkitAudioContext;
   if(!AudioContextClass)return false;
   if(!audioContext)audioContext=new AudioContextClass();
@@ -22,6 +23,7 @@ function initAudio(){
 }
 function playAudio(kind){
  try {
+  if(!audioEnabled)return false;
   const sound=soundProfiles[kind];
   if(!sound||!audioContext||audioContext.state==='closed')return false;
   if(audioContext.state==='suspended')audioContext.resume().catch(()=>{});
@@ -41,7 +43,25 @@ function playAudio(kind){
   return true;
  } catch(e) { return false; }
 }
-window.TagboundAudio={init:initAudio,play:playAudio,getState:()=>audioContext?.state||'uninitialized'};
+function setAudioEnabled(enabled){
+ audioEnabled=!!enabled;
+ try { localStorage.setItem('tagbound-sound',audioEnabled?'on':'off'); } catch(e) {}
+ if(soundToggle){
+  soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
+  soundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
+ if(audioEnabled)initAudio();
+ else if(audioContext?.state==='running')audioContext.suspend().catch(()=>{});
+ return audioEnabled;
+}
+const soundToggle=document.getElementById('sound-toggle');
+try { audioEnabled=localStorage.getItem('tagbound-sound')!=='off'; } catch(e) {}
+window.TagboundAudio={init:initAudio,play:playAudio,getState:()=>audioContext?.state||'uninitialized',setEnabled:setAudioEnabled};
+if(soundToggle){
+ soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
+ soundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ soundToggle.addEventListener('click',()=>setAudioEnabled(!audioEnabled));
+}
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 document.querySelectorAll('.class-card').forEach(b=>b.addEventListener('click',()=>{

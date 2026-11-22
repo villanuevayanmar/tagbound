@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v8';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v9';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -140,6 +140,7 @@ jobs:
               webgl: !!(document.querySelector('#canvas').getContext('webgl2') || document.querySelector('#canvas').getContext('webgl')),
               introVisible: !document.querySelector('#intro').classList.contains('hidden'),
               installVisible: (() => { const b=document.querySelector('#install'); const r=b?.getBoundingClientRect(); return !!b && !b.hidden && r.width>0 && r.height>0; })(),
+              soundToggleVisible: (() => { const b=document.querySelector('#sound-toggle'); const r=b?.getBoundingClientRect(); return !!b && r.width>0 && r.height>0; })(),
               floatingInstallPresent: !!document.querySelector('#install-float'),
               installOutsideHome: [...document.querySelectorAll('[id^="install"]')].some(e => !document.querySelector('#intro').contains(e))
             }));
@@ -151,8 +152,24 @@ jobs:
             }
 
             if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible ||
-                !runtime.installVisible || runtime.floatingInstallPresent || runtime.installOutsideHome) {
+                !runtime.installVisible || !runtime.soundToggleVisible || runtime.floatingInstallPresent || runtime.installOutsideHome) {
               throw new Error('Runtime smoke test failed: ' + JSON.stringify(runtime));
+            }
+            await page.locator('#sound-toggle').click();
+            const muted = await page.evaluate(() => ({
+              label: document.querySelector('#sound-toggle').textContent,
+              saved: localStorage.getItem('tagbound-sound')
+            }));
+            if (muted.label !== 'SOUND: OFF' || muted.saved !== 'off') {
+              throw new Error('Home sound mute setting did not persist: ' + JSON.stringify(muted));
+            }
+            await page.locator('#sound-toggle').click();
+            const unmuted = await page.evaluate(() => ({
+              label: document.querySelector('#sound-toggle').textContent,
+              saved: localStorage.getItem('tagbound-sound')
+            }));
+            if (unmuted.label !== 'SOUND: ON' || unmuted.saved !== 'on') {
+              throw new Error('Home sound restore setting did not persist: ' + JSON.stringify(unmuted));
             }
 
             await page.locator('[data-class="1"]').click();
@@ -212,13 +229,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v8');
+              const cache = await caches.open('tagbound-v9');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v8') || cacheState.keys.includes('tagbound-v7') ||
+            if (!cacheState.keys.includes('tagbound-v9') || cacheState.keys.includes('tagbound-v8') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -241,6 +258,7 @@ jobs:
             const mobile = await mobilePage.evaluate(() => ({
               controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
               installVisible: (() => { const b=document.querySelector('#install'); const r=b?.getBoundingClientRect(); return !!b && !b.hidden && r.width>0 && r.height>0; })(),
+              soundToggleVisible: (() => { const b=document.querySelector('#sound-toggle'); const r=b?.getBoundingClientRect(); return !!b && r.width>0 && r.height>0; })(),
               floatingInstallPresent: !!document.querySelector('#install-float'),
               actionCount: document.querySelectorAll('#touch-controls .action').length,
               weaponButtonPresent: !!document.querySelector('#touch-controls [data-bit="128"]'),
@@ -248,7 +266,7 @@ jobs:
               startVisible: (() => { const r=document.querySelector('#start').getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })(),
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
-            if (!mobile.controlsVisible || !mobile.installVisible || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.rotateHidden ||
+            if (!mobile.controlsVisible || !mobile.installVisible || !mobile.soundToggleVisible || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }

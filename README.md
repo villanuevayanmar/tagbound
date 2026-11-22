@@ -8,6 +8,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
 - Procedurally synthesized sound effects for jumps, melee, bow shots, dashes, damage and boss telegraphs; no audio downloads required.
+- A Home-screen sound toggle with a saved mute preference.
 - Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
 - Timed melee strike poses, enemy impact flashes, short hit-stun and knockback feedback.
