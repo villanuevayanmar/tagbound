@@ -35,6 +35,13 @@ jobs:
       - name: Compile WebAssembly
         run: cmake --build build-web --config Release --parallel 2
 
+      - name: Run gameplay regression tests
+        run: |
+          em++ -std=c++17 -O2 -Isrc -Ibuild-web/_deps/raylib-src/src \
+            src/game.cpp src/systems.cpp tests/gameplay.cpp \
+            -sENVIRONMENT=node -sEXIT_RUNTIME=1 -o /tmp/tagbound-gameplay-tests.js
+          node /tmp/tagbound-gameplay-tests.js
+
       - name: Assemble static PWA
         run: cp -R web/. dist/
 
