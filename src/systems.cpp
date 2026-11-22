@@ -251,8 +251,13 @@ void UpdatePursuit(GameState& g,float dt) {
     for(auto& e:g.enemies) {
         if(!e.alive) continue;
         float d=Distance(e.position,p.position);
+        e.hitTime=std::max(0.0f,e.hitTime-dt);
+        e.stunTime=std::max(0.0f,e.stunTime-dt);
         if(d<25) nearby++;
-        if(d<24) {
+        if(e.stunTime>0) {
+            e.position=Vector3Add(e.position,Vector3Scale(e.knockback,dt));
+            e.knockback=Vector3Scale(e.knockback,std::max(0.0f,1.0f-8.0f*dt));
+        } else if(d<24) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f) e.position=Vector3Add(e.position,Vector3Scale(Vector3Normalize(to),e.speed*dt));
@@ -283,7 +288,9 @@ void UpdatePursuit(GameState& g,float dt) {
 
 void UpdateCombat(GameState& g,const Controls& c,float dt) {
     Player& p=g.player;
+    p.attackTime=std::max(0.0f,p.attackTime-dt);
     p.blocking=c.block; p.bowAiming=c.aim;
+    if(c.attack) p.attackTime=0.22f;
     bool bossDefeated=false;
     if(c.attack&&p.weapon==Weapon::Bow) {
         g.projectiles.push_back({Vector3Add(p.position,{0,1.35f,0}),Vector3Scale(p.facing,22),2.0f});
@@ -296,6 +303,11 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
                 float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:26));
                 if(p.weapon==Weapon::Shield&&p.combatSkill) damage=29;
                 e.hp-=damage;
+                e.hitTime=0.16f;
+                e.stunTime=e.boss?0.08f:0.18f;
+                Vector3 knock=Vector3Subtract(e.position,p.position); knock.y=0;
+                if(Vector3Length(knock)>0.001f)
+                    e.knockback=Vector3Scale(Vector3Normalize(knock),e.boss?1.1f:3.0f);
                 if(e.hp<=0&&e.alive) {
                     e.alive=false; g.defeated++; UpdateProgression(g,e.boss?240:45);
                     if(e.boss) bossDefeated=true;
@@ -308,6 +320,11 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         s.position=Vector3Add(s.position,Vector3Scale(s.velocity,dt)); s.life-=dt;
         for(auto& e:g.enemies) if(e.alive&&Distance(s.position,Vector3Add(e.position,{0,1,0}))<1.1f) {
             e.hp-=45; s.life=0;
+            e.hitTime=0.16f;
+            e.stunTime=e.boss?0.08f:0.16f;
+            Vector3 knock=Vector3Subtract(e.position,p.position); knock.y=0;
+            if(Vector3Length(knock)>0.001f)
+                e.knockback=Vector3Scale(Vector3Normalize(knock),e.boss?0.9f:2.4f);
             if(e.hp<=0&&e.alive) {
                 e.alive=false; g.defeated++; UpdateProgression(g,e.boss?240:45);
                 if(e.boss) bossDefeated=true;
@@ -324,7 +341,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
     if(p.health<=0) {
         p.health=100; p.position={0,0.3f,0}; p.velocity={0,0,0};
         p.vaulting=false; p.vaultTime=0; p.ledgeGrabbing=false; p.climbing=false;
-        p.landingTime=0; p.landingRoll=false;
+        p.landingTime=0; p.landingRoll=false; p.attackTime=0;
         p.climbTime=0; p.ledgeNormal={}; p.ledgeHangPosition={}; p.ledgeTargetPosition={};
         p.stamina=100; p.invulnerable=1.2f; g.danger=15;
     }
