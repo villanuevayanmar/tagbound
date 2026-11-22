@@ -340,7 +340,7 @@ void UpdatePursuit(GameState& g,float dt) {
                 if(v==1&&e.phaseTime<=strike[v]) {
                     Vector3 charge=Vector3Subtract(p.position,e.position); charge.y=0;
                     if(Vector3Length(charge)>0.001f)
-                        e.position=Vector3Add(e.position,Vector3Scale(Vector3Normalize(charge),e.speed*3.0f*dt));
+                        MoveEnemy(g,e,Vector3Scale(Vector3Normalize(charge),e.speed*3.0f*dt));
                 }
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strike[v]) {
