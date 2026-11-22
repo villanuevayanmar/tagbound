@@ -409,7 +409,10 @@ void UpdatePursuit(GameState& g,float dt) {
             if(e.phase==BossPhase::Dormant&&d<20) e.phase=BossPhase::Hunt;
             else if(e.phase==BossPhase::Hunt&&d<range[v]*1.15f) {
                 Vector3 aim=Vector3Subtract(p.position,e.position); aim.y=0;
-                if(Vector3Length(aim)>0.001f) e.strikeDirection=Vector3Normalize(aim);
+                if(Vector3Length(aim)>0.001f) {
+                    e.strikeDirection=Vector3Normalize(aim);
+                    e.strikeOrigin=e.position;
+                }
                 e.phase=BossPhase::Windup; e.phaseTime=0;
             }
             else if(e.phase==BossPhase::Windup&&e.phaseTime>BossWindupDuration(v,enraged)) { e.phase=BossPhase::Strike; e.phaseTime=0; }
@@ -419,13 +422,15 @@ void UpdatePursuit(GameState& g,float dt) {
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strikeDuration) {
                     bool inRange=d<range[v];
+                    Vector3 attackOrigin=e.position;
                     if(v==1||v==3) {
-                        Vector3 toPlayer=Vector3Subtract(p.position,e.position); toPlayer.y=0;
+                        attackOrigin=e.strikeOrigin;
+                        Vector3 toPlayer=Vector3Subtract(p.position,attackOrigin); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);
                         inRange=forward>0.0f&&forward<range[v]&&lateralSquared<=0.9f*0.9f;
                     }
-                    if(inRange&&HasLineOfSight(g,e.position,p.position)&&p.invulnerable<=0) {
+                    if(inRange&&HasLineOfSight(g,attackOrigin,p.position)&&p.invulnerable<=0) {
                         float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;
                         if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
                         else { p.health-=damage[v]*(enraged?1.1f:1.0f); p.invulnerable=0.65f; }

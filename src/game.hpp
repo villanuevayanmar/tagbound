@@ -18,6 +18,7 @@ struct Enemy {
     int variant=0;
     Vector3 knockback{};
     Vector3 strikeDirection{};
+    Vector3 strikeOrigin{};
     float attackWindup=0;
 };
 struct Player {

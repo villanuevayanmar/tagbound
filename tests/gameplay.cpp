@@ -610,6 +610,7 @@ int main() {
     dodgedCharger.phase=BossPhase::Strike;
     dodgedCharger.phaseTime=0.33f;
     dodgedCharger.strikeDirection={0,0,1};
+    dodgedCharger.strikeOrigin=dodgedCharger.position;
     game.enemies.push_back(dodgedCharger);
     UpdatePursuit(game,0.01f);
     assert(near(game.player.health,100.0f));
@@ -627,6 +628,7 @@ int main() {
     alignedSpire.phase=BossPhase::Strike;
     alignedSpire.phaseTime=0.23f;
     alignedSpire.strikeDirection={0,0,1};
+    alignedSpire.strikeOrigin=alignedSpire.position;
     game.enemies.push_back(alignedSpire);
     UpdatePursuit(game,0.01f);
     assert(near(game.player.health,82.0f));
@@ -641,6 +643,7 @@ int main() {
     dodgedSpire.phase=BossPhase::Strike;
     dodgedSpire.phaseTime=0.23f;
     dodgedSpire.strikeDirection={0,0,1};
+    dodgedSpire.strikeOrigin=dodgedSpire.position;
     game.enemies.push_back(dodgedSpire);
     UpdatePursuit(game,0.01f);
     assert(near(game.player.health,100.0f));
@@ -661,6 +664,7 @@ int main() {
         boss.phase=BossPhase::Strike;
         boss.phaseTime=1.0f;
         boss.strikeDirection={0,0,-1};
+        boss.strikeOrigin=boss.position;
         game.enemies.push_back(boss);
         UpdatePursuit(game,0.05f);
         assert(near(game.player.health,100.0f-bossDamage[variant]));
@@ -681,6 +685,7 @@ int main() {
         boss.phase=BossPhase::Strike;
         boss.phaseTime=1.0f;
         boss.strikeDirection={0,0,-1};
+        boss.strikeOrigin=boss.position;
         game.enemies.push_back(boss);
         UpdatePursuit(game,0.05f);
         assert(near(game.player.health,100.0f-enragedBossDamage[variant]));
@@ -703,15 +708,16 @@ int main() {
     game.player.position={0,0.3f,0};
     game.player.health=100;
     game.player.invulnerable=0;
-    Enemy charger{{0,0.3f,4.0f},100,100,3.0f,0,true,true};
+    Enemy charger{{0,0.3f,2.2f},100,100,3.0f,0,true,true};
     charger.variant=1;
     charger.phase=BossPhase::Strike;
     charger.strikeDirection={0,0,-1};
+    charger.strikeOrigin=charger.position;
     game.enemies.push_back(charger);
-    UpdatePursuit(game,0.2f);
-    assert(game.enemies.front().position.z<2.5f);
+    for(int i=0;i<7;i++) UpdatePursuit(game,0.04f);
+    assert(game.enemies.front().position.z<0.0f);
     assert(near(game.player.health,100.0f));
-    UpdatePursuit(game,0.15f);
+    UpdatePursuit(game,0.05f);
     assert(near(game.player.health,70.0f));
 
     // A Gilded Charger cannot charge through a solid rooftop wall.
@@ -723,6 +729,7 @@ int main() {
     coveredCharger.variant=1;
     coveredCharger.phase=BossPhase::Strike;
     coveredCharger.strikeDirection={0,0,1};
+    coveredCharger.strikeOrigin=coveredCharger.position;
     game.enemies.push_back(coveredCharger);
     for(int i=0;i<4;i++) UpdatePursuit(game,0.05f);
     assert(game.enemies.front().position.z<1.5f);

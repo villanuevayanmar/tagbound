@@ -451,7 +451,8 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                 Vector3 direction=e.strikeDirection; direction.y=0;
                 float length=Vector3Length(direction);
                 direction=length>0.001f?Vector3Scale(direction,1.0f/length):Vector3{0,0,1};
-                Vector3 start={e.position.x,e.position.y+0.06f,e.position.z};
+                Vector3 origin=e.strikeOrigin;
+                Vector3 start={origin.x,origin.y+0.06f,origin.z};
                 Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
                 float width=variant==1?0.38f:0.45f;
                 DrawCylinderEx(start,end,width,width*0.75f,8,warning);
