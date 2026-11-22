@@ -243,7 +243,7 @@ int main() {
 
     // An enemy before the same cover remains a valid melee target.
     game.enemies.clear();
-    game.enemies.push_back({{0,0.3f,0.7f},100,100,0,0,false,true});
+    game.enemies.push_back({{0,0.3f,0.5f},100,100,0,0,false,true});
     UpdateCombat(game,blockedMelee,0.016f);
     assert(near(game.enemies.front().hp,74.0f));
     game.platforms.clear();
