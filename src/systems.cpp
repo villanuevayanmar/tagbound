@@ -343,7 +343,6 @@ void UpdatePursuit(GameState& g,float dt) {
                 float intended=std::abs(desired.x)+std::abs(desired.z);
                 if(moved<intended*0.55f) {
                     Vector3 side={to.z/horizontal,0,-to.x/horizontal};
-                    if(e.position.x<p.position.x) side=Vector3Scale(side,-1.0f);
                     Vector3 detour=Vector3Scale(side,e.speed*dt);
                     Vector3 detourStart=e.position;
                     MoveEnemy(g,e,detour);
