@@ -8,7 +8,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
 - Procedurally synthesized sound effects for jumps, melee, bow shots, dashes, shield blocks, damage, pursuer warnings and boss telegraphs; no audio downloads required.
-- A Home-screen sound toggle with a saved mute preference.
+- Home-screen and in-game settings with a shared sound toggle, a real pause state, and PWA installation available only from Home or Settings.
 - Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
 - Timed melee strike poses, enemy impact flashes, short hit-stun and knockback feedback.
@@ -118,7 +118,7 @@ The included vercel.json declares the static output directory, WebAssembly MIME 
 ### iPhone / iPad
 
 1. Open the deployed HTTPS URL in Safari.
-2. On TAGBOUND's Home screen, tap INSTALL ON PHONE, then follow Safari's Share → Add to Home Screen instructions.
+2. On TAGBOUND's Home screen or in-game Settings screen, tap INSTALL ON PHONE, then follow Safari's Share → Add to Home Screen instructions.
 3. Confirm the name and tap Add.
 4. Launch TAGBOUND from the Home Screen. Turn the device sideways.
 
@@ -127,7 +127,7 @@ iOS Safari does not consistently support JavaScript orientation locking. The app
 ### Android
 
 1. Open the deployed HTTPS URL in Chrome.
-2. On TAGBOUND's Home screen, tap INSTALL ON PHONE and confirm the browser's install prompt. If it is unavailable, use Chrome's menu and choose Install app / Add to Home screen.
+2. On TAGBOUND's Home screen or in-game Settings screen, tap INSTALL ON PHONE and confirm the browser's install prompt. If it is unavailable, use Chrome's menu and choose Install app / Add to Home screen.
 3. Launch TAGBOUND from its new home-screen icon.
 
 The first visit must download the game assets. The service worker caches the HTML, JS, WASM, stylesheet, manifest and icons for later offline launches. Clear the browser's site data to remove the offline cache.
