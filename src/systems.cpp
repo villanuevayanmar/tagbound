@@ -344,7 +344,17 @@ void UpdatePursuit(GameState& g,float dt) {
                 }
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strike[v]) {
-                    if(d<range[v]&&p.invulnerable<=0) {
+                    Vector3 attackFrom=Vector3Add(e.position,{0,1.0f,0});
+                    Vector3 attackTo=Vector3Add(p.position,{0,1.0f,0});
+                    bool blocked=false;
+                    for(const auto& platform:g.platforms) {
+                        float hitTime=0.0f;
+                        if(SegmentPlatform(attackFrom,attackTo,platform,hitTime)) {
+                            blocked=true;
+                            break;
+                        }
+                    }
+                    if(d<range[v]&&!blocked&&p.invulnerable<=0) {
                         if(p.blocking&&p.stamina>=18) p.stamina-=18;
                         else { p.health-=damage[v]; p.invulnerable=0.65f; }
                     }
