@@ -8,7 +8,7 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `5479bd3613937f7fc76af346d84fe76f25f846f9`  
+Current main commit: `ea8e576d32fdedd6f80172150c65569770fa9ee3`  
 Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
 Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
 
@@ -61,6 +61,16 @@ Merged in commit `805e96887ac4f61e17b1c6dd161c6fe026ab9026`.
 - Score remains stopped on Home, starts after Start, pauses while Settings is open, resumes with the run, follows the shared sound toggle and stops on the victory ending.
 - Added desktop/mobile tests for generated note count, pause, no new notes while paused, resumed notes, and saved-victory silence.
 
+### Death-frame attack prevention — PR #7
+
+Merged in commit `ea8e576d32fdedd6f80172150c65569770fa9ee3`.
+
+- Combat resolution captures whether the player is alive at the start of the frame.
+- If pursuit damage has already reduced HP to zero, the player cannot begin a new melee hit or spawn a new bow projectile later in that frame.
+- Already-fired projectiles remain in flight and resolve normally.
+- C++ regression tests cover a zero-HP Vanguard melee attempt and a zero-HP Skirmisher bow attempt; both respawn without creating the new attack.
+- PR hosted Emscripten build, C++ regressions, PWA validation and desktop/mobile Chromium all passed in run `45078544251`.
+
 ## Verified cloud testing
 
 - Settings PR checks passed in run `45073264491`.
@@ -72,6 +82,8 @@ Merged in commit `805e96887ac4f61e17b1c6dd161c6fe026ab9026`.
 - Main after class-specific BOW merge passed in run `45077290312`: Emscripten build, C++ gameplay regression tests, static PWA validation, desktop/mobile Chromium, and publish-dist.
 - PR #6 held-beacon checks passed in pull-request workflow `45077905618`.
 - Main after PR #6 passed Emscripten build, C++ regressions, PWA validation, desktop/mobile Chromium and publish-dist in run `45078141314`.
+- PR #7 death-frame fix passed Emscripten build, C++ regressions, PWA validation and desktop/mobile Chromium in run `45078544251`.
+- Main-branch CI and generated `dist/` sync after PR #7 are pending; record their terminal result and output SHA once available.
 - Latest main commit `e629ccbecbafed645e593b7040f3ea01f7667dd5` is the tested generated `dist/` sync.
 - Hosted browser tests are not physical Android playtesting.
 
