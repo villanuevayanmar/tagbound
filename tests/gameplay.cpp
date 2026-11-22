@@ -513,9 +513,11 @@ int main() {
         game.enemies.clear();
         game.player.playerClass=(PlayerClass)klass;
         game.player.health=0;
+        game.player.stamina=0;
         Controls idle{};
         UpdateCombat(game,idle,0.016f);
         assert(near(game.player.health,classHealth[klass]));
+        assert(near(game.player.stamina,classStamina[klass]));
     }
 
     std::cout << "PASS: city setup, names, XP/skills, movement, jump, dash, melee combat, and boss progression.\\n";
