@@ -331,6 +331,16 @@ int main() {
     assert(game.enemies.front().position.z>2.2f);
     game.platforms.clear();
 
+    // A pursuer aligned directly behind a wall finds an open side instead of stalling.
+    game.enemies.clear();
+    game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
+    game.player.position={0,0.3f,6.0f};
+    game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
+    for(int i=0;i<180;i++) UpdatePursuit(game,0.05f);
+    assert(game.enemies.front().position.x>2.2f);
+    assert(game.enemies.front().position.z>2.2f);
+    game.platforms.clear();
+
     // Blocking spends stamina instead of health; an exhausted block does not.
     game.enemies.clear();
     game.player.position={0,0.3f,0};

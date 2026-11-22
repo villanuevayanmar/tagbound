@@ -335,8 +335,18 @@ void UpdatePursuit(GameState& g,float dt) {
         } else if(d<24) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
-            if(d>1.45f&&horizontal>0.001f) MoveEnemy(g,e,Vector3Scale(Vector3Normalize(to),e.speed*dt));
-            else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
+            if(d>1.45f&&horizontal>0.001f) {
+                Vector3 before=e.position;
+                MoveEnemy(g,e,Vector3Scale(Vector3Normalize(to),e.speed*dt));
+                if(std::abs(e.position.x-before.x)+std::abs(e.position.z-before.z)<0.0001f) {
+                    Vector3 side={to.z/horizontal,0,-to.x/horizontal};
+                    Vector3 detour=Vector3Scale(side,e.speed*dt);
+                    Vector3 detourStart=e.position;
+                    MoveEnemy(g,e,detour);
+                    if(std::abs(e.position.x-detourStart.x)+std::abs(e.position.z-detourStart.z)<0.0001f)
+                        MoveEnemy(g,e,Vector3Scale(detour,-1.0f));
+                }
+            } else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
                 if(HasLineOfSight(g,e.position,p.position)) {
                     e.cooldown=1.0f;
                     if(p.blocking&&p.stamina>=8) p.stamina-=8;
