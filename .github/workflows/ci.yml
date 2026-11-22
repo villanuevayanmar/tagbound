@@ -148,7 +148,7 @@ jobs:
             if (!classStats[0].includes('125 HP') || !classStats[0].includes('95 STA') ||
                 !classStats[1].includes('95 HP') || !classStats[1].includes('100 STA') ||
                 !classStats[2].includes('115 HP') || !classStats[2].includes('100 STA') ||
-                !classStats[2].includes('EFFICIENT GUARD')) {
+                !classStats[2].includes('Efficient Guard')) {
               throw new Error('Class selection stats do not match gameplay limits: ' + JSON.stringify(classStats));
             }
 
