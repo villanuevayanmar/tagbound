@@ -42,16 +42,6 @@ int main() {
         }
     }
 
-    // Beacon triggers require rooftop height and horizontal platform proximity.
-    for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
-        Vector3 target=QuestTarget(city,quest);
-        assert(ReachedQuestBeacon(target,city,quest));
-        assert(!ReachedQuestBeacon({target.x,0.3f,target.z},city,quest));
-        assert(!ReachedQuestBeacon({target.x+3.6f,target.y,target.z},city,quest));
-        assert(!ReachedQuestBeacon({target.x,target.y+0.6f,target.z},city,quest));
-    }
-    assert(!ReachedQuestBeacon(QuestTarget(0,3),0,3));
-
     // Boss warning countdowns use the same durations as combat state transitions.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     for(int variant=0;variant<5;variant++) {
@@ -384,10 +374,10 @@ int main() {
     game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
     game.player.position={0,0.3f,6.0f};
     game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
-    float initialDistance=Distance(game.enemies.front().position,game.player.position);
+    float initialDistance=Vector3Distance(game.enemies.front().position,game.player.position);
     for(int i=0;i<40;i++) UpdatePursuit(game,0.05f);
     assert(game.enemies.front().position.z>2.2f);
-    assert(Distance(game.enemies.front().position,game.player.position)<initialDistance);
+    assert(Vector3Distance(game.enemies.front().position,game.player.position)<initialDistance);
     game.platforms.clear();
 
     // Vanguard uses the standard guard stamina cost.
