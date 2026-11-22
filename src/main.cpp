@@ -5,17 +5,17 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #define KEEP EMSCRIPTEN_KEEPALIVE
-EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished), {
-  try { localStorage.setItem("tagbound-save",JSON.stringify({city,level,xp,unlocked,klass,weapon,finished})); } catch(e) {}
+EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest), {
+  try { localStorage.setItem("tagbound-save",JSON.stringify({city,level,xp,unlocked,klass,weapon,finished,quest})); } catch(e) {}
 });
 EM_JS(int, loadLocal, (int field), {
-  try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
+  try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
 });
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { document.getElementById("ending")?.classList.remove("hidden"); });
 #else
 #define KEEP
-static void saveLocal(int,int,int,int,int,int,int) {}
+static void saveLocal(int,int,int,int,int,int,int,int) {}
 static int loadLocal(int) { return -1; }
 static void hideIntro() {}
 static void showEnding() {}
@@ -29,7 +29,7 @@ static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
-    saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0);
+    saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0,game.quest);
 }
 extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
@@ -38,7 +38,7 @@ KEEP void StartGame() {
     if(selectedClass==0) { game.player.health=125; game.player.stamina=95; game.player.weapon=ClassWeapon(PlayerClass::Vanguard); }
     if(selectedClass==1) { game.player.health=95; game.player.stamina=100; game.player.weapon=ClassWeapon(PlayerClass::Skirmisher); }
     if(selectedClass==2) { game.player.health=115; game.player.stamina=100; game.player.weapon=ClassWeapon(PlayerClass::Warden); }
-    int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6);
+    int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6), quest=loadLocal(7);
     if(c>=0) {
         game.city=std::clamp(c,0,4); game.unlockedCity=std::clamp(u,0,4);
         game.player.level=std::max(1,l); game.player.xp=std::max(0,x);
@@ -51,13 +51,17 @@ KEEP void StartGame() {
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
     game.player.weapon=ClassWeapon(game.player.playerClass);
-    game.started=true; game.finished=finished>0; BuildCity(game); savedCity=game.city; hideIntro(); Save();
+    game.started=true; game.finished=finished>0; BuildCity(game);
+    if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
+    else SetQuestProgress(game,quest<0?0:quest);
+    savedCity=game.city; hideIntro(); Save();
     if(game.finished) showEnding();
 }
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
 KEEP void SetLook(float x,float y) { lookX+=x; lookY+=y; }
 KEEP void ResetProgress() {
-    game.city=0; game.unlockedCity=0; game.player.level=1; game.player.xp=0;
+    game.city=0; game.unlockedCity=0; game.quest=0; game.bossUnlocked=false;
+    game.player.level=1; game.player.xp=0;
     game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; savedCity=0; Save();
 }
 }
@@ -104,12 +108,7 @@ static void Frame() {
                 UpdateProgression(game,65+game.city*15+game.quest*10);
                 game.questTime=0;
                 game.questLimit=100.0f-game.city*8.0f-game.quest*9.0f;
-                if(game.quest==3) {
-                    float hp=280.0f+game.city*120.0f;
-                    game.enemies.push_back({{22,3.95f,27},hp,hp,2.4f+game.city*0.38f,0,true,true});
-                    game.enemies.back().variant=game.city;
-                    game.bossUnlocked=true;
-                }
+                if(game.quest==3) SetQuestProgress(game,game.quest);
                 Save();
             }
             if(game.questTime>game.questLimit) {
