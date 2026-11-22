@@ -1,10 +1,6 @@
 name: TAGBOUND live production smoke test
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/live-smoke.yml'
   workflow_dispatch:
     inputs:
       base_url:
