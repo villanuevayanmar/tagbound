@@ -123,7 +123,7 @@ jobs:
             const runtime = await page.evaluate(() => ({
               canvas: !!document.querySelector('#canvas'),
               wasm: typeof WebAssembly === 'object',
-              webgl: !!document.querySelector('#canvas').getContext('webgl'),
+              webgl: !!(document.querySelector('#canvas').getContext('webgl2') || document.querySelector('#canvas').getContext('webgl')),
               introVisible: !document.querySelector('#intro').classList.contains('hidden')
             }));
             if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible) {
