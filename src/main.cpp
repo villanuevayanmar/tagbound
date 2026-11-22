@@ -69,7 +69,7 @@ KEEP void StartGame() {
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
 KEEP void SetLook(float x,float y) { lookX+=x; lookY+=y; }
 KEEP int GetQuestProgress() { return game.quest; }
-KEEP float GetPlayerPositionZ() { return game.player.position.z; }
+KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
 }
