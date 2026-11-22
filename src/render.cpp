@@ -268,10 +268,27 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         DrawBuildingDetails(p,g.city,g.player.position);
         DrawRooftopProps(p,g.city);
     }
+    static const Color skylineColor[5]={{34,57,64,255},{70,52,48,255},{36,48,58,255},{56,48,76,255},{65,39,45,255}};
     for(int i=0;i<32;i++) {
         float a=i*0.19635f, r=47.0f+(i%4)*2.0f;
-        Vector3 p={std::cos(a)*r,3.5f+(i%6)*1.5f,std::sin(a)*r};
-        DrawCubeV(p,{5.0f,7.0f+(i%6)*3.0f,5.0f},{25,31,43,255});
+        float width=3.8f+(i%3)*0.75f;
+        float height=7.0f+(i%6)*3.0f+g.city*0.65f;
+        Vector3 p={std::cos(a)*r,height*0.5f-0.5f,std::sin(a)*r};
+        DrawCubeV(p,{width,height,width},skylineColor[g.city]);
+        float roof=p.y+height*0.5f;
+        if(g.city==0) {
+            DrawCubeV({p.x,roof+0.12f,p.z},{width+0.18f,0.24f,width+0.18f},{75,111,116,255});
+        } else if(g.city==1) {
+            DrawCubeV({p.x,roof+0.18f,p.z},{width+0.5f,0.16f,width+0.5f},{157,103,68,255});
+        } else if(g.city==2) {
+            DrawCylinder({p.x,roof+0.8f,p.z},0.34f,0.48f,1.6f,7,{81,91,99,255});
+        } else if(g.city==3) {
+            DrawCylinder({p.x,roof+0.7f,p.z},0.0f,width*0.34f,1.4f,7,{128,112,159,255});
+        } else {
+            for(int side=-1;side<=1;side+=2)
+                DrawCubeV({p.x+side*width*0.28f,roof+0.18f,p.z},
+                          {0.42f,0.36f,width*0.7f},{132,83,77,255});
+        }
     }
     const Vector3 points[3]={{4,1.7f,6},{10,2.45f,13},{16,3.2f,20}};
     Vector3 marker=g.quest<3?Vector3Add(points[g.quest],{0,1.2f,0}):Vector3{22,5.4f,27};
