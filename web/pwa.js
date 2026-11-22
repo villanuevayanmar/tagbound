@@ -86,15 +86,25 @@ const settingsOpenButton=document.getElementById('settings-open');
 const touchControls=document.getElementById('touch-controls');
 const touchHelp=document.getElementById('touch-help');
 const resumeButton=document.getElementById('resume');
+function resetTouchInput(){
+ pointer=null;buttons=0;moveX=moveY=0;
+ knob.style.transform='translate(0,0)';
+ send();
+}
 function openSettings(){
+ resetTouchInput();
  settings.classList.remove('hidden');
  settingsOpenButton.classList.add('hidden');
+ settingsOpenButton.setAttribute('aria-expanded','true');
  touchControls.classList.add('hidden');
  touchHelp.classList.add('hidden');
  resumeButton.focus();
 }
 function closeSettings(){
  settings.classList.add('hidden');
+ touchControls.classList.remove('hidden');
+ touchHelp.classList.remove('hidden');
+ settingsOpenButton.setAttribute('aria-expanded','false');
  if(intro.classList.contains('hidden')&&ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
  settingsOpenButton.focus();
 }
