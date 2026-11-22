@@ -4,6 +4,8 @@
 
 static const char* cityNames[5]={"PORT TOWN","MERCHANT TIER","CLOCKWORK FOUNDRY","HIGH SPIRE","IMPERIAL CAPITAL"};
 const char* CityName(int c) { return cityNames[std::clamp(c,0,4)]; }
+static const char* bossNames[5]={"HARBOR WARDEN","GILDED CHARGER","FOUNDRY COLOSSUS","SPIRE SENTINEL","IMPERIAL REGENT"};
+const char* BossName(int c) { return bossNames[std::clamp(c,0,4)]; }
 const char* WeaponName(Weapon w) {
     static const char* names[5]={"SWORD","AXE","SHIELD","BOW","SPEAR"};
     return names[std::clamp((int)w,0,4)];
