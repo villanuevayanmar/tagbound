@@ -283,6 +283,7 @@ int main() {
     assert(near(game.enemies.front().hp,55.0f));
     assert(game.projectiles.empty());
 
+    game.platforms.clear();
     // Hit-stunned enemies are pushed back before resuming pursuit.
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
