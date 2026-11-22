@@ -547,7 +547,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     int targetDistance=(int)std::round(Vector3Distance(g.player.position,objectiveTarget));
     if(holdObjective) {
         DrawText(TextFormat("CAPTURE %.1f/%.1fs  |  TAGGERS %d",g.beaconHoldTime,QuestHoldDuration(g.city,g.quest),taggers),
-                 24,objectiveHudY+54,12,LIGHTBLUE);
+                 24,objectiveHudY+54,12,Color{126,215,231,255});
     } else {
         DrawText(g.quest<3?TextFormat("BEACON %dm  |  TAGGERS %d  |  WAVE %ds",targetDistance,taggers,std::max(0,(int)std::ceil(g.questLimit-g.questTime))):TextFormat("BOSS %dm  |  TAGGERS %d",targetDistance,taggers),
                  24,objectiveHudY+54,12,LIGHTGRAY);
