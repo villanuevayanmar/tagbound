@@ -477,11 +477,28 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         else { g.city++; BuildCity(g); }
     }
     if(p.health<=0) {
-        p.health=ClassMaxHealth(p.playerClass); p.position={0,0.3f,0}; p.velocity={0,0,0};
-        p.vaulting=false; p.vaultTime=0; p.ledgeGrabbing=false; p.climbing=false;
+        Vector3 checkpoint={0,0.3f,0};
+        if(g.quest>0) checkpoint=QuestTarget(g.city,g.quest-1);
+        Vector3 next=QuestTarget(g.city,g.quest);
+        Vector3 facing=Vector3Subtract(next,checkpoint);
+        facing.y=0;
+        if(Vector3Length(facing)>0.001f) p.facing=Vector3Normalize(facing);
+        p.health=ClassMaxHealth(p.playerClass);
+        p.stamina=ClassMaxStamina(p.playerClass);
+        p.position=checkpoint;
+        p.velocity={0,0,0};
+        p.grounded=true;
+        p.wallRunning=false;
+        p.dashTime=0;
+        p.dashCooldown=0;
+        p.vaulting=false; p.vaultTime=0;
+        p.ledgeGrabbing=false; p.climbing=false; p.climbTime=0;
+        p.ledgeNormal={}; p.ledgeHangPosition={}; p.ledgeTargetPosition={};
         p.landingTime=0; p.landingRoll=false; p.attackTime=0;
-        p.climbTime=0; p.ledgeNormal={}; p.ledgeHangPosition={}; p.ledgeTargetPosition={};
-        p.stamina=ClassMaxStamina(p.playerClass); p.invulnerable=1.2f; g.danger=15;
+        p.blocking=false; p.bowAiming=false;
+        p.invulnerable=1.2f;
+        g.questTime=0;
+        g.danger=15;
     }
 }
 

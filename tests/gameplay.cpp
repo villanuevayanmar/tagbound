@@ -647,15 +647,47 @@ int main() {
 
 
     const float classHealth[3]={125.0f,95.0f,115.0f};
-    for(int klass=0;klass<3;klass++) {
-        game.enemies.clear();
-        game.player.playerClass=(PlayerClass)klass;
-        game.player.health=0;
-        game.player.stamina=0;
-        Controls idle{};
-        UpdateCombat(game,idle,0.016f);
-        assert(near(game.player.health,classHealth[klass]));
-        assert(near(game.player.stamina,classStamina[klass]));
+    GameState checkpointGame;
+    Controls idle{};
+    for(int city=0;city<5;city++) {
+        checkpointGame.city=city;
+        BuildCity(checkpointGame);
+        for(int quest=0;quest<4;quest++) {
+            SetQuestProgress(checkpointGame,quest);
+            for(int klass=0;klass<3;klass++) {
+                Player& player=checkpointGame.player;
+                player.playerClass=(PlayerClass)klass;
+                player.health=0;
+                player.stamina=0;
+                player.position={-30,12,30};
+                player.grounded=false;
+                player.wallRunning=true;
+                player.dashTime=0.2f;
+                player.vaulting=true;
+                player.ledgeGrabbing=true;
+                player.climbing=true;
+                player.blocking=true;
+                player.bowAiming=true;
+                int xpBefore=player.xp, levelBefore=player.level;
+                int defeatedBefore=checkpointGame.defeated;
+                UpdateCombat(checkpointGame,idle,0.016f);
+                Vector3 expected=quest>0?QuestTarget(city,quest-1):Vector3{0,0.3f,0};
+                assert(near(player.health,classHealth[klass]));
+                assert(near(player.stamina,classStamina[klass]));
+                assert(near(player.position.x,expected.x)&&near(player.position.y,expected.y)&&near(player.position.z,expected.z));
+                assert(player.grounded&&!player.wallRunning&&!player.vaulting&&!player.ledgeGrabbing&&!player.climbing);
+                assert(!player.blocking&&!player.bowAiming&&near(player.dashTime,0));
+                assert(near(player.invulnerable,1.2f));
+                assert(checkpointGame.city==city&&checkpointGame.quest==quest);
+                assert(player.xp==xpBefore&&player.level==levelBefore&&checkpointGame.defeated==defeatedBefore);
+                assert(near(checkpointGame.questTime,0));
+                Vector3 target=QuestTarget(city,quest);
+                float fx=target.x-expected.x,fz=target.z-expected.z;
+                float fl=std::sqrt(fx*fx+fz*fz);
+                assert(fl<0.001f || (std::abs(player.facing.x-fx/fl)<0.02f&&std::abs(player.facing.z-fz/fl)<0.02f));
+                if(quest==3) assert(std::count_if(checkpointGame.enemies.begin(),checkpointGame.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;})==1);
+            }
+        }
     }
 
     // Reinforcement spawns stay in bounds and out of solid geometry.
