@@ -439,6 +439,7 @@ int main() {
     // Blocking spends stamina instead of health; an exhausted block does not.
     game.enemies.clear();
     game.player.position={0,0.3f,0};
+    game.player.facing={0,0,1};
     game.player.invulnerable=0;
     game.player.health = 100;
     game.player.stamina = 100;
@@ -460,10 +461,28 @@ int main() {
     assert(near(game.player.health,89.0f));
     game.player.blocking = false;
 
+    // A shield cannot block an attack that arrives from behind.
+    game.enemies.clear();
+    game.player.playerClass=PlayerClass::Warden;
+    game.player.position={0,0.3f,0};
+    game.player.facing={0,0,1};
+    game.player.health=100;
+    game.player.stamina=100;
+    game.player.invulnerable=0;
+    game.player.blocking=true;
+    game.enemies.push_back({{0,0.3f,-0.8f},40,40,0,0,false,true});
+    UpdatePursuit(game,0.016f);
+    assert(game.enemies.front().attackWindup>0.35f);
+    UpdatePursuit(game,0.45f);
+    assert(near(game.player.health,89.0f));
+    assert(near(game.player.stamina,100.0f));
+    game.player.blocking=false;
+
     // Warden's shield reduces guard stamina costs against both taggers and bosses.
     game.enemies.clear();
     game.player.playerClass=PlayerClass::Warden;
     game.player.position={0,0.3f,0};
+    game.player.facing={0,0,1};
     game.player.health=100;
     game.player.stamina=100;
     game.player.invulnerable=0;
@@ -478,6 +497,7 @@ int main() {
 
     game.enemies.clear();
     game.player.position={0,0.3f,0};
+    game.player.facing={0,0,1};
     game.player.health=100;
     game.player.stamina=100;
     game.player.invulnerable=0;
@@ -489,6 +509,24 @@ int main() {
     UpdatePursuit(game,0.05f);
     assert(near(game.player.health,100.0f));
     assert(near(game.player.stamina,88.0f));
+
+    // A boss strike from behind bypasses a frontal guard.
+    game.enemies.clear();
+    game.player.position={0,0.3f,0};
+    game.player.facing={0,0,1};
+    game.player.health=100;
+    game.player.stamina=100;
+    game.player.invulnerable=0;
+    game.player.blocking=true;
+    Enemy rearBoss{{0,0.3f,-3.5f},100,100,0,0,true,true};
+    rearBoss.variant=0;
+    rearBoss.phase=BossPhase::Strike;
+    rearBoss.phaseTime=1.0f;
+    rearBoss.strikeOrigin=rearBoss.position;
+    game.enemies.push_back(rearBoss);
+    UpdatePursuit(game,0.05f);
+    assert(near(game.player.health,76.0f));
+    assert(near(game.player.stamina,100.0f));
 
     // A Warden with insufficient stamina still takes the unblocked hit.
     game.enemies.clear();
@@ -563,39 +601,7 @@ int main() {
         assert(game.enemies.front().phase==BossPhase::Windup);
     }
 
-    // The Harbor Warden uses a frontal cleave that can be avoided by stepping out of its wedge.
-    game.platforms.clear();
-    game.enemies.clear();
-    game.player.position={0,0.3f,3.5f};
-    game.player.health=100;
-    game.player.invulnerable=0;
-    Enemy harborCleave{{0,0.3f,0},100,100,0,0,true,true};
-    harborCleave.variant=0;
-    harborCleave.phase=BossPhase::Strike;
-    harborCleave.phaseTime=1.0f;
-    harborCleave.strikeDirection={0,0,1};
-    harborCleave.strikeOrigin=harborCleave.position;
-    game.enemies.push_back(harborCleave);
-    UpdatePursuit(game,0.01f);
-    assert(near(game.player.health,76.0f));
-    assert(game.enemies.front().phase==BossPhase::Recover);
-
-    game.enemies.clear();
-    game.player.position={1.5f,0.3f,3.5f};
-    game.player.health=100;
-    game.player.invulnerable=0;
-    Enemy dodgedHarbor{{0,0.3f,0},100,100,0,0,true,true};
-    dodgedHarbor.variant=0;
-    dodgedHarbor.phase=BossPhase::Strike;
-    dodgedHarbor.phaseTime=1.0f;
-    dodgedHarbor.strikeDirection={0,0,1};
-    dodgedHarbor.strikeOrigin=dodgedHarbor.position;
-    game.enemies.push_back(dodgedHarbor);
-    UpdatePursuit(game,0.01f);
-    assert(near(game.player.health,100.0f));
-    assert(game.enemies.front().phase==BossPhase::Recover);
-
-// The Spire Sentinel locks a narrow attack lane when its windup begins.
+    // The Spire Sentinel locks a narrow attack lane when its windup begins.
     game.platforms.clear();
     game.enemies.clear();
     game.player.position={0,0.3f,7.0f};

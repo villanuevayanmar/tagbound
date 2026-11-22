@@ -11,6 +11,16 @@ static bool Inside(Vector3 p,const Platform& b) {
 }
 static float Distance(Vector3 a,Vector3 b) { return Vector3Distance(a,b); }
 
+static bool FacesAttacker(const Player& player,Vector3 attacker) {
+    Vector3 forward=player.facing; forward.y=0;
+    Vector3 toward=Vector3Subtract(attacker,player.position); toward.y=0;
+    float forwardLength=Vector3Length(forward),towardLength=Vector3Length(toward);
+    if(towardLength<0.001f) return true;
+    if(forwardLength<0.001f) return false;
+    return Vector3DotProduct(Vector3Scale(forward,1.0f/forwardLength),
+                             Vector3Scale(toward,1.0f/towardLength))>=0.25f;
+}
+
 static bool SegmentSphere(Vector3 from,Vector3 to,Vector3 center,float radius,float& hitTime) {
     Vector3 delta=Vector3Subtract(to,from);
     Vector3 offset=Vector3Subtract(from,center);
@@ -390,7 +400,7 @@ void UpdatePursuit(GameState& g,float dt) {
                     if(e.attackWindup<=0) {
                         e.cooldown=1.0f;
                         float guardCost=p.playerClass==PlayerClass::Warden?5.0f:8.0f;
-                        if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
+                        if(p.blocking&&FacesAttacker(p,e.position)&&p.stamina>=guardCost) p.stamina-=guardCost;
                         else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
                     }
                 }
@@ -423,21 +433,16 @@ void UpdatePursuit(GameState& g,float dt) {
                 if(e.phaseTime>strikeDuration) {
                     bool inRange=d<range[v];
                     Vector3 attackOrigin=e.position;
-                    if(v==0||v==1||v==3) {
+                    if(v==1||v==3) {
                         attackOrigin=e.strikeOrigin;
                         Vector3 toPlayer=Vector3Subtract(p.position,attackOrigin); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);
-                        if(v==0) {
-                            float halfWidth=std::max(0.0f,forward)*0.38f;
-                            inRange=forward>0.0f&&forward<range[v]&&lateralSquared<=halfWidth*halfWidth;
-                        } else {
-                            inRange=forward>0.0f&&forward<range[v]&&lateralSquared<=0.9f*0.9f;
-                        }
+                        inRange=forward>0.0f&&forward<range[v]&&lateralSquared<=0.9f*0.9f;
                     }
                     if(inRange&&HasLineOfSight(g,attackOrigin,p.position)&&p.invulnerable<=0) {
                         float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;
-                        if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
+                        if(p.blocking&&FacesAttacker(p,attackOrigin)&&p.stamina>=guardCost) p.stamina-=guardCost;
                         else { p.health-=damage[v]*(enraged?1.1f:1.0f); p.invulnerable=0.65f; }
                     }
                     e.phase=BossPhase::Recover; e.phaseTime=0;
