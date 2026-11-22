@@ -318,6 +318,7 @@ int main() {
 
     // Blocking spends stamina instead of health; an exhausted block does not.
     game.enemies.clear();
+    game.player.position={0,0.3f,0};
     game.player.health = 100;
     game.player.stamina = 100;
     game.player.blocking = true;
