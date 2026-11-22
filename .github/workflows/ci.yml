@@ -194,6 +194,7 @@ jobs:
             if (!mobile.controlsVisible || mobile.actionCount !== 8 || !mobile.rotateHidden) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
+            await mobilePage.locator('#start').tap();
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobileContext.close();
 
