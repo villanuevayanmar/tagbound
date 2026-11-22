@@ -114,6 +114,22 @@ static void DrawRooftopProps(const Platform& p,int city) {
     else if(city==3) DrawCylinder({x+0.62f,top+0.58f,z+0.18f},0.025f,0.09f,0.8f,6,{143,133,178,255});
 }
 
+static void DrawGroundGrid(Vector3 center,int city) {
+    static const Color tint[5]={{91,126,132,255},{151,112,82,255},{111,123,132,255},{132,119,163,255},{151,99,91,255}};
+    Color minor=Fade(tint[std::clamp(city,0,4)],0.22f);
+    Color major=Fade(tint[std::clamp(city,0,4)],0.42f);
+    constexpr float half=40.0f;
+    constexpr float spacing=2.0f;
+    for(int i=-20;i<=20;i++) {
+        float offset=i*spacing;
+        Color line=(i%5==0)?major:minor;
+        DrawLine3D({center.x-half,-0.305f,center.z+offset},
+                   {center.x+half,-0.305f,center.z+offset},line);
+        DrawLine3D({center.x+offset,-0.305f,center.z-half},
+                   {center.x+offset,-0.305f,center.z+half},line);
+    }
+}
+
 static Vector3 BodyPoint(Vector3 origin,Vector3 right,Vector3 forward,float side,float height,float depth) {
     return Vector3Add(origin,Vector3Add(Vector3Scale(right,side),Vector3Add(Vector3Scale(forward,depth),Vector3{0,height,0})));
 }
@@ -364,7 +380,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     }
     for(const auto& s:g.projectiles) DrawSphere(s.position,0.12f,GOLD);
     DrawCityLandmarks(g.city);
-    DrawGrid(80,1.0f);
+    DrawGroundGrid(player.position,g.city);
     EndMode3D();
 
     int w=GetScreenWidth(),h=GetScreenHeight();
