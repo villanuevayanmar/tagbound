@@ -138,7 +138,22 @@ jobs:
               throw new Error('Live class/start/save or install visibility check failed: ' + JSON.stringify(gameplay));
             }
 
+            await page.evaluate(() => {
+              Module.ccall('SetTouch', null, ['number', 'number', 'number'], [0.65, -0.35, 4]);
+              Module.ccall('SetLook', null, ['number', 'number'], [7.5, -2.5]);
+              const action = document.querySelector('.action');
+              action.classList.add('active');
+              action.dataset.pointerId = '999';
+            });
             await page.locator('#settings-open').click();
+            const inputReset = await page.evaluate(() => ({
+              clear: Module.ccall('IsInputStateClear', 'number', [], []),
+              activeButtons: document.querySelectorAll('.action.active').length,
+              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+            }));
+            if (inputReset.clear !== 1 || inputReset.activeButtons || inputReset.pointerIds) {
+              throw new Error('Touch/look input was not fully reset when Settings opened: ' + JSON.stringify(inputReset));
+            }
             const settingsVisible = await page.evaluate(() => ({
               open: !document.querySelector('#settings').classList.contains('hidden'),
               installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
@@ -300,7 +315,22 @@ jobs:
             const mobileInstallHidden = await mobilePage.locator('#install')
               .evaluate(element => element.getClientRects().length === 0);
             if (!mobileInstallHidden) throw new Error('Install option remained visible during mobile gameplay.');
+            await mobilePage.evaluate(() => {
+              Module.ccall('SetTouch', null, ['number', 'number', 'number'], [-0.4, 0.75, 8]);
+              Module.ccall('SetLook', null, ['number', 'number'], [4.5, 1.25]);
+              const action = document.querySelector('.action');
+              action.classList.add('active');
+              action.dataset.pointerId = '998';
+            });
             await mobilePage.locator('#settings-open').tap();
+            const mobileInputReset = await mobilePage.evaluate(() => ({
+              clear: Module.ccall('IsInputStateClear', 'number', [], []),
+              activeButtons: document.querySelectorAll('.action.active').length,
+              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+            }));
+            if (mobileInputReset.clear !== 1 || mobileInputReset.activeButtons || mobileInputReset.pointerIds) {
+              throw new Error('Production mobile touch/look input was not reset when Settings opened: ' + JSON.stringify(mobileInputReset));
+            }
             const mobileSettings = await mobilePage.evaluate(() => ({
               open: !document.querySelector('#settings').classList.contains('hidden'),
               installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
