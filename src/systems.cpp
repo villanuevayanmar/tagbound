@@ -18,6 +18,7 @@ static bool SegmentSphere(Vector3 from,Vector3 to,Vector3 center,float radius,fl
     if(a<0.000001f) return false;
     float b=2.0f*Vector3DotProduct(offset,delta);
     float c=Vector3DotProduct(offset,offset)-radius*radius;
+    if(c<=0.0f) { hitTime=0.0f; return true; }
     float discriminant=b*b-4.0f*a*c;
     if(discriminant<0.0f) return false;
     float t=(-b-std::sqrt(discriminant))/(2.0f*a);
