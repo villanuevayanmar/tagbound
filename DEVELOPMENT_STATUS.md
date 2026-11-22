@@ -8,13 +8,24 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `34f19141704ee4c5e64b02dc391c63eea44d6b17`  
+Current main commit: `e629ccbecbafed645e593b7040f3ea01f7667dd5`  
 Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
 Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
 
 The production URL is still serving the older deployment. Do not send the user to test the new release until Vercel reports a READY deployment for latest main and the production alias points to it.
 
 ## Recently completed and merged
+
+### Timed hold-beacon objectives — PR #6
+
+Merged in commit `805e96887ac4f61e17b1c6dd161c6fe026ab9026`.
+
+- Mixed reach and timed hold objectives across the five cities.
+- Hold stages require 2.5–4.0 seconds inside the beacon radius while pursuers remain active.
+- Leaving the radius resets the capture timer; death, quest changes and city rebuilds also reset it.
+- The objective HUD identifies “HOLD THE BEACON” and shows live capture time; the 3D marker changes color for hold stages.
+- C++ regression tests cover stage pattern, duration, accumulation, leave-radius, quest/city and death resets.
+- Hosted Chromium restores a saved hold-beacon checkpoint and verifies objective mode, zero initial capture time and duration.
 
 ### Settings and pause system — PR #1
 
@@ -59,7 +70,9 @@ The production URL is still serving the older deployment. Do not send the user t
 - Class-specific BOW/loadout PR checks passed in run `45077008462`.
 - Main after ambient-score merge passed WebAssembly compilation, C++ gameplay regressions, generated PWA validation, desktop/mobile Chromium, and publish-dist in run `45076558880`.
 - Main after class-specific BOW merge passed in run `45077290312`: Emscripten build, C++ gameplay regression tests, static PWA validation, desktop/mobile Chromium, and publish-dist.
-- Latest main commit `34f1914` is the generated build-output sync from that successful run.
+- PR #6 held-beacon checks passed in pull-request workflow `45077905618`.
+- Main after PR #6 passed Emscripten build, C++ regressions, PWA validation, desktop/mobile Chromium and publish-dist in run `45078141314`.
+- Latest main commit `e629ccbecbafed645e593b7040f3ea01f7667dd5` is the tested generated `dist/` sync.
 - Hosted browser tests are not physical Android playtesting.
 
 ## Current state
