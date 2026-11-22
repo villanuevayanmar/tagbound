@@ -820,6 +820,8 @@ int main() {
     coveredBoss.variant=0;
     coveredBoss.phase=BossPhase::Strike;
     coveredBoss.phaseTime=1.0f;
+    coveredBoss.strikeDirection={0,0,-1};
+    coveredBoss.strikeOrigin=coveredBoss.position;
     game.enemies.clear();
     game.enemies.push_back(coveredBoss);
     UpdatePursuit(game,0.05f);
@@ -832,6 +834,8 @@ int main() {
     exposedBoss.variant=0;
     exposedBoss.phase=BossPhase::Strike;
     exposedBoss.phaseTime=1.0f;
+    exposedBoss.strikeDirection={0,0,-1};
+    exposedBoss.strikeOrigin=exposedBoss.position;
     game.enemies.clear();
     game.enemies.push_back(exposedBoss);
     UpdatePursuit(game,0.05f);
