@@ -180,6 +180,10 @@ int main() {
         hit.attack = true;
         UpdateCombat(game, hit, 0.016f);
         assert(near(game.enemies.front().hp, 100.0f-expectedDamage[i]));
+        assert(game.player.attackTime>0.2f);
+        assert(game.enemies.front().hitTime>0.1f);
+        assert(game.enemies.front().stunTime>0.1f);
+        assert(Vector3Length(game.enemies.front().knockback)>0.5f);
     }
 
     // Bow projectiles travel and damage a target in front of the player.
@@ -194,6 +198,22 @@ int main() {
     bow.attack = false;
     UpdateCombat(game, bow, 0.05f);
     assert(near(game.enemies.front().hp, 55.0f));
+    assert(game.enemies.front().hitTime>0.1f);
+    assert(game.enemies.front().stunTime>0.1f);
+
+    // Hit-stunned enemies are pushed back before resuming pursuit.
+    game.enemies.clear();
+    game.player.position = {0,0.3f,0};
+    game.player.facing = {0,0,1};
+    game.player.weapon = Weapon::Sword;
+    game.enemies.push_back({{0,0.3f,1.8f},100,100,2.5f,0,false,true});
+    Controls stunHit{};
+    stunHit.attack = true;
+    UpdateCombat(game,stunHit,0.016f);
+    float hitPosition=game.enemies.front().position.z;
+    UpdatePursuit(game,0.05f);
+    assert(game.enemies.front().position.z>hitPosition);
+    assert(game.enemies.front().stunTime>0);
 
     // Blocking spends stamina instead of health; an exhausted block does not.
     game.enemies.clear();
