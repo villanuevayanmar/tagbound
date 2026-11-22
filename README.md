@@ -4,14 +4,14 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 
 ## Current playable scope
 
-- Three selectable classes: Vanguard, Skirmisher and Warden.
+- Three selectable classes: Vanguard, Skirmisher and Warden. Each class has one fixed weapon; players cannot switch weapons.
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
 - Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
 - Timed melee strike poses, enemy impact flashes, short hit-stun and knockback feedback.
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
-- Pursuit pressure, health, stamina, five weapon slots and ranged bow projectiles.
+- Pursuit pressure, health, stamina and class-exclusive weapons: Vanguard sword, Skirmisher bow and Warden shield.
 - Three beacon quests per city, followed by five uniquely named bosses with different strike patterns, attack ranges, visual designs and telegraphed warning zones.
 - XP, levels, two skill unlock milestones and local progress saving.
 - Landscape-first mobile controls and keyboard/mouse support.
@@ -109,7 +109,7 @@ The included vercel.json declares the static output directory, WebAssembly MIME 
 ### iPhone / iPad
 
 1. Open the deployed HTTPS URL in Safari.
-2. Tap Share → Add to Home Screen.
+2. On TAGBOUND's Home screen, tap INSTALL ON PHONE, then follow Safari's Share → Add to Home Screen instructions.
 3. Confirm the name and tap Add.
 4. Launch TAGBOUND from the Home Screen. Turn the device sideways.
 
@@ -118,7 +118,7 @@ iOS Safari does not consistently support JavaScript orientation locking. The app
 ### Android
 
 1. Open the deployed HTTPS URL in Chrome.
-2. Use the browser's Install app / Add to Home screen prompt.
+2. On TAGBOUND's Home screen, tap INSTALL ON PHONE and confirm the browser's install prompt. If it is unavailable, use Chrome's menu and choose Install app / Add to Home screen.
 3. Launch TAGBOUND from its new home-screen icon.
 
 The first visit must download the game assets. The service worker caches the HTML, JS, WASM, stylesheet, manifest and icons for later offline launches. Clear the browser's site data to remove the offline cache.
@@ -132,11 +132,10 @@ The first visit must download the game assets. The service worker caches the HTM
 - Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
 - Slide: short speed boost while grounded; hold it through a hard landing to roll forward; while hanging, slide or push down on the joystick to drop
 - Attack: use equipped weapon
-- Block: shield/block
-- Bow: aim while selected / shoot with Attack
+- Block: defend against incoming attacks
+- Bow: aim with the Skirmisher's bow; use Attack to fire
 - Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
 - Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
-- Weapon: cycle through sword, axe, shield, bow and spear
 
 ### Keyboard / mouse
 
@@ -146,7 +145,6 @@ The first visit must download the game assets. The service worker caches the HTM
 - Shift: sprint
 - Ctrl or C: slide
 - Left mouse: attack
-- Number keys 1–5: select sword, axe, shield, bow or spear
 - E: escape skill after unlock
 
 ## Save data
