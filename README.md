@@ -8,6 +8,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
 - Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
+- Landing recovery poses and slide-assisted forward rolls after hard falls.
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
 - Pursuit pressure, health, stamina, five weapon slots and ranged bow projectiles.
 - Three beacon quests per city, followed by a city boss gate with telegraphed strikes and stamina-based blocking.
@@ -128,7 +129,7 @@ The first visit must download the game assets. The service worker caches the HTM
 - Left joystick: move
 - Right side of the screen: swipe to look
 - Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
-- Slide: short speed boost while grounded; while hanging, slide or push down on the joystick to drop
+- Slide: short speed boost while grounded; hold it through a hard landing to roll forward; while hanging, slide or push down on the joystick to drop
 - Attack: use equipped weapon
 - Block: shield/block
 - Bow: aim while selected / shoot with Attack
