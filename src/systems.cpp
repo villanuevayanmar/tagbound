@@ -364,6 +364,7 @@ void UpdatePursuit(GameState& g,float dt) {
         float d=Distance(e.position,p.position);
         e.hitTime=std::max(0.0f,e.hitTime-dt);
         e.stunTime=std::max(0.0f,e.stunTime-dt);
+        e.cooldown=std::max(0.0f,e.cooldown-dt);
         if(d<25) nearby++;
         if(!e.boss&&(d>1.45f||e.stunTime>0)) e.attackWindup=0;
         if(e.stunTime>0) {
@@ -373,7 +374,7 @@ void UpdatePursuit(GameState& g,float dt) {
         } else if(d<24) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
-            if(d>1.45f&&horizontal>0.001f) {
+            if(d>1.45f&&horizontal>0.001f&&(!e.boss||e.phase==BossPhase::Dormant||e.phase==BossPhase::Hunt)) {
                 Vector3 destination=p.position,waypoint{};
                 if(!HasLineOfSight(g,e.position,p.position)&&FindPursuitWaypoint(g,e,p.position,waypoint))
                     destination=waypoint;
@@ -413,15 +414,12 @@ void UpdatePursuit(GameState& g,float dt) {
             }
             else if(e.phase==BossPhase::Windup&&e.phaseTime>BossWindupDuration(v,enraged)) { e.phase=BossPhase::Strike; e.phaseTime=0; }
             else if(e.phase==BossPhase::Strike) {
-                if(v==1&&e.phaseTime<=strikeDuration) {
-                    Vector3 charge=Vector3Subtract(p.position,e.position); charge.y=0;
-                    if(Vector3Length(charge)>0.001f)
-                        MoveEnemy(g,e,Vector3Scale(Vector3Normalize(charge),e.speed*3.0f*(enraged?1.15f:1.0f)*dt));
-                }
+                if(v==1&&e.phaseTime<=strikeDuration&&Vector3Length(e.strikeDirection)>0.001f)
+                    MoveEnemy(g,e,Vector3Scale(e.strikeDirection,e.speed*3.0f*(enraged?1.15f:1.0f)*dt));
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strikeDuration) {
                     bool inRange=d<range[v];
-                    if(v==3) {
+                    if(v==1||v==3) {
                         Vector3 toPlayer=Vector3Subtract(p.position,e.position); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);

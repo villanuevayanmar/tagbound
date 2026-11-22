@@ -451,9 +451,10 @@ int main() {
     UpdatePursuit(game,0.45f);
     assert(near(game.player.health,100.0f));
     assert(near(game.player.stamina,92.0f));
-    game.enemies.front().cooldown=0;
+    assert(near(game.enemies.front().cooldown,1.0f));
     game.player.stamina=0;
-    UpdatePursuit(game,0.016f);
+    UpdatePursuit(game,1.0f);
+    assert(near(game.enemies.front().cooldown,0.0f));
     assert(near(game.player.health,100.0f));
     UpdatePursuit(game,0.45f);
     assert(near(game.player.health,89.0f));
@@ -574,10 +575,45 @@ int main() {
     assert(game.enemies.front().phase==BossPhase::Windup);
     assert(near(game.enemies.front().strikeDirection.x,0.0f));
     assert(near(game.enemies.front().strikeDirection.z,1.0f));
+    Vector3 spireHold=game.enemies.front().position;
     game.player.position={1.1f,0.3f,7.0f};
     UpdatePursuit(game,0.05f);
+    assert(near(game.enemies.front().position.x,spireHold.x));
+    assert(near(game.enemies.front().position.z,spireHold.z));
     assert(near(game.enemies.front().strikeDirection.x,0.0f));
     assert(near(game.enemies.front().strikeDirection.z,1.0f));
+
+    // The Gilded Charger locks its charge direction and pauses during its warning.
+    game.enemies.clear();
+    game.player.position={0,0.3f,2.5f};
+    Enemy chargerWindup{{0,0.3f,0},100,100,3.0f,0,true,true};
+    chargerWindup.variant=1;
+    chargerWindup.phase=BossPhase::Hunt;
+    game.enemies.push_back(chargerWindup);
+    UpdatePursuit(game,0.016f);
+    assert(game.enemies.front().phase==BossPhase::Windup);
+    assert(near(game.enemies.front().strikeDirection.z,1.0f));
+    Vector3 chargerHold=game.enemies.front().position;
+    game.player.position={1.1f,0.3f,2.5f};
+    UpdatePursuit(game,0.05f);
+    assert(near(game.enemies.front().position.x,chargerHold.x));
+    assert(near(game.enemies.front().position.z,chargerHold.z));
+    assert(near(game.enemies.front().strikeDirection.z,1.0f));
+
+    // A Gilded Charger can be sidestepped after its direction-locked warning.
+    game.enemies.clear();
+    game.player.position={1.1f,0.3f,2.0f};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    Enemy dodgedCharger{{0,0.3f,0},100,100,0,0,true,true};
+    dodgedCharger.variant=1;
+    dodgedCharger.phase=BossPhase::Strike;
+    dodgedCharger.phaseTime=0.33f;
+    dodgedCharger.strikeDirection={0,0,1};
+    game.enemies.push_back(dodgedCharger);
+    UpdatePursuit(game,0.01f);
+    assert(near(game.player.health,100.0f));
+    assert(game.enemies.front().phase==BossPhase::Recover);
 
     // An aligned Spire Sentinel thrust hits, but a lateral dodge escapes its lane.
     game.enemies.clear();
@@ -670,9 +706,10 @@ int main() {
     Enemy charger{{0,0.3f,4.0f},100,100,3.0f,0,true,true};
     charger.variant=1;
     charger.phase=BossPhase::Strike;
+    charger.strikeDirection={0,0,-1};
     game.enemies.push_back(charger);
     UpdatePursuit(game,0.2f);
-    assert(game.enemies.front().position.z<2.0f);
+    assert(game.enemies.front().position.z<2.5f);
     assert(near(game.player.health,100.0f));
     UpdatePursuit(game,0.15f);
     assert(near(game.player.health,70.0f));
@@ -685,9 +722,10 @@ int main() {
     Enemy coveredCharger{{0,0.3f,0},100,100,3.0f,0,true,true};
     coveredCharger.variant=1;
     coveredCharger.phase=BossPhase::Strike;
+    coveredCharger.strikeDirection={0,0,1};
     game.enemies.push_back(coveredCharger);
     for(int i=0;i<4;i++) UpdatePursuit(game,0.05f);
-    assert(game.enemies.front().position.z<1.3f);
+    assert(game.enemies.front().position.z<1.5f);
     game.platforms.clear();
 
     // Boss strikes cannot damage a player through a solid rooftop wall.
