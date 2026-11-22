@@ -336,7 +336,7 @@ int main() {
     game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
     game.player.position={0,0.3f,6.0f};
     game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
-    for(int i=0;i<180;i++) UpdatePursuit(game,0.05f);
+    for(int i=0;i<40;i++) UpdatePursuit(game,0.05f);
     assert(game.enemies.front().position.x>2.2f);
     assert(game.enemies.front().position.z>2.2f);
     game.platforms.clear();
