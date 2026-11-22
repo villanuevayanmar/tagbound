@@ -1,0 +1,152 @@
+name: TAGBOUND build and browser smoke tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: latest
+          actions-cache-folder: emsdk-cache
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build python3
+
+      - name: Generate PWA icons
+        run: python3 scripts/generate_icons.py
+
+      - name: Configure WebAssembly build
+        run: emcmake cmake -S . -B build-web -G Ninja -DPLATFORM=Web -DCMAKE_BUILD_TYPE=Release
+
+      - name: Compile WebAssembly
+        run: cmake --build build-web --config Release --parallel 2
+
+      - name: Assemble static PWA
+        run: cp -R web/. dist/
+
+      - name: Validate generated output
+        run: |
+          test -s dist/game.js
+          test -s dist/game.wasm
+          test -s dist/index.html
+          test -s dist/sw.js
+          node --check dist/pwa.js
+          node --check dist/game.js
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          root = Path("dist")
+          json.loads((root / "manifest.json").read_text())
+          sw = (root / "sw.js").read_text()
+          for asset in ("/", "/styles.css", "/pwa.js", "/manifest.json",
+                        "/icons/icon-192.png", "/icons/icon-512.png",
+                        "/game.js", "/game.wasm"):
+              path = root / asset.lstrip("/")
+              assert path.exists() and path.is_file(), f"Missing cached asset: {asset}"
+              assert f"'{asset}'" in sw or f'"{asset}"' in sw, f"Not in service-worker core list: {asset}"
+          print("Static PWA assets and service-worker precache list are valid.")
+          PY
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tagbound-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  browser-smoke:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: tagbound-dist
+          path: dist
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright
+          npx playwright install --with-deps chromium
+
+      - name: Serve and test browser runtime and offline cache
+        run: |
+          python3 -m http.server 4173 --directory dist > /tmp/tagbound-http.log 2>&1 &
+          echo $! > /tmp/tagbound-http.pid
+          node --input-type=module <<'JS'
+          import { chromium } from 'playwright';
+
+          const browser = await chromium.launch({
+            headless: true,
+            args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist']
+          });
+          const context = await browser.newContext();
+          const page = await context.newPage();
+          const errors = [];
+          page.on('pageerror', error => errors.push(error.message));
+          page.on('console', message => {
+            if (message.type() === 'error') errors.push(message.text());
+          });
+
+          try {
+            const response = await page.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!response?.ok()) throw new Error('The game page did not return HTTP 200.');
+            await page.waitForFunction(() => {
+              const loading = document.querySelector('#loading');
+              return loading && loading.classList.contains('hidden');
+            }, { timeout: 45000 });
+
+            const runtime = await page.evaluate(() => ({
+              canvas: !!document.querySelector('#canvas'),
+              wasm: typeof WebAssembly === 'object',
+              webgl: !!document.querySelector('#canvas').getContext('webgl'),
+              introVisible: !document.querySelector('#intro').classList.contains('hidden')
+            }));
+            if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible) {
+              throw new Error('Runtime smoke test failed: ' + JSON.stringify(runtime));
+            }
+
+            await page.evaluate(async () => {
+              if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
+              await navigator.serviceWorker.ready;
+            });
+            const cacheState = await page.evaluate(async () => {
+              const keys = await caches.keys();
+              const cache = await caches.open('tagbound-v3');
+              const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
+                '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
+              const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
+              return { keys, expected, cached };
+            });
+            if (!cacheState.keys.includes('tagbound-v3') || cacheState.cached.some(value => !value)) {
+              throw new Error('Service-worker precache is incomplete: ' + JSON.stringify(cacheState));
+            }
+
+            await context.setOffline(true);
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 30000 });
+            if (errors.length) throw new Error('Browser console errors: ' + errors.join(' | '));
+            console.log('PASS: WebAssembly runtime, WebGL canvas, service-worker cache, and offline reload.');
+          } finally {
+            await browser.close();
+          }
+          JS
