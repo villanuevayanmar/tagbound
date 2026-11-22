@@ -17,7 +17,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Warden's shield reduces the stamina cost of blocking both pursuer and boss strikes.
 - Vanguard's sword deals a heavier melee strike; Skirmisher retains the fastest base movement speed; Warden uses less stamina while guarding.
 - Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss.
-- Three beacon quests per city, followed by five uniquely named bosses with different strike patterns, attack ranges, visual designs and telegraphed warning zones: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
+- Three mixed beacon objectives per city: some are reached immediately, while selected beacons require the player to remain inside the capture radius for a city-specific duration as pursuers stay active. Leaving the radius or dying resets capture progress. Each city then ends with a unique boss and its own strike pattern, attack range, visual design and telegraphed warning zone: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
 - Shared beacon and boss-gate coordinates drive gameplay triggers, 3D markers and the live HUD distance readout.
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
 - Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
