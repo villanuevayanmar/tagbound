@@ -115,6 +115,23 @@ int main() {
     assert(!game.player.ledgeGrabbing);
     assert(!game.player.grounded);
 
+    assert(game.player.position.x > 6.8f);
+    UpdateMovement(game,Controls{},camera,0.016f);
+    assert(!game.player.ledgeGrabbing);
+
+    // Pushing the mobile joystick down also releases the ledge.
+    game.player.position = {6.51f,0.3f,6.0f};
+    game.player.facing = {-1,0,0};
+    game.player.grounded = false;
+    grab.move.x = -1.0f;
+    UpdateMovement(game,grab,camera,0.01f);
+    assert(game.player.ledgeGrabbing);
+    Controls joystickDrop{};
+    joystickDrop.move.y = -1.0f;
+    UpdateMovement(game,joystickDrop,camera,0.016f);
+    assert(!game.player.ledgeGrabbing);
+    assert(game.player.position.x > 6.8f);
+
     game.player.escapeSkill = 1;
     Controls dash{};
     dash.skill = true;
