@@ -265,7 +265,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         if(e.boss&&(e.phase==BossPhase::Windup||e.phase==BossPhase::Strike)) {
             static const float warningRadius[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
             Color warning=e.phase==BossPhase::Windup?Color{255,166,56,65}:Color{238,62,52,80};
-            DrawCircle3D({e.position.x,0.025f,e.position.z},warningRadius[std::clamp(e.variant,0,4)],{1,0,0},90,warning);
+            DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius[std::clamp(e.variant,0,4)],{1,0,0},90,warning);
         }
         DrawEnemyModel(e,animationClock);
         float width=e.boss?2.0f:1.0f;
