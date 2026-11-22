@@ -354,6 +354,8 @@ int main() {
     assert(game.enemies.front().position.z>2.2f);
     game.platforms.clear();
 
+    // Vanguard uses the standard guard stamina cost.
+    game.player.playerClass=PlayerClass::Vanguard;
     // Blocking spends stamina instead of health; an exhausted block does not.
     game.enemies.clear();
     game.player.position={0,0.3f,0};
@@ -370,6 +372,46 @@ int main() {
     UpdatePursuit(game, 0.016f);
     assert(near(game.player.health, 89.0f));
     game.player.blocking = false;
+
+    // Warden's shield reduces guard stamina costs against both taggers and bosses.
+    game.enemies.clear();
+    game.player.playerClass=PlayerClass::Warden;
+    game.player.position={0,0.3f,0};
+    game.player.health=100;
+    game.player.stamina=100;
+    game.player.invulnerable=0;
+    game.player.blocking=true;
+    game.enemies.push_back({{0,0.3f,0.8f},40,40,0,0,false,true});
+    UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,100.0f));
+    assert(near(game.player.stamina,95.0f));
+
+    game.enemies.clear();
+    game.player.position={0,0.3f,0};
+    game.player.health=100;
+    game.player.stamina=100;
+    game.player.invulnerable=0;
+    Enemy guardedBoss{{0,0.3f,0.7f},100,100,0,0,true,true};
+    guardedBoss.variant=0;
+    guardedBoss.phase=BossPhase::Strike;
+    guardedBoss.phaseTime=1.0f;
+    game.enemies.push_back(guardedBoss);
+    UpdatePursuit(game,0.05f);
+    assert(near(game.player.health,100.0f));
+    assert(near(game.player.stamina,88.0f));
+
+    // A Warden with insufficient stamina still takes the unblocked hit.
+    game.enemies.clear();
+    game.player.position={0,0.3f,0};
+    game.player.health=100;
+    game.player.stamina=4;
+    game.player.invulnerable=0;
+    game.player.blocking=true;
+    game.enemies.push_back({{0,0.3f,0.8f},40,40,0,0,false,true});
+    UpdatePursuit(game,0.016f);
+    assert(near(game.player.health,89.0f));
+    assert(near(game.player.stamina,4.0f));
+    game.player.blocking=false;
 
     // A pursuer cannot hit a player through a solid rooftop wall.
     game.enemies.clear();

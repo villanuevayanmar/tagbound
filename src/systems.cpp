@@ -352,7 +352,8 @@ void UpdatePursuit(GameState& g,float dt) {
             } else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
                 if(HasLineOfSight(g,e.position,p.position)) {
                     e.cooldown=1.0f;
-                    if(p.blocking&&p.stamina>=8) p.stamina-=8;
+                    float guardCost=p.playerClass==PlayerClass::Warden?5.0f:8.0f;
+                    if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
                     else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
                 }
             }
@@ -377,7 +378,8 @@ void UpdatePursuit(GameState& g,float dt) {
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strike[v]) {
                     if(d<range[v]&&HasLineOfSight(g,e.position,p.position)&&p.invulnerable<=0) {
-                        if(p.blocking&&p.stamina>=18) p.stamina-=18;
+                        float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;
+                        if(p.blocking&&p.stamina>=guardCost) p.stamina-=guardCost;
                         else { p.health-=damage[v]; p.invulnerable=0.65f; }
                     }
                     e.phase=BossPhase::Recover; e.phaseTime=0;
