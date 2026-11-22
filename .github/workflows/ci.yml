@@ -142,6 +142,13 @@ jobs:
               floatingInstallPresent: !!document.querySelector('#install-float'),
               installOutsideHome: [...document.querySelectorAll('[id^="install"]')].some(e => !document.querySelector('#intro').contains(e))
             }));
+            const classStats = await page.locator('.class-card').allTextContents();
+            if (!classStats[0].includes('125 HP') || !classStats[0].includes('95 STA') ||
+                !classStats[1].includes('95 HP') || !classStats[1].includes('100 STA') ||
+                !classStats[2].includes('115 HP') || !classStats[2].includes('100 STA')) {
+              throw new Error('Class selection stats do not match gameplay limits: ' + JSON.stringify(classStats));
+            }
+
             if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible ||
                 !runtime.installVisible || runtime.floatingInstallPresent || runtime.installOutsideHome) {
               throw new Error('Runtime smoke test failed: ' + JSON.stringify(runtime));
