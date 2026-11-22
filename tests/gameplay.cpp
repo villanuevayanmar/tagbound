@@ -71,6 +71,50 @@ int main() {
     UpdateMovement(game,vault,camera,0.2f);
     assert(game.player.position.x > 1.5f);
 
+    // Airborne contact with a reachable roof edge enters a stable ledge hang.
+    BuildCity(game);
+    game.player.position = {6.49f,0.3f,6.0f};
+    game.player.facing = {1,0,0};
+    game.player.grounded = false;
+    Controls grab{};
+    grab.move.x = 1.0f;
+    UpdateMovement(game,grab,camera,0.01f);
+    assert(game.player.ledgeGrabbing);
+    assert(near(game.player.velocity.x,0.0f));
+    assert(near(game.player.velocity.y,0.0f));
+    Vector3 hangPosition = game.player.position;
+    UpdateMovement(game,Controls{},camera,0.1f);
+    assert(game.player.ledgeGrabbing);
+    assert(near(game.player.position.x,hangPosition.x));
+    assert(near(game.player.position.y,hangPosition.y));
+
+    // Jump transitions from hanging to a smooth climb onto the roof.
+    Controls climb{};
+    climb.jump = true;
+    UpdateMovement(game,climb,camera,0.21f);
+    assert(game.player.climbing);
+    assert(game.player.position.y > hangPosition.y);
+    climb.jump = false;
+    UpdateMovement(game,climb,camera,0.22f);
+    assert(!game.player.climbing);
+    assert(!game.player.ledgeGrabbing);
+    assert(game.player.grounded);
+    assert(near(game.player.position.y,1.7f));
+    assert(game.player.position.x < hangPosition.x);
+
+    // A downward/slide input safely releases a hanging player.
+    game.player.position = {6.49f,0.3f,6.0f};
+    game.player.facing = {1,0,0};
+    game.player.grounded = false;
+    grab.move.x = 1.0f;
+    UpdateMovement(game,grab,camera,0.01f);
+    assert(game.player.ledgeGrabbing);
+    Controls drop{};
+    drop.slide = true;
+    UpdateMovement(game,drop,camera,0.016f);
+    assert(!game.player.ledgeGrabbing);
+    assert(!game.player.grounded);
+
     game.player.escapeSkill = 1;
     Controls dash{};
     dash.skill = true;
