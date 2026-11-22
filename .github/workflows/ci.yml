@@ -130,6 +130,25 @@ jobs:
               throw new Error('Runtime smoke test failed: ' + JSON.stringify(runtime));
             }
 
+            await page.locator('[data-class="1"]').click();
+            await page.locator('#start').click();
+            await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await page.keyboard.down('w');
+            await page.waitForTimeout(250);
+            await page.keyboard.up('w');
+            await page.keyboard.press('Shift');
+            await page.keyboard.press('1');
+            await page.keyboard.press('2');
+            await page.waitForTimeout(300);
+            const gameplay = await page.evaluate(() => ({
+              introHidden: document.querySelector('#intro').classList.contains('hidden'),
+              canvasSize: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height || !gameplay.save) {
+              throw new Error('Gameplay start/input/save smoke test failed: ' + JSON.stringify(gameplay));
+            }
+
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
               await navigator.serviceWorker.ready;
@@ -150,7 +169,28 @@ jobs:
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 30000 });
             if (errors.length) throw new Error('Browser console errors: ' + errors.join(' | '));
-            console.log('PASS: WebAssembly runtime, WebGL canvas, service-worker cache, and offline reload.');
+
+            const mobileContext = await browser.newContext({
+              viewport: { width: 844, height: 390 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const mobilePage = await mobileContext.newPage();
+            await mobilePage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await mobilePage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 45000 });
+            const mobile = await mobilePage.evaluate(() => ({
+              controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
+              actionCount: document.querySelectorAll('#touch-controls .action').length,
+              rotateHidden: document.querySelector('#rotate').classList.contains('hidden')
+            }));
+            if (!mobile.controlsVisible || mobile.actionCount !== 8 || !mobile.rotateHidden) {
+              throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
+            }
+            await mobilePage.locator('[data-bit="4"]').tap();
+            await mobileContext.close();
+
+            console.log('PASS: WebAssembly runtime, WebGL, gameplay start/input/save, service-worker cache, offline reload, and mobile landscape controls.');
           } finally {
             await browser.close();
           }
