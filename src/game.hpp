@@ -57,3 +57,4 @@ const char* CityName(int city);
 const char* BossName(int city);
 const char* WeaponName(Weapon weapon);
 Weapon ClassWeapon(PlayerClass playerClass);
+float ClassMaxHealth(PlayerClass playerClass);
