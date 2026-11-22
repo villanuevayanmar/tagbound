@@ -207,6 +207,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
     }
     if(p.health<=0) {
         p.health=100; p.position={0,0.3f,0}; p.velocity={0,0,0};
+        p.vaulting=false; p.vaultTime=0;
         p.stamina=100; p.invulnerable=1.2f; g.danger=15;
     }
 }
