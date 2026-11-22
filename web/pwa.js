@@ -14,7 +14,7 @@ const soundProfiles=[
  {wave:'triangle',start:1450,end:520,duration:0.09,volume:0.03,cutoff:3600}
 ];
 const musicNotes=[146.83,174.61,220.00,261.63,220.00,174.61,196.00,220.00,293.66,261.63,220.00,196.00,174.61,196.00,220.00,174.61];
-let musicStep=0,musicTimer=null,musicRequested=false,musicPaused=false;
+let musicStep=0,musicTimer=null,musicRequested=false,musicPaused=false,musicNotesPlayed=0;
 function initAudio(){
  try {
   if(!audioEnabled)return false;
@@ -65,6 +65,7 @@ function playMusicNote(){
   fundamental.connect(filter);overtone.connect(filter);filter.connect(gain);gain.connect(audioContext.destination);
   fundamental.start(now);overtone.start(now);
   fundamental.stop(now+0.41);overtone.stop(now+0.41);
+  musicNotesPlayed++;
   return true;
  } catch(e) { return false; }
 }
@@ -118,7 +119,8 @@ try { audioEnabled=localStorage.getItem('tagbound-sound')!=='off'; } catch(e) {}
 window.TagboundAudio={
  init:initAudio,play:playAudio,getState:()=>audioContext?.state||'uninitialized',
  setEnabled:setAudioEnabled,startMusic,pauseMusic,resumeMusic,
- getMusicState:()=>musicTimer!==null?'playing':musicRequested?(musicPaused?'paused':'stopped'):'stopped'
+ getMusicState:()=>musicTimer!==null?'playing':musicRequested?(musicPaused?'paused':'stopped'):'stopped',
+ getMusicNoteCount:()=>musicNotesPlayed
 };
 syncSoundButtons();
 soundButtons.forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
