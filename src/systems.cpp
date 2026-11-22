@@ -277,7 +277,7 @@ void UpdatePursuit(GameState& g,float dt) {
             int v=std::clamp(e.variant,0,4);
             e.phaseTime+=dt;
             if(e.phase==BossPhase::Dormant&&d<20) e.phase=BossPhase::Hunt;
-            else if(e.phase==BossPhase::Hunt&&d<3.5f) { e.phase=BossPhase::Windup; e.phaseTime=0; }
+            else if(e.phase==BossPhase::Hunt&&d<range[v]*1.15f) { e.phase=BossPhase::Windup; e.phaseTime=0; }
             else if(e.phase==BossPhase::Windup&&e.phaseTime>windup[v]) { e.phase=BossPhase::Strike; e.phaseTime=0; }
             else if(e.phase==BossPhase::Strike) {
                 if(v==1&&e.phaseTime<=strike[v]) {
