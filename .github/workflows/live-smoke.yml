@@ -98,6 +98,40 @@ jobs:
             }
 
             await page.screenshot({ path: 'live-review/production-home.png', fullPage: true });
+
+
+            // Verify each class has one fixed weapon and only Skirmisher has the BOW touch action.
+            const classLoadouts = [
+              { klass: 0, weapon: 0, bowVisible: false },
+              { klass: 1, weapon: 3, bowVisible: true },
+              { klass: 2, weapon: 2, bowVisible: false }
+            ];
+            for (const loadout of classLoadouts) {
+              const loadoutContext = await browser.newContext();
+              const loadoutPage = await loadoutContext.newPage();
+              const loadoutResponse = await loadoutPage.goto(baseUrl, { waitUntil: 'networkidle', timeout: 60000 });
+              if (!loadoutResponse?.ok()) throw new Error('Live class loadout page did not return HTTP 200.');
+              await loadoutPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await loadoutPage.locator('[data-class="' + loadout.klass + '"]').click();
+              const bowVisible = await loadoutPage.locator('#touch-controls [data-bit="16"]')
+                .evaluate(element => !element.hidden);
+              if (bowVisible !== loadout.bowVisible) {
+                throw new Error('Live class BOW control visibility mismatch: ' + JSON.stringify({ loadout, bowVisible }));
+              }
+              await loadoutPage.locator('#start').click();
+              await loadoutPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const savedLoadout = await loadoutPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (savedLoadout?.klass !== loadout.klass || savedLoadout?.weapon !== loadout.weapon) {
+                throw new Error('Live fixed class weapon mapping failed: ' + JSON.stringify({ loadout, savedLoadout }));
+              }
+              await loadoutContext.close();
+            }
+
+
             await page.locator('#sound-toggle').click();
             const muted = await page.evaluate(() => ({
               label: document.querySelector('#sound-toggle').textContent,
@@ -332,7 +366,8 @@ jobs:
               settingsInstallHidden: document.querySelector('#settings-install').getClientRects().length === 0,
               settingsButtonHidden: document.querySelector('#settings-open').getClientRects().length === 0,
               floatingInstallPresent: !!document.querySelector('#install-float'),
-              actionCount: document.querySelectorAll('#touch-controls .action').length,
+              actionCount: [...document.querySelectorAll('#touch-controls .action')].filter(button => !button.hidden).length,
+              bowButtonVisible: !document.querySelector('#touch-controls [data-bit="16"]').hidden,
               weaponButtonPresent: !!document.querySelector('#touch-controls [data-bit="128"]'),
               startVisible: (() => {
                 const rect = document.querySelector('#start').getBoundingClientRect();
@@ -340,15 +375,36 @@ jobs:
               })()
             }));
             if (!mobile.controlsVisible || !mobile.installVisible || !mobile.settingsInstallHidden ||
-                !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.startVisible) {
+                !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 6 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.startVisible) {
               throw new Error('Live mobile layout check failed: ' + JSON.stringify(mobile));
             }
 
             await mobilePage.screenshot({ path: 'live-review/production-mobile-home.png', fullPage: true });
+            const mobileLoadouts = [
+              { klass: 1, weapon: 3, bowVisible: true, actions: 7 },
+              { klass: 2, weapon: 2, bowVisible: false, actions: 6 },
+              { klass: 0, weapon: 0, bowVisible: false, actions: 6 },
+              { klass: 1, weapon: 3, bowVisible: true, actions: 7 }
+            ];
+            for (const loadout of mobileLoadouts) {
+              await mobilePage.locator('[data-class="' + loadout.klass + '"]').tap();
+              const state = await mobilePage.evaluate(() => ({
+                selected: Number(document.querySelector('.class-card.selected')?.dataset.class),
+                bowVisible: !document.querySelector('#touch-controls [data-bit="16"]').hidden,
+                actions: [...document.querySelectorAll('#touch-controls .action')].filter(button => !button.hidden).length
+              }));
+              if (state.selected !== loadout.klass || state.bowVisible !== loadout.bowVisible || state.actions !== loadout.actions) {
+                throw new Error('Live mobile class control mapping failed: ' + JSON.stringify({ loadout, state }));
+              }
+            }
             await mobilePage.locator('#start').tap();
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
+            const mobileSavedLoadout = await mobilePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+            if (mobileSavedLoadout?.klass !== 1 || mobileSavedLoadout?.weapon !== 3) {
+              throw new Error('Live mobile Skirmisher save did not retain its Bow loadout: ' + JSON.stringify(mobileSavedLoadout));
+            }
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
               const h = innerHeight <= 440 ? 96 : innerHeight - 78;
