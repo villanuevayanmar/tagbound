@@ -34,5 +34,6 @@ void BuildCity(GameState& g) {
     }
     g.player.position={0,0.3f,0}; g.player.velocity={0,0,0};
     g.player.grounded=true; g.player.wallRunning=false; g.player.dashTime=0;
-    g.player.vaulting=false; g.player.vaultTime=0;
+    g.player.vaulting=false; g.player.vaultTime=0; g.player.ledgeGrabbing=false; g.player.climbing=false;
+    g.player.climbTime=0; g.player.ledgeNormal={}; g.player.ledgeHangPosition={}; g.player.ledgeTargetPosition={};
 }
