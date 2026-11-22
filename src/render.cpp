@@ -90,7 +90,7 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     DrawSphere(BodyPoint(p.position,right,forward,0.105f,1.77f+breath,0.244f),0.035f,{35,31,29,255});
     DrawSphere(BodyPoint(p.position,right,forward,0,1.68f+breath,0.278f),0.045f,{167,119,91,255});
 
-    float legLift=p.grounded?0.0f:0.12f;
+    float legLift=p.vaulting?0.26f:(p.grounded?0.0f:0.12f);
     float leftDepth=swing*0.36f, rightDepth=-swing*0.36f;
     Vector3 leftHip=BodyPoint(p.position,right,forward,-0.145f,0.69f+breath,0);
     Vector3 rightHip=BodyPoint(p.position,right,forward,0.145f,0.69f+breath,0);
@@ -108,10 +108,10 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     Vector3 leftShoulder=BodyPoint(p.position,right,forward,-0.30f,1.35f+breath,0);
     Vector3 rightShoulder=BodyPoint(p.position,right,forward,0.30f,1.35f+breath,0);
     float armSwing=p.blocking?0.25f:-swing*0.30f;
-    Vector3 leftElbow=BodyPoint(p.position,right,forward,-0.39f,1.06f+breath,p.blocking?0.34f:armSwing);
-    Vector3 leftHand=BodyPoint(p.position,right,forward,-0.43f,0.91f+breath,p.blocking?0.52f:armSwing*1.35f);
-    Vector3 rightElbow=BodyPoint(p.position,right,forward,0.39f,1.08f+breath,p.bowAiming?0.28f:(p.blocking?0.34f:0.12f+swing*0.16f));
-    Vector3 rightHand=BodyPoint(p.position,right,forward,0.43f,0.94f+breath,p.bowAiming?0.48f:(p.blocking?0.52f:0.31f+swing*0.18f));
+    Vector3 leftElbow=BodyPoint(p.position,right,forward,-0.39f,p.vaulting?1.48f:(1.06f+breath),p.vaulting?0.22f:(p.blocking?0.34f:armSwing));
+    Vector3 leftHand=BodyPoint(p.position,right,forward,-0.43f,p.vaulting?1.68f:(0.91f+breath),p.vaulting?0.34f:(p.blocking?0.52f:armSwing*1.35f));
+    Vector3 rightElbow=BodyPoint(p.position,right,forward,0.39f,p.vaulting?1.48f:(1.08f+breath),p.vaulting?0.22f:(p.bowAiming?0.28f:(p.blocking?0.34f:0.12f+swing*0.16f)));
+    Vector3 rightHand=BodyPoint(p.position,right,forward,0.43f,p.vaulting?1.68f:(0.94f+breath),p.vaulting?0.34f:(p.bowAiming?0.48f:(p.blocking?0.52f:0.31f+swing*0.18f)));
     Color armColor=cloth;
     DrawLimb(leftShoulder,leftElbow,0.13f,0.095f,armColor);
     DrawLimb(leftElbow,leftHand,0.095f,0.065f,armColor);
