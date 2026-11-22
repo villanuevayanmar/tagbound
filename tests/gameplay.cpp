@@ -601,6 +601,38 @@ int main() {
         assert(game.enemies.front().phase==BossPhase::Windup);
     }
 
+    // The Harbor Warden cleaves a frontal wedge; a lateral dodge leaves the danger zone.
+    game.platforms.clear();
+    game.enemies.clear();
+    game.player.position={0,0.3f,3.5f};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    Enemy harborCleave{{0,0.3f,0},100,100,0,0,true,true};
+    harborCleave.variant=0;
+    harborCleave.phase=BossPhase::Strike;
+    harborCleave.phaseTime=1.0f;
+    harborCleave.strikeDirection={0,0,1};
+    harborCleave.strikeOrigin=harborCleave.position;
+    game.enemies.push_back(harborCleave);
+    UpdatePursuit(game,0.01f);
+    assert(near(game.player.health,76.0f));
+    assert(game.enemies.front().phase==BossPhase::Recover);
+
+    game.enemies.clear();
+    game.player.position={1.5f,0.3f,3.5f};
+    game.player.health=100;
+    game.player.invulnerable=0;
+    Enemy dodgedHarbor{{0,0.3f,0},100,100,0,0,true,true};
+    dodgedHarbor.variant=0;
+    dodgedHarbor.phase=BossPhase::Strike;
+    dodgedHarbor.phaseTime=1.0f;
+    dodgedHarbor.strikeDirection={0,0,1};
+    dodgedHarbor.strikeOrigin=dodgedHarbor.position;
+    game.enemies.push_back(dodgedHarbor);
+    UpdatePursuit(game,0.01f);
+    assert(near(game.player.health,100.0f));
+    assert(game.enemies.front().phase==BossPhase::Recover);
+
     // The Spire Sentinel locks a narrow attack lane when its windup begins.
     game.platforms.clear();
     game.enemies.clear();
