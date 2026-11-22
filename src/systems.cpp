@@ -88,7 +88,10 @@ static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target
     float best=1000000.0f;
     bool found=false;
     for(Vector3 corner:corners) {
-        if(!HasLineOfSight(g,e.position,corner)||!HasLineOfSight(g,corner,target)) continue;
+        if(!HasLineOfSight(g,e.position,corner)) continue;
+        Vector3 cornerRay=corner; cornerRay.y+=1.0f;
+        float blockedByCurrent=0.0f;
+        if(SegmentPlatform(cornerRay,to,*blocker,blockedByCurrent)) continue;
         float route=Distance(e.position,corner)+Distance(corner,target);
         if(route<best) { best=route; waypoint=corner; found=true; }
     }

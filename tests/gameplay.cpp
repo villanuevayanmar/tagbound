@@ -373,6 +373,25 @@ int main() {
     assert(game.enemies.front().position.z>2.2f);
     game.platforms.clear();
 
+    // Sequential walls are routed one at a time instead of blocking all candidate corners.
+    game.enemies.clear();
+    game.platforms.clear();
+    game.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
+    game.platforms.push_back({{0,1.5f,6.0f},{4,3.0f,0.4f},GRAY});
+    game.player.position={0,0.3f,10.0f};
+    game.enemies.push_back({{0,0.3f,0},100,100,3.0f,0,false,true});
+    const float twoWallStart=Vector3Distance(game.enemies.front().position,game.player.position);
+    for(int i=0;i<140;i++) {
+        UpdatePursuit(game,0.05f);
+        const Vector3 position=game.enemies.front().position;
+        assert(!(std::abs(position.x)<2.42f&&position.z>1.38f&&position.z<2.62f));
+        assert(!(std::abs(position.x)<2.42f&&position.z>5.38f&&position.z<6.62f));
+    }
+    assert(game.enemies.front().position.z>6.62f);
+    assert(Vector3Distance(game.enemies.front().position,game.player.position)<twoWallStart);
+    game.platforms.clear();
+
     // A pursuer aligned directly behind a wall finds an open side instead of stalling.
     game.enemies.clear();
     game.platforms.push_back({{0,1.5f,2.0f},{4,3.0f,0.4f},GRAY});
