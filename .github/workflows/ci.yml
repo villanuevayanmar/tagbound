@@ -137,9 +137,13 @@ jobs:
               canvas: !!document.querySelector('#canvas'),
               wasm: typeof WebAssembly === 'object',
               webgl: !!(document.querySelector('#canvas').getContext('webgl2') || document.querySelector('#canvas').getContext('webgl')),
-              introVisible: !document.querySelector('#intro').classList.contains('hidden')
+              introVisible: !document.querySelector('#intro').classList.contains('hidden'),
+              installVisible: (() => { const b=document.querySelector('#install'); const r=b?.getBoundingClientRect(); return !!b && !b.hidden && r.width>0 && r.height>0; })(),
+              floatingInstallPresent: !!document.querySelector('#install-float'),
+              installOutsideHome: [...document.querySelectorAll('[id^="install"]')].some(e => !document.querySelector('#intro').contains(e))
             }));
-            if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible) {
+            if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible ||
+                !runtime.installVisible || runtime.floatingInstallPresent || runtime.installOutsideHome) {
               throw new Error('Runtime smoke test failed: ' + JSON.stringify(runtime));
             }
 
@@ -156,10 +160,11 @@ jobs:
             const gameplay = await page.evaluate(() => ({
               introHidden: document.querySelector('#intro').classList.contains('hidden'),
               canvasSize: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
-              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
+              installHiddenDuringGameplay: document.querySelector('#install')?.getClientRects().length === 0
             }));
             if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height ||
-                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0) {
+                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || !gameplay.installHiddenDuringGameplay) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
             await page.waitForTimeout(2000);
@@ -198,17 +203,21 @@ jobs:
             await mobilePage.screenshot({ path: 'visual-review/mobile-intro.png', fullPage: true });
             const mobile = await mobilePage.evaluate(() => ({
               controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
+              installVisible: (() => { const b=document.querySelector('#install'); const r=b?.getBoundingClientRect(); return !!b && !b.hidden && r.width>0 && r.height>0; })(),
+              floatingInstallPresent: !!document.querySelector('#install-float'),
               actionCount: document.querySelectorAll('#touch-controls .action').length,
               weaponButtonPresent: !!document.querySelector('#touch-controls [data-bit="128"]'),
               rotateHidden: document.querySelector('#rotate').classList.contains('hidden'),
               startVisible: (() => { const r=document.querySelector('#start').getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })(),
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
-            if (!mobile.controlsVisible || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.rotateHidden ||
+            if (!mobile.controlsVisible || !mobile.installVisible || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             await mobilePage.locator('#start').tap();
+            const installHiddenDuringGameplay = await mobilePage.locator('#install').evaluate(e => e.getClientRects().length === 0);
+            if (!installHiddenDuringGameplay) throw new Error('PWA install action remained visible during mobile gameplay.');
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobilePage.waitForTimeout(1500);
             await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
