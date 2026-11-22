@@ -101,6 +101,7 @@ jobs:
 
       - name: Serve and test browser runtime and offline cache
         run: |
+          mkdir -p visual-review
           python3 -m http.server 4173 --directory dist > /tmp/tagbound-http.log 2>&1 &
           echo $! > /tmp/tagbound-http.pid
           for attempt in $(seq 1 30); do
@@ -130,6 +131,7 @@ jobs:
               const loading = document.querySelector('#loading');
               return loading && loading.classList.contains('hidden');
             }, { timeout: 45000 });
+            await page.screenshot({ path: 'visual-review/desktop-intro.png', fullPage: true });
 
             const runtime = await page.evaluate(() => ({
               canvas: !!document.querySelector('#canvas'),
@@ -160,6 +162,8 @@ jobs:
                 !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
+            await page.waitForTimeout(2000);
+            await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
 
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
@@ -191,6 +195,7 @@ jobs:
             const mobilePage = await mobileContext.newPage();
             await mobilePage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
             await mobilePage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 45000 });
+            await mobilePage.screenshot({ path: 'visual-review/mobile-intro.png', fullPage: true });
             const mobile = await mobilePage.evaluate(() => ({
               controlsVisible: getComputedStyle(document.querySelector('#touch-controls')).display !== 'none',
               actionCount: document.querySelectorAll('#touch-controls .action').length,
@@ -201,6 +206,8 @@ jobs:
             }
             await mobilePage.locator('#start').tap();
             await mobilePage.locator('[data-bit="4"]').tap();
+            await mobilePage.waitForTimeout(1500);
+            await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
             await mobileContext.close();
 
             const portraitContext = await browser.newContext({
@@ -226,6 +233,13 @@ jobs:
             await browser.close();
           }
           JS
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tagbound-visual-review
+          path: visual-review/
+          if-no-files-found: error
+          retention-days: 1
 
   publish-dist:
     needs: [build, browser-smoke]
