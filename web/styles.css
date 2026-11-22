@@ -31,5 +31,5 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .loading{position:absolute;z-index:7;bottom:50%;left:50%;transform:translate(-50%,50%);background:#101621d9;border:1px solid #6e614c;padding:14px 20px;font-size:12px;letter-spacing:.16em;color:#efd8b2}
 @media(pointer:coarse){#touch-controls{display:block}#touch-help{display:block}}
 @media(pointer:fine){#touch-controls,#touch-help{display:none}}
-@media(orientation:portrait) and (pointer:coarse){#rotate{display:grid}#game-shell{visibility:hidden}#rotate{visibility:visible}}
+@media(orientation:portrait) and (pointer:coarse){#rotate{display:grid;visibility:visible}}
 @media(max-height:440px){.stick-area{width:120px;height:120px}.stick-ring{width:98px;height:98px}.stick-knob{width:44px;height:44px}.action-pad{width:250px;gap:4px}.action{font-size:9px}.panel{max-height:91dvh;padding:14px 20px}.story-copy{font-size:13px}.muted{font-size:11px}.class-card{min-height:66px;padding:8px}}
