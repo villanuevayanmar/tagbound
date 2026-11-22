@@ -478,6 +478,20 @@ int main() {
         }
     }
 
+    // Stamina caps, regeneration, and level-up refills match each class.
+    const float classStamina[3]={95.0f,100.0f,100.0f};
+    for(int klass=0;klass<3;klass++) {
+        game.player.playerClass=(PlayerClass)klass;
+        assert(near(ClassMaxStamina(game.player.playerClass),classStamina[klass]));
+        game.player.stamina=classStamina[klass]-1.0f;
+        UpdateMovement(game,Controls{},camera,0.1f);
+        assert(near(game.player.stamina,classStamina[klass]));
+        game.player.stamina=1.0f;
+        game.player.xp=game.player.level*100-1;
+        UpdateProgression(game,1);
+        assert(near(game.player.stamina,classStamina[klass]));
+    }
+
     // Each class's maximum health remains consistent when leveling up.
     const float classMaximums[3]={125.0f,95.0f,115.0f};
     for(int klass=0;klass<3;klass++) {
