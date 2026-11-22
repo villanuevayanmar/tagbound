@@ -14,6 +14,10 @@ Weapon ClassWeapon(PlayerClass c) {
     static const Weapon loadouts[3]={Weapon::Sword,Weapon::Bow,Weapon::Shield};
     return loadouts[std::clamp((int)c,0,2)];
 }
+float ClassMaxHealth(PlayerClass c) {
+    static const float health[3]={125.0f,95.0f,115.0f};
+    return health[std::clamp((int)c,0,2)];
+}
 void BuildCity(GameState& g) {
     g.platforms.clear(); g.enemies.clear(); g.projectiles.clear();
     g.quest=0; g.bossUnlocked=false; g.questTime=0; g.danger=0;
