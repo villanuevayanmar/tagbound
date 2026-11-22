@@ -97,7 +97,7 @@ jobs:
 
       - name: Install Chromium
         run: |
-          npm install --no-save playwright
+          npm install --no-save playwright pngjs
           npx playwright install --with-deps chromium
 
       - name: Serve and test browser runtime and offline cache
@@ -112,6 +112,7 @@ jobs:
           curl -fsS http://127.0.0.1:4173/ >/dev/null
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
+          import { PNG } from 'pngjs';
 
           const browser = await chromium.launch({
             headless: true,
@@ -198,11 +199,24 @@ jobs:
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
               installHiddenDuringGameplay: document.querySelector('#install')?.getClientRects().length === 0,
               settingsInstallHiddenDuringGameplay: document.querySelector('#settings-install')?.getClientRects().length === 0,
-              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0
+              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
+              settingsButtonClearOfHud: (() => {
+                const s = document.querySelector('#settings-open').getBoundingClientRect();
+                const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+                const boxes = [
+                  { left: 12, right: 262, top: 12, bottom: 87 },
+                  { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
+                  { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
+                  { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
+                  { left: 12, right: 402, top: h, bottom: h + 65 }
+                ];
+                return boxes.every(b => !(s.left < b.right && s.right > b.left && s.top < b.bottom && s.bottom > b.top));
+              })()
             }));
             if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height ||
                 !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || gameplay.save.quest !== 0 ||
-                !gameplay.installHiddenDuringGameplay || !gameplay.settingsInstallHiddenDuringGameplay || !gameplay.settingsButtonVisible) {
+                !gameplay.installHiddenDuringGameplay || !gameplay.settingsInstallHiddenDuringGameplay ||
+                !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfHud) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
 
@@ -249,7 +263,20 @@ jobs:
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
-            await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
+            const gameplayImage = await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
+            const gameplayPng = PNG.sync.read(gameplayImage);
+            let healthTextPixels = 0;
+            for (let y = 14; y < 38; y++) {
+              for (let x = 20; x < Math.min(190, gameplayPng.width); x++) {
+                const pixel = (y * gameplayPng.width + x) * 4;
+                if (gameplayPng.data[pixel] > 170 &&
+                    gameplayPng.data[pixel + 1] > 170 &&
+                    gameplayPng.data[pixel + 2] > 170) healthTextPixels++;
+              }
+            }
+            if (healthTextPixels < 12) {
+              throw new Error('The in-game health HUD is not visibly rendered in the gameplay frame.');
+            }
 
             // Seed an old installed-PWA cache, then verify the new worker removes it.
             await page.evaluate(async () => {
@@ -309,6 +336,19 @@ jobs:
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             await mobilePage.locator('#start').tap();
+            const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
+              const s = document.querySelector('#settings-open').getBoundingClientRect();
+              const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+              const boxes = [
+                { left: 12, right: 262, top: 12, bottom: 87 },
+                { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
+                { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
+                { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
+                { left: 12, right: 402, top: h, bottom: h + 65 }
+              ];
+              return boxes.every(b => !(s.left < b.right && s.right > b.left && s.top < b.bottom && s.bottom > b.top));
+            });
+            if (!mobileSettingsButtonClear) throw new Error('Mobile Settings button overlaps a HUD panel.');
             const installHiddenDuringGameplay = await mobilePage.locator('#install').evaluate(e => e.getClientRects().length === 0);
             if (!installHiddenDuringGameplay) throw new Error('PWA install action remained visible during mobile gameplay.');
             await mobilePage.locator('#settings-open').tap();

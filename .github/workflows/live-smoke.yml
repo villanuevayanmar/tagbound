@@ -29,7 +29,7 @@ jobs:
 
       - name: Install Chromium
         run: |
-          npm install --no-save playwright
+          npm install --no-save playwright pngjs
           npx playwright install --with-deps chromium
 
       - name: Test the deployed production game
@@ -39,6 +39,7 @@ jobs:
           mkdir -p live-review
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
+          import { PNG } from 'pngjs';
 
           const baseUrl = process.env.BASE_URL;
           const browser = await chromium.launch({
@@ -117,11 +118,23 @@ jobs:
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
               installHidden: document.querySelector('#install')?.getClientRects().length === 0,
               settingsInstallHidden: document.querySelector('#settings-install')?.getClientRects().length === 0,
-              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0
+              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
+              settingsButtonClearOfHud: (() => {
+                const s = document.querySelector('#settings-open').getBoundingClientRect();
+                const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+                const boxes = [
+                  { left: 12, right: 262, top: 12, bottom: 87 },
+                  { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
+                  { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
+                  { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
+                  { left: 12, right: 402, top: h, bottom: h + 65 }
+                ];
+                return boxes.every(b => !(s.left < b.right && s.right > b.left && s.top < b.bottom && s.bottom > b.top));
+              })()
             }));
             if (!gameplay.canvas.width || !gameplay.canvas.height || gameplay.save?.klass !== 1 ||
                 gameplay.save?.city !== 0 || gameplay.save?.quest !== 0 || !gameplay.installHidden ||
-                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible) {
+                !gameplay.settingsInstallHidden || !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfHud) {
               throw new Error('Live class/start/save or install visibility check failed: ' + JSON.stringify(gameplay));
             }
 
@@ -167,7 +180,20 @@ jobs:
             if (restored.quest !== 3 || restored.bosses !== 1) {
               throw new Error('Live saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
-            await page.screenshot({ path: 'live-review/production-gameplay.png', fullPage: true });
+            const gameplayImage = await page.screenshot({ path: 'live-review/production-gameplay.png', fullPage: true });
+            const gameplayPng = PNG.sync.read(gameplayImage);
+            let healthTextPixels = 0;
+            for (let y = 14; y < 38; y++) {
+              for (let x = 20; x < Math.min(190, gameplayPng.width); x++) {
+                const pixel = (y * gameplayPng.width + x) * 4;
+                if (gameplayPng.data[pixel] > 170 &&
+                    gameplayPng.data[pixel + 1] > 170 &&
+                    gameplayPng.data[pixel + 2] > 170) healthTextPixels++;
+              }
+            }
+            if (healthTextPixels < 12) {
+              throw new Error('The production health HUD is not visibly rendered in the gameplay frame.');
+            }
 
             await page.evaluate(async () => { await navigator.serviceWorker.ready; });
             // The first document installs the worker but is not controlled by it.
@@ -258,6 +284,19 @@ jobs:
 
             await mobilePage.screenshot({ path: 'live-review/production-mobile-home.png', fullPage: true });
             await mobilePage.locator('#start').tap();
+            const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
+              const s = document.querySelector('#settings-open').getBoundingClientRect();
+              const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+              const boxes = [
+                { left: 12, right: 262, top: 12, bottom: 87 },
+                { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
+                { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
+                { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
+                { left: 12, right: 402, top: h, bottom: h + 65 }
+              ];
+              return boxes.every(b => !(s.left < b.right && s.right > b.left && s.top < b.bottom && s.bottom > b.top));
+            });
+            if (!mobileSettingsButtonClear) throw new Error('Production mobile Settings button overlaps a HUD panel.');
             const mobileInstallHidden = await mobilePage.locator('#install')
               .evaluate(element => element.getClientRects().length === 0);
             if (!mobileInstallHidden) throw new Error('Install option remained visible during mobile gameplay.');
