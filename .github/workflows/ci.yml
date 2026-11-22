@@ -149,6 +149,8 @@ jobs:
               settingsInstallHiddenAtHome: document.querySelector('#settings-install').getClientRects().length === 0,
               settingsButtonHiddenAtHome: document.querySelector('#settings-open').getClientRects().length === 0
             }));
+            const homeMusicState = await page.evaluate(() => window.TagboundAudio?.getMusicState?.());
+            if (homeMusicState !== 'stopped') throw new Error('Ambient score started before gameplay: ' + homeMusicState);
             const classStats = await page.locator('.class-card').allTextContents();
             if (!classStats[0].includes('125 HP') || !classStats[0].includes('95 STA') ||
                 !classStats[0].includes('Heavy Strike') ||
@@ -183,7 +185,8 @@ jobs:
             await page.locator('[data-class="1"]').click();
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
-            await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', { timeout: 5000 });
+            await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
+            await page.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             const audioPlayed = await page.evaluate(() => window.TagboundAudio.play(0));
             if (!audioPlayed) throw new Error('Synthesized combat audio did not start after the Home-screen click.');
             await page.keyboard.down('w');
@@ -232,10 +235,14 @@ jobs:
             const inputReset = await page.evaluate(() => ({
               clear: Module.ccall('IsInputStateClear', 'number', [], []),
               activeButtons: document.querySelectorAll('.action.active').length,
-              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length,
+              musicState: window.TagboundAudio?.getMusicState?.()
             }));
             if (inputReset.clear !== 1 || inputReset.activeButtons || inputReset.pointerIds) {
               throw new Error('Touch/look input was not fully reset when Settings opened: ' + JSON.stringify(inputReset));
+            }
+            if (inputReset.musicState !== 'paused') {
+              throw new Error('CI ambient score did not pause with Settings: ' + inputReset.musicState);
             }
             const settingsVisible = await page.evaluate(() => ({
               open: !document.querySelector('#settings').classList.contains('hidden'),
@@ -253,11 +260,15 @@ jobs:
               throw new Error('Settings sound toggle did not synchronize with Home.');
             }
             await page.locator('#settings-sound').click();
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score resumed while Settings was still open.');
+            }
             const pausedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
             if (pausedState !== 0) throw new Error('C++ simulation was not paused while Settings was open.');
             await page.locator('#resume').click();
             const resumedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
             if (resumedState !== 1) throw new Error('C++ simulation did not resume after closing Settings.');
+            await page.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
 
             // Reopen from a saved boss-gate state and confirm C++ restored the boss.
             await page.evaluate(() => {
@@ -351,6 +362,8 @@ jobs:
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             await mobilePage.locator('#start').tap();
+            await mobilePage.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
+            await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
               const h = innerHeight <= 440 ? 96 : innerHeight - 78;
@@ -377,11 +390,13 @@ jobs:
             const mobileInputReset = await mobilePage.evaluate(() => ({
               clear: Module.ccall('IsInputStateClear', 'number', [], []),
               activeButtons: document.querySelectorAll('.action.active').length,
-              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length,
+              musicState: window.TagboundAudio?.getMusicState?.()
             }));
             if (mobileInputReset.clear !== 1 || mobileInputReset.activeButtons || mobileInputReset.pointerIds) {
               throw new Error('Mobile touch/look input was not reset when Settings opened: ' + JSON.stringify(mobileInputReset));
             }
+            if (mobileInputReset.musicState !== 'paused') throw new Error('Mobile ambient score did not pause in Settings.');
             const mobileSettings = await mobilePage.evaluate(() => ({
               open: !document.querySelector('#settings').classList.contains('hidden'),
               installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
@@ -390,7 +405,13 @@ jobs:
             if (!mobileSettings.open || !mobileSettings.installVisible || !mobileSettings.controlsHidden) {
               throw new Error('Mobile settings overlay failed: ' + JSON.stringify(mobileSettings));
             }
+            await mobilePage.locator('#settings-sound').tap();
+            if (await mobilePage.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Mobile ambient score resumed before the Resume action.');
+            }
+            await mobilePage.locator('#settings-sound').tap();
             await mobilePage.locator('#resume').tap();
+            await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             if (await mobilePage.locator('#settings-install').evaluate(e => e.getClientRects().length !== 0)) {
               throw new Error('Settings install action remained visible after resume.');
             }
