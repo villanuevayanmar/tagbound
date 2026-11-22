@@ -461,13 +461,14 @@ void UpdatePursuit(GameState& g,float dt) {
 
 void UpdateCombat(GameState& g,const Controls& c,float dt) {
     Player& p=g.player;
+    const bool aliveAtStart=p.health>0.0f;
     p.attackTime=std::max(0.0f,p.attackTime-dt);
     p.blocking=c.block; p.bowAiming=c.aim;
-    if(c.attack) p.attackTime=0.22f;
+    if(c.attack&&aliveAtStart) p.attackTime=0.22f;
     bool bossDefeated=false;
-    if(c.attack&&p.weapon==Weapon::Bow) {
+    if(c.attack&&aliveAtStart&&p.weapon==Weapon::Bow) {
         g.projectiles.push_back({Vector3Add(p.position,{0,1.35f,0}),Vector3Scale(p.facing,22),2.0f});
-    } else if(c.attack) {
+    } else if(c.attack&&aliveAtStart) {
         const float range=p.weapon==Weapon::Spear?3.1f:2.2f;
         float nearest=range+0.0001f;
         Enemy* target=nullptr;
