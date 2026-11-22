@@ -52,12 +52,27 @@ static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hit
     hitTime=enter;
     return true;
 }
-static bool OverlapsWall(Vector3 feet,const Platform& b) {
-    const float radius=0.34f, height=1.72f;
+static bool OverlapsWall(Vector3 feet,const Platform& b,float radius=0.34f,float height=1.72f) {
     bool x=feet.x+radius>b.position.x-b.size.x*0.5f && feet.x-radius<b.position.x+b.size.x*0.5f;
     bool z=feet.z+radius>b.position.z-b.size.z*0.5f && feet.z-radius<b.position.z+b.size.z*0.5f;
     bool y=feet.y+height>b.position.y-b.size.y*0.5f+0.05f && feet.y<b.position.y+b.size.y*0.5f-0.05f;
     return x&&z&&y;
+}
+static void MoveEnemy(GameState& g,Enemy& e,Vector3 delta) {
+    const float radius=e.boss?0.62f:0.42f;
+    const float height=e.boss?2.2f:1.72f;
+    float oldX=e.position.x;
+    e.position.x+=delta.x;
+    for(const auto& platform:g.platforms) if(OverlapsWall(e.position,platform,radius,height)) {
+        e.position.x=oldX;
+        break;
+    }
+    float oldZ=e.position.z;
+    e.position.z+=delta.z;
+    for(const auto& platform:g.platforms) if(OverlapsWall(e.position,platform,radius,height)) {
+        e.position.z=oldZ;
+        break;
+    }
 }
 static bool NearWall(Vector3 p,const Platform& b,Vector3& away) {
     float dx=std::abs(std::abs(p.x-b.position.x)-b.size.x*0.5f);
@@ -297,12 +312,12 @@ void UpdatePursuit(GameState& g,float dt) {
         e.stunTime=std::max(0.0f,e.stunTime-dt);
         if(d<25) nearby++;
         if(e.stunTime>0) {
-            e.position=Vector3Add(e.position,Vector3Scale(e.knockback,dt));
+            MoveEnemy(g,e,Vector3Scale(e.knockback,dt));
             e.knockback=Vector3Scale(e.knockback,std::max(0.0f,1.0f-8.0f*dt));
         } else if(d<24) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
-            if(d>1.45f&&horizontal>0.001f) e.position=Vector3Add(e.position,Vector3Scale(Vector3Normalize(to),e.speed*dt));
+            if(d>1.45f&&horizontal>0.001f) MoveEnemy(g,e,Vector3Scale(Vector3Normalize(to),e.speed*dt));
             else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
                 e.cooldown=1.0f;
                 if(p.blocking&&p.stamina>=8) p.stamina-=8;
