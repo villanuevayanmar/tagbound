@@ -58,3 +58,6 @@ const char* BossName(int city);
 const char* WeaponName(Weapon weapon);
 Weapon ClassWeapon(PlayerClass playerClass);
 float ClassMaxHealth(PlayerClass playerClass);
+inline float ClassMaxStamina(PlayerClass playerClass) {
+    return playerClass==PlayerClass::Vanguard?95.0f:100.0f;
+}
