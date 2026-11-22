@@ -194,6 +194,19 @@ int main() {
         assert(std::sqrt(knockback.x*knockback.x+knockback.y*knockback.y+knockback.z*knockback.z)>0.5f);
     }
 
+    // A melee swing hits only the nearest target, even when enemies overlap the attack arc.
+    game.enemies.clear();
+    game.player.position = {0,0.3f,0};
+    game.player.facing = {0,0,1};
+    game.player.weapon = Weapon::Sword;
+    game.enemies.push_back({{0,0.3f,1.8f},100,100,0,0,false,true});
+    game.enemies.push_back({{0,0.3f,1.0f},100,100,0,0,false,true});
+    Controls singleHit{};
+    singleHit.attack = true;
+    UpdateCombat(game,singleHit,0.016f);
+    assert(near(game.enemies[0].hp,100.0f));
+    assert(near(game.enemies[1].hp,74.0f));
+
     // Bow projectiles travel and damage a target in front of the player.
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
