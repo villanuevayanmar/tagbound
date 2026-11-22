@@ -15,6 +15,7 @@ struct Enemy {
     bool boss=false, alive=true;
     BossPhase phase=BossPhase::Dormant;
     float phaseTime=0, hitTime=0, stunTime=0;
+    int variant=0;
     Vector3 knockback{};
 };
 struct Player {
@@ -52,4 +53,5 @@ void UpdateProgression(GameState& game, int amount);
 void BuildCity(GameState& game);
 void DrawGame(const GameState& game, const Camera3D& camera);
 const char* CityName(int city);
+const char* BossName(int city);
 const char* WeaponName(Weapon weapon);
