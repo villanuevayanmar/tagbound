@@ -481,6 +481,15 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
             DrawTriangle(tip,{back.x+side.x,back.y+side.y},{back.x-side.x,back.y-side.y},GOLD);
         }
     }
+    const auto windupBoss=std::find_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e) {
+        return e.alive&&e.boss&&e.phase==BossPhase::Windup;
+    });
+    if(windupBoss!=g.enemies.end()) {
+        float remaining=std::max(0.0f,BossWindupDuration(windupBoss->variant)-windupBoss->phaseTime);
+        DrawRectangle(w/2-96,67,192,23,Fade(BLACK,0.78f));
+        DrawText(TextFormat("%s  STRIKE IN %.1fs",BossName(windupBoss->variant),remaining),
+                 w/2-85,73,11,remaining<0.25f?RED:ORANGE);
+    }
     if(g.player.ledgeGrabbing) DrawText("HANGING - JUMP: CLIMB / DOWN: DROP",w/2-155,28,14,GOLD);
     else if(g.player.climbing) DrawText("CLIMBING...",w/2-55,28,14,GOLD);
     DrawRectangle(w-245,12,233,76,Fade(BLACK,0.65f));

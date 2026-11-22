@@ -359,7 +359,6 @@ void UpdatePursuit(GameState& g,float dt) {
         }
         e.cooldown=std::max(0.0f,e.cooldown-dt);
         if(e.boss) {
-            static const float windup[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
             static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
             static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};
             static const float range[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
@@ -368,7 +367,7 @@ void UpdatePursuit(GameState& g,float dt) {
             e.phaseTime+=dt;
             if(e.phase==BossPhase::Dormant&&d<20) e.phase=BossPhase::Hunt;
             else if(e.phase==BossPhase::Hunt&&d<range[v]*1.15f) { e.phase=BossPhase::Windup; e.phaseTime=0; }
-            else if(e.phase==BossPhase::Windup&&e.phaseTime>windup[v]) { e.phase=BossPhase::Strike; e.phaseTime=0; }
+            else if(e.phase==BossPhase::Windup&&e.phaseTime>BossWindupDuration(v)) { e.phase=BossPhase::Strike; e.phaseTime=0; }
             else if(e.phase==BossPhase::Strike) {
                 if(v==1&&e.phaseTime<=strike[v]) {
                     Vector3 charge=Vector3Subtract(p.position,e.position); charge.y=0;

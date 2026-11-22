@@ -28,6 +28,11 @@ int main() {
     assert(near(beacon2.x,16) && near(beacon2.y,3.2f) && near(beacon2.z,20));
     assert(near(bossGate.x,22) && near(bossGate.y,3.95f) && near(bossGate.z,27));
 
+    // Boss warning countdowns use the same durations as combat state transitions.
+    const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
+    for(int variant=0;variant<5;variant++)
+        assert(near(BossWindupDuration(variant),bossWindups[variant]));
+
     // Each class has exactly one assigned weapon.
     assert(ClassWeapon(PlayerClass::Vanguard) == Weapon::Sword);
     assert(ClassWeapon(PlayerClass::Skirmisher) == Weapon::Bow);

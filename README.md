@@ -17,6 +17,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Three beacon quests per city, followed by five uniquely named bosses with different strike patterns, attack ranges, visual designs and telegraphed warning zones.
 - Shared beacon and boss-gate coordinates drive gameplay triggers, 3D markers and the live HUD distance readout.
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
+- Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
 - XP, levels, two skill unlock milestones and local progress saving.
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
