@@ -225,7 +225,7 @@ jobs:
 
   publish-dist:
     needs: [build, browser-smoke]
-    if: github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore: sync built WebAssembly output')
+    if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && (github.event_name != 'push' || !startsWith(github.event.head_commit.message, 'chore: sync built WebAssembly output'))
     runs-on: ubuntu-latest
     permissions:
       contents: write
