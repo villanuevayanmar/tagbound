@@ -269,18 +269,32 @@ void UpdatePursuit(GameState& g,float dt) {
         }
         e.cooldown=std::max(0.0f,e.cooldown-dt);
         if(e.boss) {
+            static const float windup[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
+            static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
+            static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};
+            static const float range[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+            static const float damage[5]={24,30,32,18,28};
+            int v=std::clamp(e.variant,0,4);
             e.phaseTime+=dt;
             if(e.phase==BossPhase::Dormant&&d<20) e.phase=BossPhase::Hunt;
             else if(e.phase==BossPhase::Hunt&&d<3.5f) { e.phase=BossPhase::Windup; e.phaseTime=0; }
-            else if(e.phase==BossPhase::Windup&&e.phaseTime>0.65f) { e.phase=BossPhase::Strike; e.phaseTime=0; }
-            else if(e.phase==BossPhase::Strike&&e.phaseTime>0.35f) {
-                if(d<4.0f&&p.invulnerable<=0) {
-                    if(p.blocking&&p.stamina>=18) p.stamina-=18;
-                    else { p.health-=24; p.invulnerable=0.65f; }
+            else if(e.phase==BossPhase::Windup&&e.phaseTime>windup[v]) { e.phase=BossPhase::Strike; e.phaseTime=0; }
+            else if(e.phase==BossPhase::Strike) {
+                if(v==1&&e.phaseTime<=strike[v]) {
+                    Vector3 charge=Vector3Subtract(p.position,e.position); charge.y=0;
+                    if(Vector3Length(charge)>0.001f)
+                        e.position=Vector3Add(e.position,Vector3Scale(Vector3Normalize(charge),e.speed*3.0f*dt));
                 }
-                e.phase=BossPhase::Recover; e.phaseTime=0;
+                d=Distance(e.position,p.position);
+                if(e.phaseTime>strike[v]) {
+                    if(d<range[v]&&p.invulnerable<=0) {
+                        if(p.blocking&&p.stamina>=18) p.stamina-=18;
+                        else { p.health-=damage[v]; p.invulnerable=0.65f; }
+                    }
+                    e.phase=BossPhase::Recover; e.phaseTime=0;
+                }
             }
-            else if(e.phase==BossPhase::Recover&&e.phaseTime>0.8f) { e.phase=BossPhase::Hunt; e.phaseTime=0; }
+            else if(e.phase==BossPhase::Recover&&e.phaseTime>recover[v]) { e.phase=BossPhase::Hunt; e.phaseTime=0; }
         }
     }
     g.danger=std::clamp(g.danger+(nearby?18.0f:-12.0f)*dt,0.0f,100.0f);
