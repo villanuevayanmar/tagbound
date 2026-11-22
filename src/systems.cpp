@@ -27,6 +27,32 @@ static bool NearWall(Vector3 p,const Platform& b,Vector3& away) {
     return false;
 }
 
+static bool FindLedge(const GameState& g,Vector3 p,Vector3 facing,
+                     Vector3& normal,Vector3& hang,Vector3& target) {
+    for(const auto& b:g.platforms) {
+        Vector3 away{};
+        if(!NearWall(p,b,away)) continue;
+        if(Vector3DotProduct(facing,Vector3Scale(away,-1.0f))<0.65f) continue;
+        float top=b.position.y+b.size.y*0.5f;
+        float handGap=top-p.y;
+        if(handGap<0.85f||handGap>1.8f) continue;
+
+        normal=away;
+        hang=p;
+        hang.y=top-1.55f;
+        target=hang;
+        target.y=top;
+        target.x-=away.x*0.75f;
+        target.z-=away.z*0.75f;
+        target.x=std::clamp(target.x,b.position.x-b.size.x*0.5f+0.55f,
+                                  b.position.x+b.size.x*0.5f-0.55f);
+        target.z=std::clamp(target.z,b.position.z-b.size.z*0.5f+0.55f,
+                                  b.position.z+b.size.z*0.5f-0.55f);
+        return true;
+    }
+    return false;
+}
+
 void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     Player& p=g.player;
     p.invulnerable=std::max(0.0f,p.invulnerable-dt);
@@ -39,10 +65,61 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     cameraPitch=std::clamp(cameraPitch-c.lookY*0.008f,-0.48f,0.42f);
     Vector3 forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
     Vector3 right={forward.z,0,-forward.x};
+    auto updateCamera=[&]() {
+        camera.target={p.position.x+forward.x*4.0f,p.position.y+1.2f+cameraPitch*5.0f,p.position.z+forward.z*4.0f};
+        camera.position={p.position.x-forward.x*8.0f+right.x*1.6f,p.position.y+4.0f,p.position.z-forward.z*8.0f+right.z*1.6f};
+    };
     Vector3 direction=Vector3Add(Vector3Scale(right,c.move.x),Vector3Scale(forward,c.move.y));
     if(Vector3Length(direction)>1.0f) direction=Vector3Normalize(direction);
     if(Vector3Length(direction)>0.05f) p.facing=Vector3Normalize(direction);
     else if(c.aim) p.facing=forward;
+
+    if(p.ledgeGrabbing) {
+        p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
+        if(c.jump) {
+            p.ledgeGrabbing=false;
+            p.climbing=true;
+            p.climbTime=0.0f;
+        } else if(c.slide||c.move.y<-0.55f) {
+            p.ledgeGrabbing=false;
+            p.velocity={0,-1.5f,0};
+            p.grounded=false;
+            p.ledgeNormal={};
+        } else {
+            p.position=p.ledgeHangPosition;
+            p.velocity={0,0,0};
+            p.grounded=false;
+            p.wallRunning=false;
+            p.vaulting=false;
+            updateCamera();
+            return;
+        }
+    }
+
+    if(p.climbing) {
+        constexpr float climbDuration=0.42f;
+        p.climbTime=std::min(climbDuration,p.climbTime+dt);
+        float t=p.climbTime/climbDuration;
+        float eased=t*t*(3.0f-2.0f*t);
+        p.position=Vector3Add(p.ledgeHangPosition,
+            Vector3Scale(Vector3Subtract(p.ledgeTargetPosition,p.ledgeHangPosition),eased));
+        p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
+        p.velocity={0,0,0};
+        p.grounded=false;
+        p.vaulting=true;
+        if(t>=1.0f) {
+            p.position=p.ledgeTargetPosition;
+            p.climbing=false;
+            p.climbTime=0.0f;
+            p.grounded=true;
+            p.vaulting=false;
+            p.ledgeNormal={};
+            p.ledgeHangPosition={};
+            p.ledgeTargetPosition={};
+        }
+        updateCamera();
+        return;
+    }
 
     float speed=p.playerClass==PlayerClass::Skirmisher?7.5f:6.0f;
     float sprintCost=18.0f*dt;
@@ -56,12 +133,35 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     if(p.dashTime>0) speed*=2.7f;
 
     float oldX=p.position.x,oldZ=p.position.z;
+    bool wallContact=false;
     p.position.x+=(direction.x*speed+p.velocity.x)*dt;
-    for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) { p.position.x=oldX; p.velocity.x=0; break; }
+    for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) {
+        p.position.x=oldX; p.velocity.x=0; wallContact=true; break;
+    }
     p.position.z+=(direction.z*speed+p.velocity.z)*dt;
-    for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) { p.position.z=oldZ; p.velocity.z=0; break; }
+    for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) {
+        p.position.z=oldZ; p.velocity.z=0; wallContact=true; break;
+    }
     p.velocity.x*=std::max(0.0f,1.0f-9.0f*dt);
     p.velocity.z*=std::max(0.0f,1.0f-9.0f*dt);
+
+    if(wallContact&&!p.grounded&&!p.ledgeGrabbing&&!p.climbing) {
+        Vector3 normal{},hang{},target{};
+        if(FindLedge(g,p.position,p.facing,normal,hang,target)) {
+            p.ledgeNormal=normal;
+            p.ledgeHangPosition=hang;
+            p.ledgeTargetPosition=target;
+            p.position=hang;
+            p.velocity={0,0,0};
+            p.grounded=false;
+            p.ledgeGrabbing=true;
+            p.vaulting=false;
+            p.vaultTime=0;
+            p.wallRunning=false;
+            updateCamera();
+            return;
+        }
+    }
 
     Vector3 wallAway{};
     p.wallRunning=false;
@@ -125,8 +225,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
 
     p.position.x=std::clamp(p.position.x,-49.0f,49.0f);
     p.position.z=std::clamp(p.position.z,-35.0f,42.0f);
-    camera.target={p.position.x+forward.x*4.0f,p.position.y+1.2f+cameraPitch*5.0f,p.position.z+forward.z*4.0f};
-    camera.position={p.position.x-forward.x*8.0f+right.x*1.6f,p.position.y+4.0f,p.position.z-forward.z*8.0f+right.z*1.6f};
+    updateCamera();
 }
 
 void UpdatePursuit(GameState& g,float dt) {
