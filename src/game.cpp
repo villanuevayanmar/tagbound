@@ -16,6 +16,13 @@ Vector3 QuestTarget(int city,int quest) {
     };
     return routes[std::clamp(city,0,4)][std::clamp(quest,0,3)];
 }
+
+bool ReachedQuestBeacon(Vector3 position,int city,int quest) {
+    if(quest<0||quest>=3) return false;
+    Vector3 target=QuestTarget(city,quest);
+    float dx=position.x-target.x, dz=position.z-target.z;
+    return dx*dx+dz*dz<=3.4f*3.4f && std::abs(position.y-target.y)<=0.45f;
+}
 float BossWindupDuration(int variant,bool enraged) {
     static const float duration[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     return duration[std::clamp(variant,0,4)]*(enraged?0.85f:1.0f);

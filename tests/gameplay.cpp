@@ -42,6 +42,16 @@ int main() {
         }
     }
 
+    // Beacon triggers require rooftop height and horizontal platform proximity.
+    for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
+        Vector3 target=QuestTarget(city,quest);
+        assert(ReachedQuestBeacon(target,city,quest));
+        assert(!ReachedQuestBeacon({target.x,0.3f,target.z},city,quest));
+        assert(!ReachedQuestBeacon({target.x+3.6f,target.y,target.z},city,quest));
+        assert(!ReachedQuestBeacon({target.x,target.y+0.6f,target.z},city,quest));
+    }
+    assert(!ReachedQuestBeacon(QuestTarget(0,3),0,3));
+
     // Boss warning countdowns use the same durations as combat state transitions.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     for(int variant=0;variant<5;variant++) {
