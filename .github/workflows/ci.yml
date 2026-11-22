@@ -199,7 +199,25 @@ jobs:
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobileContext.close();
 
-            console.log('PASS: WebAssembly runtime, WebGL, gameplay start/input/save, service-worker cache, offline reload, and mobile landscape controls.');
+            const portraitContext = await browser.newContext({
+              viewport: { width: 390, height: 844 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const portraitPage = await portraitContext.newPage();
+            await portraitPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            const portrait = await portraitPage.evaluate(() => ({
+              rotateVisible: getComputedStyle(document.querySelector('#rotate')).display !== 'none' &&
+                !document.querySelector('#rotate').classList.contains('hidden'),
+              message: document.querySelector('#rotate strong')?.textContent
+            }));
+            if (!portrait.rotateVisible || !portrait.message.includes('ROTATE')) {
+              throw new Error('Mobile portrait rotation guidance failed: ' + JSON.stringify(portrait));
+            }
+            await portraitContext.close();
+
+            console.log('PASS: WebAssembly runtime, WebGL, gameplay start/input/save, service-worker cache, offline reload, mobile landscape controls, and portrait rotation guidance.');
           } finally {
             await browser.close();
           }
