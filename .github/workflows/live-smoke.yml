@@ -83,6 +83,13 @@ jobs:
                 settingsButtonHiddenAtHome: document.querySelector('#settings-open').getClientRects().length === 0
               };
             });
+            const homeMusicState = await page.evaluate(() => ({
+              state: window.TagboundAudio?.getMusicState?.(),
+              notes: window.TagboundAudio?.getMusicNoteCount?.()
+            }));
+            if (homeMusicState.state !== 'stopped' || homeMusicState.notes !== 0) {
+              throw new Error('Live ambient score must remain silent on Home: ' + JSON.stringify(homeMusicState));
+            }
             const classCards = await page.locator('.class-card').allTextContents();
             if (!runtime.canvas || !runtime.webAssembly || !runtime.webgl || !runtime.introVisible ||
                 !runtime.installVisible || runtime.floatingInstallPresent || !runtime.settingsInstallScoped ||
@@ -112,6 +119,8 @@ jobs:
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
             await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
+            await page.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
+            await page.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
 
             const gameplay = await page.evaluate(() => ({
               canvas: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
@@ -149,10 +158,15 @@ jobs:
             const inputReset = await page.evaluate(() => ({
               clear: Module.ccall('IsInputStateClear', 'number', [], []),
               activeButtons: document.querySelectorAll('.action.active').length,
-              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length,
+              musicState: window.TagboundAudio?.getMusicState?.(),
+              musicNotes: window.TagboundAudio?.getMusicNoteCount?.()
             }));
             if (inputReset.clear !== 1 || inputReset.activeButtons || inputReset.pointerIds) {
               throw new Error('Touch/look input was not fully reset when Settings opened: ' + JSON.stringify(inputReset));
+            }
+            if (inputReset.musicState !== 'paused') {
+              throw new Error('Live ambient score did not pause with Settings: ' + inputReset.musicState);
             }
             const settingsVisible = await page.evaluate(() => ({
               open: !document.querySelector('#settings').classList.contains('hidden'),
@@ -169,11 +183,24 @@ jobs:
               throw new Error('Live settings sound toggle did not synchronize.');
             }
             await page.locator('#settings-sound').click();
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Live ambient score resumed while Settings was still open.');
+            }
+            const pausedMusicNotes = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
+            await page.waitForTimeout(550);
+            const musicNotesWhilePaused = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
+            if (musicNotesWhilePaused !== pausedMusicNotes) throw new Error('Production ambient score generated notes while paused.');
             const pausedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
             if (pausedState !== 0) throw new Error('Live C++ simulation was not paused in Settings.');
             await page.locator('#resume').click();
             const resumedState = await page.evaluate(() => Module.ccall('IsGameUpdating', 'number', [], []));
             if (resumedState !== 1) throw new Error('Live C++ simulation did not resume after Settings.');
+            await page.waitForFunction(
+              (previousCount) => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previousCount,
+              pausedMusicNotes,
+              { timeout: 5000 }
+            );
 
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
@@ -208,6 +235,26 @@ jobs:
             }
             if (healthTextPixels < 12) {
               throw new Error('The production health HUD is not visibly rendered in the gameplay frame.');
+            }
+            await page.evaluate(() => {
+              const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
+              save.finished = 1;
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            });
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            await page.locator('#start').click();
+            await page.waitForFunction(() => !document.querySelector('#ending')?.classList.contains('hidden'));
+            const victoryAudio = await page.evaluate(() => ({
+              music: window.TagboundAudio?.getMusicState?.(),
+              notes: window.TagboundAudio?.getMusicNoteCount?.()
+            }));
+            if (victoryAudio.music !== 'stopped' || victoryAudio.notes !== 0) {
+              throw new Error('A completed production save started ambient music behind the victory screen: ' + JSON.stringify(victoryAudio));
             }
 
             await page.evaluate(async () => { await navigator.serviceWorker.ready; });
@@ -299,6 +346,9 @@ jobs:
 
             await mobilePage.screenshot({ path: 'live-review/production-mobile-home.png', fullPage: true });
             await mobilePage.locator('#start').tap();
+            await mobilePage.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
+            await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
+            await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
               const h = innerHeight <= 440 ? 96 : innerHeight - 78;
@@ -326,11 +376,14 @@ jobs:
             const mobileInputReset = await mobilePage.evaluate(() => ({
               clear: Module.ccall('IsInputStateClear', 'number', [], []),
               activeButtons: document.querySelectorAll('.action.active').length,
-              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              pointerIds: document.querySelectorAll('.action[data-pointer-id]').length,
+              musicState: window.TagboundAudio?.getMusicState?.()
             }));
             if (mobileInputReset.clear !== 1 || mobileInputReset.activeButtons || mobileInputReset.pointerIds) {
               throw new Error('Production mobile touch/look input was not reset when Settings opened: ' + JSON.stringify(mobileInputReset));
             }
+            if (mobileInputReset.musicState !== 'paused') throw new Error('Production mobile ambient score did not pause in Settings.');
+            const pausedMobileMusicNotes = await mobilePage.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
             const mobileSettings = await mobilePage.evaluate(() => ({
               open: !document.querySelector('#settings').classList.contains('hidden'),
               installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
@@ -339,7 +392,22 @@ jobs:
             if (!mobileSettings.open || !mobileSettings.installVisible || !mobileSettings.controlsHidden) {
               throw new Error('Live mobile settings failed: ' + JSON.stringify(mobileSettings));
             }
+            await mobilePage.locator('#settings-sound').tap();
+            if (await mobilePage.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Production mobile ambient score resumed before Resume.');
+            }
+            await mobilePage.locator('#settings-sound').tap();
+            await mobilePage.waitForTimeout(550);
+            if (await mobilePage.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.()) !== pausedMobileMusicNotes) {
+              throw new Error('Production mobile ambient score generated notes while paused.');
+            }
             await mobilePage.locator('#resume').tap();
+            await mobilePage.waitForFunction(
+              (previousCount) => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previousCount,
+              pausedMobileMusicNotes,
+              { timeout: 5000 }
+            );
             if (await mobilePage.locator('#settings-install').evaluate(e => e.getClientRects().length !== 0)) {
               throw new Error('Settings install remained visible after resume.');
             }
