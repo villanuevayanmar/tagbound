@@ -7,6 +7,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Three selectable classes: Vanguard, Skirmisher and Warden.
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
+- Forward mantle vaults for reachable rooftop ledges, with a dedicated airborne pose.
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
 - Pursuit pressure, health, stamina, five weapon slots and ranged bow projectiles.
 - Three beacon quests per city, followed by a city boss gate with telegraphed strikes and stamina-based blocking.
