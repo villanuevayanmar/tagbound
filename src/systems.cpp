@@ -52,6 +52,15 @@ static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hit
     hitTime=enter;
     return true;
 }
+static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to) {
+    from.y+=1.0f;
+    to.y+=1.0f;
+    for(const auto& platform:g.platforms) {
+        float hitTime=0.0f;
+        if(SegmentPlatform(from,to,platform,hitTime)) return false;
+    }
+    return true;
+}
 static bool OverlapsWall(Vector3 feet,const Platform& b,float radius=0.34f,float height=1.72f) {
     bool x=feet.x+radius>b.position.x-b.size.x*0.5f && feet.x-radius<b.position.x+b.size.x*0.5f;
     bool z=feet.z+radius>b.position.z-b.size.z*0.5f && feet.z-radius<b.position.z+b.size.z*0.5f;
@@ -319,17 +328,7 @@ void UpdatePursuit(GameState& g,float dt) {
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f) MoveEnemy(g,e,Vector3Scale(Vector3Normalize(to),e.speed*dt));
             else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
-                Vector3 attackFrom=Vector3Add(e.position,{0,1.0f,0});
-                Vector3 attackTo=Vector3Add(p.position,{0,1.0f,0});
-                bool blocked=false;
-                for(const auto& platform:g.platforms) {
-                    float hitTime=0.0f;
-                    if(SegmentPlatform(attackFrom,attackTo,platform,hitTime)) {
-                        blocked=true;
-                        break;
-                    }
-                }
-                if(!blocked) {
+                if(HasLineOfSight(g,e.position,p.position)) {
                     e.cooldown=1.0f;
                     if(p.blocking&&p.stamina>=8) p.stamina-=8;
                     else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
@@ -356,17 +355,7 @@ void UpdatePursuit(GameState& g,float dt) {
                 }
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strike[v]) {
-                    Vector3 attackFrom=Vector3Add(e.position,{0,1.0f,0});
-                    Vector3 attackTo=Vector3Add(p.position,{0,1.0f,0});
-                    bool blocked=false;
-                    for(const auto& platform:g.platforms) {
-                        float hitTime=0.0f;
-                        if(SegmentPlatform(attackFrom,attackTo,platform,hitTime)) {
-                            blocked=true;
-                            break;
-                        }
-                    }
-                    if(d<range[v]&&!blocked&&p.invulnerable<=0) {
+                    if(d<range[v]&&HasLineOfSight(g,e.position,p.position)&&p.invulnerable<=0) {
                         if(p.blocking&&p.stamina>=18) p.stamina-=18;
                         else { p.health-=damage[v]; p.invulnerable=0.65f; }
                     }
@@ -396,17 +385,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
             Vector3 to=Vector3Subtract(e.position,p.position);
             float d=Vector3Length(to);
             if(d>0.001f&&d<=range&&d<nearest&&Vector3DotProduct(p.facing,Vector3Normalize(to))>0.1f) {
-                Vector3 attackFrom=Vector3Add(p.position,{0,1.0f,0});
-                Vector3 attackTo=Vector3Add(e.position,{0,1.0f,0});
-                bool blocked=false;
-                for(const auto& platform:g.platforms) {
-                    float hitTime=0.0f;
-                    if(SegmentPlatform(attackFrom,attackTo,platform,hitTime)) {
-                        blocked=true;
-                        break;
-                    }
-                }
-                if(!blocked) {
+                if(HasLineOfSight(g,p.position,e.position)) {
                     nearest=d;
                     target=&e;
                 }
