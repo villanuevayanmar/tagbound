@@ -319,9 +319,21 @@ void UpdatePursuit(GameState& g,float dt) {
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f) MoveEnemy(g,e,Vector3Scale(Vector3Normalize(to),e.speed*dt));
             else if(d<=1.45f&&e.cooldown<=0&&!e.boss) {
-                e.cooldown=1.0f;
-                if(p.blocking&&p.stamina>=8) p.stamina-=8;
-                else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
+                Vector3 attackFrom=Vector3Add(e.position,{0,1.0f,0});
+                Vector3 attackTo=Vector3Add(p.position,{0,1.0f,0});
+                bool blocked=false;
+                for(const auto& platform:g.platforms) {
+                    float hitTime=0.0f;
+                    if(SegmentPlatform(attackFrom,attackTo,platform,hitTime)) {
+                        blocked=true;
+                        break;
+                    }
+                }
+                if(!blocked) {
+                    e.cooldown=1.0f;
+                    if(p.blocking&&p.stamina>=8) p.stamina-=8;
+                    else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
+                }
             }
         }
         e.cooldown=std::max(0.0f,e.cooldown-dt);
