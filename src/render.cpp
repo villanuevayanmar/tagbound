@@ -3,6 +3,53 @@
 #include <algorithm>
 #include <cmath>
 
+static void DrawCityLandmarks(int city) {
+    switch (city) {
+        case 0: // Port town: dock cranes and stacked cargo.
+            for (int i=0;i<3;i++) {
+                float x=-25.0f+i*9.0f;
+                DrawCylinder({x,2.5f,-15},0.16f,0.16f,5.0f,8,BROWN);
+                DrawCubeV({x+1.8f,4.8f,-15},{3.8f,0.16f,0.16f},BROWN);
+                DrawCubeV({x+3.2f,3.9f,-15},{0.14f,1.8f,0.14f},DARKBROWN);
+                DrawCubeV({x+3.2f,2.9f,-13.8f},{2.2f,1.6f,2.2f},{116,76,48,255});
+            }
+            break;
+        case 1: // Merchant tier: colorful market awnings.
+            for (int i=0;i<4;i++) {
+                float x=-27.0f+i*7.0f;
+                Color cloth=i%2?Color{153,76,59,255}:Color{190,145,78,255};
+                DrawCubeV({x,2.4f,-14},{4.2f,0.24f,3.2f},cloth);
+                for (int side=-1;side<=1;side+=2)
+                    DrawCylinder({x+side*1.75f,1.2f,-14},0.08f,0.08f,2.4f,6,BROWN);
+                DrawCubeV({x,0.55f,-14},{3.5f,1.0f,2.5f},{91,67,51,255});
+            }
+            break;
+        case 2: // Foundry: furnaces, chimneys and glowing vents.
+            for (int i=0;i<3;i++) {
+                float x=-25.0f+i*9.0f;
+                DrawCubeV({x,3.8f,-15},{4.0f,7.6f,4.0f},{65,72,79,255});
+                DrawCylinder({x,8.3f,-15},0.8f,1.0f,2.2f,8,{93,92,91,255});
+                DrawCubeV({x,0.35f,-12.85f},{1.4f,0.18f,0.12f},ORANGE);
+            }
+            break;
+        case 3: // High spire: narrow towers and pointed roofs.
+            for (int i=0;i<4;i++) {
+                float x=-27.0f+i*8.0f, h=12.0f+(i%2)*5.0f;
+                DrawCylinder({x,h*0.5f,-16},1.15f,1.45f,h,8,{92,88,124,255});
+                DrawCylinder({x,h+1.1f,-16},0.0f,1.5f,2.2f,8,{173,143,103,255});
+            }
+            break;
+        case 4: // Imperial capital: curtain wall and fortified towers.
+            DrawCubeV({-12,3.0f,-17},{27.0f,6.0f,1.4f},{112,83,78,255});
+            for (int i=0;i<4;i++) {
+                float x=-24.0f+i*8.0f;
+                DrawCylinder({x,5.2f,-17},1.45f,1.7f,10.4f,8,{133,91,80,255});
+                DrawCylinder({x,11.0f,-17},0.0f,1.7f,2.0f,8,{189,148,104,255});
+            }
+            break;
+    }
+}
+
 void DrawGame(const GameState& g,const Camera3D& camera) {
     static const Color sky[5]={{32,52,68,255},{53,52,69,255},{33,43,54,255},{55,49,77,255},{51,36,46,255}};
     ClearBackground(sky[g.city]);
@@ -74,6 +121,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         DrawCubeV({e.position.x-width*0.5f*(1-e.hp/e.maxHp),e.position.y+2.3f,e.position.z},{width*(e.hp/e.maxHp),0.1f,0.12f},RED);
     }
     for(const auto& s:g.projectiles) DrawSphere(s.position,0.12f,GOLD);
+    DrawCityLandmarks(g.city);
     DrawGrid(80,1.0f);
     EndMode3D();
 
