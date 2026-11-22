@@ -129,10 +129,12 @@ static void Frame() {
         UpdateMovement(game,controls,camera,dt);
         if(controls.jump&&game.player.position.y>previousY+0.01f) playGameAudio(3);
         if(!wasDashing&&game.player.dashTime>0) playGameAudio(2);
+        float staminaBeforeCombat=game.player.stamina;
         UpdatePursuit(game,dt);
         if(TaggerWindupCount()>previousTaggerWindups) playGameAudio(7);
         if((BossWindupMask()&~previousWindups)!=0) playGameAudio(5);
         UpdateCombat(game,controls,dt);
+        if(game.player.stamina<staminaBeforeCombat-0.01f) playGameAudio(8);
         if(game.player.health<previousHealth) playGameAudio(4);
         if(game.defeated>previousDefeated) playGameAudio(6);
         if(game.city!=savedCity) { savedCity=game.city; Save(); }

@@ -7,7 +7,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Three selectable classes: Vanguard, Skirmisher and Warden. Each class has one fixed weapon; players cannot switch weapons.
 - Five city environments with distinct low-poly landmarks and increasing pursuer toughness and speed.
 - Procedural articulated player, pursuer, and boss models with animated movement poses.
-- Procedurally synthesized sound effects for jumps, melee, bow shots, dashes, damage, pursuer warnings and boss telegraphs; no audio downloads required.
+- Procedurally synthesized sound effects for jumps, melee, bow shots, dashes, shield blocks, damage, pursuer warnings and boss telegraphs; no audio downloads required.
 - A Home-screen sound toggle with a saved mute preference.
 - Forward mantle vaults and ledge grabbing, with a stable hanging state, jump-to-climb transition and safe drop input.
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
