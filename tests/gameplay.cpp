@@ -525,6 +525,7 @@ int main() {
     rearBoss.variant=0;
     rearBoss.phase=BossPhase::Strike;
     rearBoss.phaseTime=1.0f;
+    rearBoss.strikeDirection={0,0,1};
     rearBoss.strikeOrigin=rearBoss.position;
     game.enemies.push_back(rearBoss);
     UpdatePursuit(game,0.05f);
