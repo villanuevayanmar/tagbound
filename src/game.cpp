@@ -49,6 +49,7 @@ void SetQuestProgress(GameState& g,int quest) {
     g.quest=std::clamp(quest,0,3);
     if(g.quest<3) {
         g.bossUnlocked=false;
+        if(g.quest>0) g.questLimit=100.0f-g.city*8.0f-g.quest*9.0f;
         return;
     }
     for(const auto& e:g.enemies) if(e.boss) {
