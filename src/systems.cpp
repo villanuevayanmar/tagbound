@@ -415,7 +415,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
             }
         }
         if(target) {
-            float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:26));
+            float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:(p.weapon==Weapon::Sword?30:26)));
             if(p.weapon==Weapon::Shield&&p.combatSkill) damage=29;
             target->hp-=damage;
             target->hitTime=0.16f;

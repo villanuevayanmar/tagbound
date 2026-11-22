@@ -224,7 +224,7 @@ int main() {
 
     // Every melee weapon must apply its intended damage.
     const Weapon weapons[] = {Weapon::Sword, Weapon::Axe, Weapon::Shield, Weapon::Spear};
-    const float expectedDamage[] = {26, 43, 14, 32};
+    const float expectedDamage[] = {30, 43, 14, 32};
     for (int i = 0; i < 4; ++i) {
         game.enemies.clear();
         game.player.position = {0,0.3f,0};
@@ -254,7 +254,7 @@ int main() {
     singleHit.attack = true;
     UpdateCombat(game,singleHit,0.016f);
     assert(near(game.enemies[0].hp,100.0f));
-    assert(near(game.enemies[1].hp,74.0f));
+    assert(near(game.enemies[1].hp,70.0f));
 
     // Solid rooftop cover blocks melee attacks against enemies behind it.
     game.enemies.clear();
@@ -273,7 +273,7 @@ int main() {
     game.enemies.clear();
     game.enemies.push_back({{0,0.3f,0.5f},100,100,0,0,false,true});
     UpdateCombat(game,blockedMelee,0.016f);
-    assert(near(game.enemies.front().hp,74.0f));
+    assert(near(game.enemies.front().hp,70.0f));
     game.platforms.clear();
 
     // Bow projectiles travel and damage a target in front of the player.

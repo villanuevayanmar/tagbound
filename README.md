@@ -15,6 +15,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
 - Pursuit pressure, health, stamina and class-exclusive weapons: Vanguard sword, Skirmisher bow and Warden shield.
 - Warden's shield reduces the stamina cost of blocking both pursuer and boss strikes.
+- Vanguard's sword deals a heavier melee strike; Skirmisher retains the fastest base movement speed; Warden uses less stamina while guarding.
 - Three beacon quests per city, followed by five uniquely named bosses with different strike patterns, attack ranges, visual designs and telegraphed warning zones.
 - Shared beacon and boss-gate coordinates drive gameplay triggers, 3D markers and the live HUD distance readout.
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
