@@ -8,7 +8,7 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `15da20d50789098d94d83a4dea5a5343e8284cef`  
+Current main commit: `e4ed14a83bb79533da85ea7ac5f4c9268450dfcd`  
 Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
 Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
 
@@ -36,6 +36,13 @@ The production URL is still serving the older deployment. Do not send the user t
 - Opening Settings clears joystick movement, touch action bits, camera-look deltas, active-button styling and tracked pointer captures.
 - Hosted desktop/mobile checks verify all touch/look state is cleared.
 
+### Class-specific BOW control — PR #5
+
+- BOW touch action is hidden for Vanguard and Warden and shown only for Skirmisher.
+- The fixed loadouts remain Vanguard → Sword, Skirmisher → Bow, Warden → Shield.
+- Hosted desktop browser tests start each class in an isolated session and verify the saved weapon enum.
+- Hosted mobile checks cycle through all three classes, verify visible action counts/BOW visibility, and verify the saved Skirmisher weapon is Bow.
+
 ### Original ambient score — PR #4
 
 - Added an original ambient note sequence synthesized locally using Web Audio oscillators and filters.
@@ -49,19 +56,15 @@ The production URL is still serving the older deployment. Do not send the user t
 - HUD/render PR checks passed in run `45074803692`.
 - Pause input-reset PR checks passed in run `45075281567`.
 - Ambient score PR checks passed in run `45076329628`.
+- Class-specific BOW/loadout PR checks passed in run `45077008462`.
 - Main after ambient-score merge passed WebAssembly compilation, C++ gameplay regressions, generated PWA validation, desktop/mobile Chromium, and publish-dist in run `45076558880`.
-- Latest main commit `15da20d` is the generated build-output sync from that successful run.
+- Main after class-specific BOW merge is running in workflow `45077247867`; check its terminal result before considering this merge fully green.
+- Latest main source commit is `e4ed14a`; its tested generated `dist/` sync will follow successful main CI.
 - Hosted browser tests are not physical Android playtesting.
 
-## Current work — fix/class-specific-bow-control
+## Current state
 
-Implemented on a feature branch; awaiting CI and PR review:
-
-- The BOW touch action currently appears for every class even though only Skirmisher has a bow.
-- Hide BOW for Vanguard and Warden; show it only when Skirmisher is selected.
-- Verify all three class choices persist the correct fixed weapon in the saved player state: Vanguard → Sword, Skirmisher → Bow, Warden → Shield.
-- Extend desktop and mobile browser tests to switch through all classes and assert the corresponding touch-action visibility and saved weapon mapping.
-- Keep the one-weapon-per-class rule: no weapon swapping or secondary weapon slot.
+The class-specific BOW feature is merged in PR #5. No weapon swapping or secondary weapon slot was introduced.
 
 ## Deployment blocker — Vercel
 
@@ -114,8 +117,7 @@ Production still serves commit `a15a767`, not the latest main.
 
 ## Exact next task
 
-1. Finish `fix/class-specific-bow-control`.
-2. Add browser checks for the BOW button visibility across all three classes and fixed saved weapon assignment.
-3. Require Emscripten build, C++ gameplay regression and desktop/mobile Chromium tests to pass.
-4. Merge only after hosted CI is green.
-5. Continue with campaign playthrough validation and quest variety, while monitoring Vercel's free deployment quota. Android testing remains pending until the latest production build is live.
+1. Check the terminal status of main workflow `45077247867` and verify the generated `dist/` sync commit.
+2. Review city progression, checkpoint/respawn, quest variety, and boss encounters for the next concrete gameplay gap.
+3. Add automated regression and hosted browser tests for the selected change.
+4. Continue merging tested work while monitoring Vercel's free deployment quota. Android testing remains pending until the latest production build is live.
