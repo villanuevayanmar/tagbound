@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v24';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v25';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -141,8 +141,12 @@ jobs:
               introVisible: !document.querySelector('#intro').classList.contains('hidden'),
               installVisible: (() => { const b=document.querySelector('#install'); const r=b?.getBoundingClientRect(); return !!b && !b.hidden && r.width>0 && r.height>0; })(),
               soundToggleVisible: (() => { const b=document.querySelector('#sound-toggle'); const r=b?.getBoundingClientRect(); return !!b && r.width>0 && r.height>0; })(),
+              settingsInstallHidden: document.querySelector('#settings-install').getClientRects().length === 0,
+              settingsButtonHidden: document.querySelector('#settings-open').getClientRects().length === 0,
               floatingInstallPresent: !!document.querySelector('#install-float'),
-              installOutsideHome: [...document.querySelectorAll('[id^="install"]')].some(e => !document.querySelector('#intro').contains(e))
+              settingsInstallScoped: document.querySelector('#settings').contains(document.querySelector('#settings-install')),
+              settingsInstallHiddenAtHome: document.querySelector('#settings-install').getClientRects().length === 0,
+              settingsButtonHiddenAtHome: document.querySelector('#settings-open').getClientRects().length === 0
             }));
             const classStats = await page.locator('.class-card').allTextContents();
             if (!classStats[0].includes('125 HP') || !classStats[0].includes('95 STA') ||
@@ -154,7 +158,8 @@ jobs:
             }
 
             if (!runtime.canvas || !runtime.wasm || !runtime.webgl || !runtime.introVisible ||
-                !runtime.installVisible || !runtime.soundToggleVisible || runtime.floatingInstallPresent || runtime.installOutsideHome) {
+                !runtime.installVisible || !runtime.soundToggleVisible || runtime.floatingInstallPresent ||
+                !runtime.settingsInstallScoped || !runtime.settingsInstallHiddenAtHome || !runtime.settingsButtonHiddenAtHome) {
               throw new Error('Runtime smoke test failed: ' + JSON.stringify(runtime));
             }
             await page.locator('#sound-toggle').click();
@@ -191,12 +196,51 @@ jobs:
               introHidden: document.querySelector('#intro').classList.contains('hidden'),
               canvasSize: { width: document.querySelector('#canvas').width, height: document.querySelector('#canvas').height },
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
-              installHiddenDuringGameplay: document.querySelector('#install')?.getClientRects().length === 0
+              installHiddenDuringGameplay: document.querySelector('#install')?.getClientRects().length === 0,
+              settingsInstallHiddenDuringGameplay: document.querySelector('#settings-install')?.getClientRects().length === 0,
+              settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0
             }));
             if (!gameplay.introHidden || !gameplay.canvasSize.width || !gameplay.canvasSize.height ||
-                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || gameplay.save.quest !== 0 || !gameplay.installHiddenDuringGameplay) {
+                !gameplay.save || gameplay.save.klass !== 1 || gameplay.save.city !== 0 || gameplay.save.quest !== 0 ||
+                !gameplay.installHiddenDuringGameplay || !gameplay.settingsInstallHiddenDuringGameplay || !gameplay.settingsButtonVisible) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
+
+            // Settings must expose install only while open and pause the actual C++ simulation.
+            await page.locator('#settings-open').click();
+            const settingsVisible = await page.evaluate(() => ({
+              open: !document.querySelector('#settings').classList.contains('hidden'),
+              installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
+              homeInstallHidden: document.querySelector('#install').getClientRects().length === 0,
+              touchControlsHidden: document.querySelector('#touch-controls').classList.contains('hidden')
+            }));
+            if (!settingsVisible.open || !settingsVisible.installVisible || !settingsVisible.homeInstallHidden) {
+              throw new Error('Settings screen or install placement failed: ' + JSON.stringify(settingsVisible));
+            }
+            await page.locator('#settings-sound').click();
+            if (await page.locator('#sound-toggle').textContent() !== 'SOUND: OFF' ||
+                await page.locator('#settings-sound').textContent() !== 'SOUND: OFF' ||
+                await page.evaluate(() => localStorage.getItem('tagbound-sound')) !== 'off') {
+              throw new Error('Settings sound toggle did not synchronize with Home.');
+            }
+            await page.locator('#settings-sound').click();
+            const pausedBefore = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
+            await page.keyboard.down('w');
+            await page.waitForTimeout(250);
+            await page.keyboard.up('w');
+            const pausedAfter = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
+            if (Math.abs(pausedAfter - pausedBefore) > 0.01) {
+              throw new Error('Gameplay continued moving while Settings was open.');
+            }
+            await page.locator('#resume').click();
+            await page.keyboard.down('w');
+            await page.waitForTimeout(250);
+            await page.keyboard.up('w');
+            const resumedAfter = await page.evaluate(() => Module.ccall('GetPlayerPositionZ', 'number', [], []));
+            if (resumedAfter <= pausedAfter + 0.1) {
+              throw new Error('Resume did not restart gameplay movement.');
+            }
+
             // Reopen from a saved boss-gate state and confirm C++ restored the boss.
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
@@ -231,13 +275,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v24');
+              const cache = await caches.open('tagbound-v25');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v24') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v25') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -268,13 +312,27 @@ jobs:
               startVisible: (() => { const r=document.querySelector('#start').getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })(),
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
-            if (!mobile.controlsVisible || !mobile.installVisible || !mobile.soundToggleVisible || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.rotateHidden ||
+            if (!mobile.controlsVisible || !mobile.installVisible || !mobile.soundToggleVisible ||
+                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.weaponButtonPresent || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             await mobilePage.locator('#start').tap();
             const installHiddenDuringGameplay = await mobilePage.locator('#install').evaluate(e => e.getClientRects().length === 0);
             if (!installHiddenDuringGameplay) throw new Error('PWA install action remained visible during mobile gameplay.');
+            await mobilePage.locator('#settings-open').tap();
+            const mobileSettings = await mobilePage.evaluate(() => ({
+              open: !document.querySelector('#settings').classList.contains('hidden'),
+              installVisible: document.querySelector('#settings-install').getClientRects().length > 0,
+              controlsHidden: document.querySelector('#touch-controls').classList.contains('hidden')
+            }));
+            if (!mobileSettings.open || !mobileSettings.installVisible || !mobileSettings.controlsHidden) {
+              throw new Error('Mobile settings overlay failed: ' + JSON.stringify(mobileSettings));
+            }
+            await mobilePage.locator('#resume').tap();
+            if (await mobilePage.locator('#settings-install').evaluate(e => e.getClientRects().length !== 0)) {
+              throw new Error('Settings install action remained visible after resume.');
+            }
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobilePage.waitForTimeout(1500);
             await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
