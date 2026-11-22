@@ -68,7 +68,9 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
                 (p.playerClass==PlayerClass::Skirmisher?Color{58,112,89,255}:Color{78,89,116,255});
     Color cloth=p.invulnerable>0?WHITE:tunic;
     Color pants={43,45,53,255}, leather={77,54,39,255}, metal={139,145,151,255};
-    float breath=bob;
+    float impact=std::clamp(p.landingTime/0.28f,0.0f,1.0f);
+    float crouch=impact*(p.landingRoll?0.16f:0.23f);
+    float breath=bob-crouch;
 
     Vector3 waist=BodyPoint(p.position,right,forward,0,0.72f+breath,0);
     Vector3 chest=BodyPoint(p.position,right,forward,0,1.30f+breath,0);
@@ -90,7 +92,7 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     DrawSphere(BodyPoint(p.position,right,forward,0.105f,1.77f+breath,0.244f),0.035f,{35,31,29,255});
     DrawSphere(BodyPoint(p.position,right,forward,0,1.68f+breath,0.278f),0.045f,{167,119,91,255});
 
-    float legLift=(p.vaulting||p.ledgeGrabbing||p.climbing)?0.26f:(p.grounded?0.0f:0.12f);
+    float legLift=(p.vaulting||p.ledgeGrabbing||p.climbing)?0.26f:(p.grounded?0.0f:0.12f)-impact*0.12f;
     float leftDepth=swing*0.36f, rightDepth=-swing*0.36f;
     Vector3 leftHip=BodyPoint(p.position,right,forward,-0.145f,0.69f+breath,0);
     Vector3 rightHip=BodyPoint(p.position,right,forward,0.145f,0.69f+breath,0);
@@ -107,7 +109,7 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
 
     Vector3 leftShoulder=BodyPoint(p.position,right,forward,-0.30f,1.35f+breath,0);
     Vector3 rightShoulder=BodyPoint(p.position,right,forward,0.30f,1.35f+breath,0);
-    float armSwing=p.blocking?0.25f:-swing*0.30f;
+    float armSwing=p.blocking?0.25f:(p.landingRoll?0.42f:-swing*0.30f);
     Vector3 leftElbow=BodyPoint(p.position,right,forward,-0.39f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.48f:(1.06f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.22f:(p.blocking?0.34f:armSwing));
     Vector3 leftHand=BodyPoint(p.position,right,forward,-0.43f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.68f:(0.91f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.34f:(p.blocking?0.52f:armSwing*1.35f));
     Vector3 rightElbow=BodyPoint(p.position,right,forward,0.39f,(p.vaulting||p.ledgeGrabbing||p.climbing)?1.48f:(1.08f+breath),(p.vaulting||p.ledgeGrabbing||p.climbing)?0.22f:(p.bowAiming?0.28f:(p.blocking?0.34f:0.12f+swing*0.16f)));
