@@ -227,3 +227,17 @@ Continue auditing the agreed gameplay/PWA scope for concrete uncovered edge case
 - The README's current playable-scope statement and `DEVELOPMENT_STATUS.md` remaining-work section now reflect the implemented five-city campaign: reach, hold and survival objectives are all present; the next work is evidence-based balance/polish, not adding unrequested objective types.
 - Production still serves main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`; the current PR #14 code is not deployed. Do not ask for Android testing of this branch until the user authorizes a deployment after the reported Vercel hold.
 - Physical Android frame-time, touch and audio behavior remain unverified. Hosted Chromium mobile tests do not establish Android performance.
+
+
+## Latest verified checkpoint — 2026-11-23, browser lifecycle recovery
+
+- Source/test head: `29fee596ac204be433ff18d25266e722b18bd249`; exact GitHub Actions run #315 (`45184017300`) passed.
+- Run #314 (`45182902026`) passed input cleanup tests for window blur and document visibility changes.
+- Run #315 added and passed audio lifecycle tests: ambient music pauses on browser blur and when the document is hidden; music resumes when focus/visibility returns only while active gameplay is visible. Settings and the victory ending remain paused.
+- Existing desktop/mobile Chromium, C++ gameplay, WebAssembly, save restoration, service-worker cache, and offline reload checks passed. PR-only `publish-dist` remained skipped.
+- README, development status, and this prompt now record the background lifecycle behavior.
+- PR #13 and PR #14 remain open/unmerged; PR #14 remains draft. Main is still `a18e39e9eca221a15d75c4070de9d06ef94abc3e`. No `dist/` change, merge, deployment, or billing modification occurred.
+- Physical Android performance/touch/audio checks remain unverified. Do not merge/deploy or attempt a quota workaround; deployment still needs explicit user authorization.
+
+### Next exact task
+Continue the remaining source/test audit for concrete issues. Prioritize gameplay defects with reproducible regressions over speculative additions or balance changes without playtest evidence. Keep all work outside `dist/` during the deployment hold.
