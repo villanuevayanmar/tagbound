@@ -203,7 +203,8 @@ jobs:
               const loadoutResponse = await loadoutPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle', timeout: 60000 });
               if (!loadoutResponse?.ok()) throw new Error('CI class loadout page did not return HTTP 200.');
               await loadoutPage.waitForFunction(
-                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                () => document.querySelector('#loading')?.classList.contains('hidden') &&
+                  typeof window.TagboundSettings?.isOpen === 'function',
                 null,
                 { timeout: 45000 }
               );
