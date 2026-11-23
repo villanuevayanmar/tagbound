@@ -277,3 +277,22 @@ Review each boss variant's telegraph geometry against its actual strike damage r
 
 ### Exact next task
 Review rooftop-route geometry and jump envelopes for all five cities. Compare each pair of consecutive objective platforms and the boss gate against the actual movement/jump physics; add a simulation regression for any route gap that cannot be traversed with the supported controls. Do not change gameplay parameters without a reproducible reachability failure.
+
+
+## Verified checkpoint — five-city rooftop route simulation (2026-11-23)
+
+- PR #14 head `48569424b036950fe4b477f0307f38e25eae9ca7` passed exact Actions run #296 (`45144472169`): WebAssembly build, complete C++ gameplay regression suite, static PWA validation, desktop/mobile Chromium, and service-worker/offline smoke. The PR-only `publish-dist` job was skipped.
+- Added a deterministic movement simulation that checks all four transitions in each of the five cities: spawn roof → objective 1 → objective 2 → objective 3 → final boss gate (20 transfers total).
+- The initial simulation exposed a test-harness omission: when the jump reaches a roof edge and enters `ledgeGrabbing`, the actual control contract requires a second Vault/jump press to climb. The final simulation now supplies that input and all 20 transitions pass. No route geometry or movement tuning was changed.
+- The earlier failed attempts (#292–#295) were test-development runs. Their diagnostics showed the Imperial opening jump reached a valid ledge hang; the simulation had not sent the climb input. This was corrected in the test, not by weakening the reachability assertion.
+- The test models Skirmisher movement/sprint and the existing jump/ledge-climb controls, and tests each route segment from the prior objective platform. Physical Android timing/handling still requires device testing.
+
+### Current branch/deployment state
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at `48569424b036950fe4b477f0307f38e25eae9ca7`.
+- Production remains READY at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. No merge or deployment was performed.
+- Keep PR #14 edits outside `dist/` during the Vercel hold. PR #13 uses service-worker cache `tagbound-v27`, while PR #14 still validates `tagbound-v25`; reconcile that CI/service-worker overlap when preparing integration, while preserving both branches' browser assertions.
+- Android physical-device playtest remains pending.
+
+### Next task
+Inspect how boss progression is unlocked after the third objective on each city and whether every boss arena is actually reachable from the final objective using normal movement. Extend the route simulation to cover objective 3 → boss arena entry. Then audit save/checkpoint restoration at boss entry and after defeat, preserving the legacy-save migration and existing player preferences. Do not modify `dist/`, merge, or deploy during the hold.

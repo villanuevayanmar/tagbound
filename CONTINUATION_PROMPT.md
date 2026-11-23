@@ -142,3 +142,17 @@ After the exact-head CI result is known, continue with a test-backed review of p
 
 ### Next task
 Review actual rooftop route reachability for Harbor, Gilded, Foundry, Imperial, and Spire. Use the movement/jump physics in `src/systems.cpp` and route coordinates from `src/game.cpp`; add a deterministic simulation test for consecutive objective platforms and the final boss gate. Only adjust route positions if the test proves a gap is unreachable. Never modify `dist/`, merge, or deploy during the hold.
+
+
+## Verified five-city route checkpoint — 2026-11-23
+
+- PR #14 branch head `48569424b036950fe4b477f0307f38e25eae9ca7`.
+- Exact Actions run #296 (`45144472169`) passed on this SHA: WebAssembly compile, C++ gameplay tests, PWA validation, Chromium browser smoke, offline reload. `publish-dist` was intentionally skipped for the pull request.
+- Added 20 deterministic rooftop transfer simulations: each city's spawn roof to objective 1, then objective 1→2, 2→3, and objective 3→boss gate.
+- Initial route simulation failure was an input-sequencing omission in the test: when the jump caught a ledge, the test did not press jump again to climb. The corrected simulation sends the documented ledge-climb input. All 20 transitions now pass; no gameplay route/movement tuning was needed.
+- Do not characterize the initial Imperial failure as an inaccessible route. The debug trace showed the player entered a valid ledge-hang state, and the missing second jump was the cause.
+- PR #13 and PR #14 remain open/unmerged; production remains on the last READY main deployment. Vercel deployment hold remains active. Keep source/test changes away from `dist/`; no merge or deploy without authorization.
+- Integration still must reconcile PR #13's `tagbound-v27` service-worker cache with PR #14's `tagbound-v25` CI assertion.
+
+### Next exact task
+Extend the existing five-city transfer simulation from the third objective platform into each boss arena, based on actual boss placement/spawn geometry and normal movement. Then inspect checkpoint/save restoration at boss unlock, death, and restart. Keep all save migration and preference-preservation checks; do not change gameplay mechanics without a reproducible failure.
