@@ -29,6 +29,23 @@ int main() {
     assert(MigrateLegacyCityIndex(-1)==-1);
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
+    // Enemy models face their target; boss windup/strike poses retain the locked warning direction.
+    Enemy facingEnemy{{2,0.3f,3},100,100,2.5f,0,false,true};
+    Vector3 facing=EnemyFacing(facingEnemy,{5,0.3f,7});
+    assert(near(facing.x,0.6f)&&near(facing.z,0.8f));
+    Enemy facingBoss=facingEnemy;
+    facingBoss.boss=true;
+    facingBoss.phase=BossPhase::Windup;
+    facingBoss.strikeDirection={0,0,4};
+    facing=EnemyFacing(facingBoss,{-10,0.3f,3});
+    assert(near(facing.x,0.0f)&&near(facing.z,1.0f));
+    facingBoss.phase=BossPhase::Recover;
+    facing=EnemyFacing(facingBoss,{-2,0.3f,3});
+    assert(near(facing.x,-1.0f)&&near(facing.z,0.0f));
+    facing=EnemyFacing(facingEnemy,facingEnemy.position);
+    assert(near(facing.x,0.0f)&&near(facing.z,-1.0f));
+
+
     // Each city has its own rooftop route with consistent climb spacing.
     const Vector3 expectedRoutes[5][4]={
         {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},

@@ -125,6 +125,19 @@ float BossStrikeHalfWidth(int variant,float forward) {
         default: return 0.0f;
     }
 }
+Vector3 EnemyFacing(const Enemy& enemy,Vector3 target) {
+    Vector3 direction{};
+    if(enemy.boss&&(enemy.phase==BossPhase::Windup||enemy.phase==BossPhase::Strike)&&
+       enemy.strikeDirection.x*enemy.strikeDirection.x+
+       enemy.strikeDirection.z*enemy.strikeDirection.z>0.000001f) {
+        direction=enemy.strikeDirection;
+    } else {
+        direction={target.x-enemy.position.x,0,target.z-enemy.position.z};
+    }
+    const float length=std::sqrt(direction.x*direction.x+direction.z*direction.z);
+    if(length<=0.001f) return {0,0,-1};
+    return {direction.x/length,0,direction.z/length};
+}
 const char* WeaponName(Weapon w) {
     static const char* names[5]={"SWORD","AXE","SHIELD","BOW","SPEAR"};
     return names[std::clamp((int)w,0,4)];

@@ -73,6 +73,7 @@ bool UpdateQuestObjective(GameState& game,float dt);
 float BossWindupDuration(int variant,bool enraged=false);
 float BossStrikeRange(int variant);
 float BossStrikeHalfWidth(int variant,float forward);
+Vector3 EnemyFacing(const Enemy& enemy,Vector3 target);
 const char* WeaponName(Weapon weapon);
 Weapon ClassWeapon(PlayerClass playerClass);
 float ClassMaxHealth(PlayerClass playerClass);

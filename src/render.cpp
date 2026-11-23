@@ -251,8 +251,8 @@ static Vector3 DrawHero(const Player& p,float swing,float bob) {
     return rightHand;
 }
 
-static void DrawEnemyModel(const Enemy& e,float time) {
-    Vector3 forward={0,0,-1}, right={1,0,0};
+static void DrawEnemyModel(const Enemy& e,Vector3 playerPosition,float time) {
+    Vector3 forward=EnemyFacing(e,playerPosition), right={forward.z,0,-forward.x};
     static const Color bossHide[5]={{82,45,53,255},{91,66,49,255},{58,68,83,255},{105,46,48,255},{50,77,78,255}};
     static const Color bossArmor[5]={{91,91,105,255},{145,111,67,255},{105,119,133,255},{153,79,72,255},{66,113,111,255}};
     int variant=std::clamp(e.variant,0,4);
@@ -474,7 +474,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
             }
         }
         DrawCylinder({e.position.x,e.position.y+0.025f,e.position.z},e.boss?0.62f:0.42f,e.boss?0.62f:0.42f,0.025f,12,Fade(BLACK,0.24f));
-        DrawEnemyModel(e,animationClock);
+        DrawEnemyModel(e,player.position,animationClock);
         float width=e.boss?2.0f:1.0f;
         DrawCubeV({e.position.x,e.position.y+2.3f,e.position.z},{width,0.09f,0.1f},DARKGRAY);
         DrawCubeV({e.position.x-width*0.5f*(1-e.hp/e.maxHp),e.position.y+2.3f,e.position.z},{width*(e.hp/e.maxHp),0.1f,0.12f},RED);
