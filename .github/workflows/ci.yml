@@ -289,7 +289,9 @@ jobs:
               const restoredStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
               if (restoredStage?.city !== expectedStage || restoredStage?.unlocked !== expectedStage ||
                   restoredStage?.schemaVersion !== 1 || restoredStage?.quest !== 1 ||
-                  restoredStage?.klass !== 1 || restoredStage?.weapon !== 3) {
+                  restoredStage?.level !== 2 || restoredStage?.xp !== 15 ||
+                  restoredStage?.klass !== 1 || restoredStage?.weapon !== 3 ||
+                  restoredStage?.finished !== 0) {
                 throw new Error('Legacy campaign save migration failed: ' + JSON.stringify({ savedStage, expectedStage, restoredStage }));
               }
               await stagePage.reload({ waitUntil: 'networkidle' });
@@ -302,7 +304,10 @@ jobs:
               await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
               const reloadedStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
               if (reloadedStage?.city !== expectedStage || reloadedStage?.unlocked !== expectedStage ||
-                  reloadedStage?.schemaVersion !== 1 || reloadedStage?.quest !== 1) {
+                  reloadedStage?.schemaVersion !== 1 || reloadedStage?.quest !== 1 ||
+                  reloadedStage?.level !== 2 || reloadedStage?.xp !== 15 ||
+                  reloadedStage?.klass !== 1 || reloadedStage?.weapon !== 3 ||
+                  reloadedStage?.finished !== 0) {
                 throw new Error('Legacy campaign save was migrated more than once: ' + JSON.stringify({ savedStage, expectedStage, reloadedStage }));
               }
               await stageContext.close();
@@ -439,7 +444,12 @@ jobs:
               bosses: Module.ccall('GetActiveBossCount', 'number', [], []),
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
-            if (restored.quest !== 3 || restored.bosses !== 1 || restored.save?.quest !== 3) {
+            if (restored.quest !== 3 || restored.bosses !== 1 ||
+                restored.save?.city !== 0 || restored.save?.unlocked !== 0 ||
+                restored.save?.quest !== 3 || restored.save?.level !== 1 ||
+                restored.save?.xp !== 0 || restored.save?.klass !== 1 ||
+                restored.save?.weapon !== 3 || restored.save?.finished !== 0 ||
+                restored.save?.schemaVersion !== 1) {
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
