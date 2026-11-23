@@ -193,3 +193,21 @@ Inspect existing city rendering before changing it: city-specific landmarks, tin
 
 ### Next exact task
 Review the renderer for proven redundant per-frame geometry/draw work and any concrete five-city visual inconsistencies. Inspect actual screenshots and source; make no speculative performance or quality changes. Use existing CI/browser smoke for verification, but state clearly that actual Android frame time has not been measured. Keep all source/test work on PR #14 and avoid the deployable bundle during the hold.
+
+
+## Latest verified render checkpoint — floor/grid de-duplication (2026-11-23)
+
+- PR #14 exact code/test SHA: `5f941dc18113c5fd037e2ff56d93bfdad3989ca9`.
+- Exact Actions run #304 (`45151623835`) passed: WebAssembly build, C++ gameplay regressions, PWA validation, Chromium desktop/mobile smoke, service-worker cache and offline reload. The PR publishing job was skipped.
+- Renderer no longer draws the 120×120 ground collision slab as a cube/wireframe on every frame. It still exists in `GameState` for collision; its visual surface is provided by one ground plane at height 0.0. Ground grid was moved slightly above the plane so it is visible rather than occluded inside the slab.
+- Inspected generated desktop and mobile screenshots from run #304: the ground grid is visible, and player/rooftop heights remain aligned.
+- No gameplay collision or movement behavior changed. Removed two redundant world-floor drawing calls plus the slab geometry; no actual FPS/frame-time measurement has been performed on Android.
+
+## Current repo/deployment constraints
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; PR #14 remains open/draft/unmerged at `5f941dc18113c5fd037e2ff56d93bfdad3989ca9`.
+- Production remains READY on main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`. No PR merge, deployment, or `dist/` change was made.
+- Vercel deployment hold remains active; deployment still requires explicit authorization later. Keep code edits away from `dist/`.
+- Integration cache mismatch remains: PR #13 uses `tagbound-v27`, PR #14 CI expects `tagbound-v25`. Reconcile when preparing a combined PR without dropping existing tests.
+
+### Next exact task
+Review actual desktop/mobile screenshots for player class equipment and the five boss silhouettes/strike warnings. Confirm they remain visually distinguishable at mobile scale and against the floor grid. Add only targeted render adjustments when the screenshot shows a concrete visibility problem. No speculative model/geometry additions or dependency changes; physical Android performance remains unverified.

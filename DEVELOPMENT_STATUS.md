@@ -355,3 +355,24 @@ Review the five city render paths for visible differentiation and mobile renderi
 
 ### Next task
 Review the remaining low-poly rendering path for redundant or duplicated per-frame geometry. Keep the review evidence-based: profile/draw-call counts where the source permits, inspect generated screenshots, and avoid changing geometry or quality settings without a reproducible visual/performance defect. Prefer small renderer-only changes and keep all changes out of `dist/` during the deployment hold.
+
+
+## Verified checkpoint — world-floor render de-duplication (2026-11-23)
+
+- PR #14 code/test commit `5f941dc18113c5fd037e2ff56d93bfdad3989ca9` passed exact Actions run #304 (`45151623835`): Emscripten/WebAssembly build, full C++ gameplay tests, PWA assembly/validation, Chromium desktop/mobile smoke, service-worker cache and offline reload. The PR-only `publish-dist` job was skipped.
+- Found duplicate floor rendering in `DrawGame`: the 120×120 collision-floor platform was drawn as a cube plus wireframe every frame, while a separate ground plane was also drawn below it. The grid was positioned inside the collision slab and therefore occluded.
+- Kept the collision platform in `GameState` unchanged. Renderer now recognizes only the large thin world-floor slab and skips its cube/wireframe, drawing one plane at the collision top instead. Ground-grid lines are placed just above that plane.
+- Inspected the run #304 desktop and mobile gameplay screenshot artifacts: the ground grid is visible on both sizes; player and rooftop-platform heights remain visually aligned. No movement, collision, route or gameplay behavior was changed.
+- This removes the duplicate world-floor cube and wireframe render calls; actual frame-time improvement has not been measured on Android or desktop, so no FPS claim is made.
+
+### Current branch and deployment state
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at `5f941dc18113c5fd037e2ff56d93bfdad3989ca9`.
+- Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- Production remains **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, deployed runtime `9115f13b4021f9052a95eea66ceaa1000f134978`. Read-only Vercel verification after run #304 confirmed it was unchanged.
+- No merge, production deployment, or `dist/` edit occurred. The user-reported deployment hold remains in force.
+- Integration conflict remains: PR #13 bumps service-worker cache to `tagbound-v27`; PR #14's current CI still asserts `tagbound-v25`. Reconcile before integration while preserving both PRs' browser assertions.
+- Physical Android frame-time, touch, and orientation testing remains pending.
+
+### Next task
+Review enemy and boss visual silhouettes across all five cities using the existing screenshots and render branches. Check whether class equipment/boss weapons remain distinguishable at mobile gameplay scale and whether warning geometry stays visible against the new ground grid. Make only small visual corrections backed by screenshot evidence. Keep changes out of `dist/`; do not merge/deploy during the hold.
