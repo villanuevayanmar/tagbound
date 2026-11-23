@@ -923,26 +923,63 @@ int main() {
     assert(near(game.player.health,76.0f));
     game.platforms.clear();
 
-    // Defeating each city boss advances the campaign; the fifth ends it.
-    game.unlockedCity = 0;
-    game.finished = false;
-    for (int city = 0; city < 5; ++city) {
-        game.city = city;
-        BuildCity(game);
-        game.enemies.clear();
-        game.player.position = {0,0.3f,0};
-        game.player.facing = {0,0,1};
-        game.player.weapon = Weapon::Axe;
-        game.enemies.push_back({{0,0.3f,1.5f},10,10,0,0,true,true});
-        Controls bossHit{};
-        bossHit.attack = true;
-        UpdateCombat(game, bossHit, 0.016f);
-        if (city < 4) {
-            assert(game.city == city + 1);
-            assert(game.unlockedCity >= city + 1);
-        } else {
-            assert(game.city == 4);
-            assert(game.finished);
+    // Every playable class can defeat all five bosses with its one fixed weapon.
+    const PlayerClass campaignClasses[3]={
+        PlayerClass::Vanguard,PlayerClass::Skirmisher,PlayerClass::Warden
+    };
+    const Weapon campaignWeapons[3]={
+        Weapon::Sword,Weapon::Bow,Weapon::Shield
+    };
+    for(int klass=0;klass<3;klass++) {
+        GameState campaign;
+        campaign.unlockedCity=0;
+        campaign.finished=false;
+        campaign.player.playerClass=campaignClasses[klass];
+        campaign.player.weapon=ClassWeapon(campaignClasses[klass]);
+        campaign.player.health=ClassMaxHealth(campaignClasses[klass]);
+
+        assert(campaign.player.weapon==campaignWeapons[klass]);
+        for(int city=0;city<5;city++) {
+            campaign.city=city;
+            BuildCity(campaign);
+            campaign.platforms.clear();
+            campaign.enemies.clear();
+            campaign.player.playerClass=campaignClasses[klass];
+            campaign.player.weapon=ClassWeapon(campaignClasses[klass]);
+            campaign.player.health=ClassMaxHealth(campaignClasses[klass]);
+            campaign.player.position=QuestTarget(city,3);
+            campaign.player.position.z-=1.5f;
+            campaign.player.facing={0,0,1};
+
+            SetQuestProgress(campaign,3);
+            assert(campaign.bossUnlocked);
+            assert(campaign.enemies.size()==1);
+            assert(campaign.enemies.front().boss);
+            assert(campaign.enemies.front().variant==city);
+            campaign.enemies.front().hp=10.0f;
+            campaign.enemies.front().maxHp=10.0f;
+
+            Controls bossHit{};
+            bossHit.attack=true;
+            UpdateCombat(campaign,bossHit,0.016f);
+            if(campaignWeapons[klass]==Weapon::Bow) {
+                assert(campaign.projectiles.size()==1);
+                UpdateCombat(campaign,Controls{},0.1f);
+            }
+
+            assert(campaign.player.weapon==campaignWeapons[klass]);
+            assert(std::count_if(campaign.enemies.begin(),campaign.enemies.end(),
+                [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==0);
+            if(city<4) {
+                assert(campaign.city==city+1);
+                assert(campaign.unlockedCity>=city+1);
+                assert(campaign.quest==0);
+                assert(!campaign.finished);
+            } else {
+                assert(campaign.city==4);
+                assert(campaign.unlockedCity==4);
+                assert(campaign.finished);
+            }
         }
     }
 
