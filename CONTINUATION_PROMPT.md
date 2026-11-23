@@ -96,3 +96,12 @@ Current production deployment was inspected through Vercel and is **READY**:
 - Fixed listener registration in both `web/pwa.js` and `dist/pwa.js` by attaching to the two declared sound buttons via `[soundToggle,settingsSoundToggle].filter(Boolean)`.
 - Updated both service workers to cache version `tagbound-v27`, synchronized both HTML application-version metadata values to v27, and changed normal CI and live-smoke assertions to require v27.
 - Immediate next action: fetch the current PR head and the latest Actions run for that exact SHA. Confirm the browser no longer times out at initialization; investigate any further runtime/test failures from logs and fix their actual causes. Keep PR #13 unmerged and production unchanged until the user explicitly authorizes a production-triggering merge/deploy.
+
+
+## Newest verified checkpoint — PR #13 CI success (2026-11-23)
+
+- Latest branch head at verification: `ea2b29b988c8b515012eb974163bb10cd1bbbc6c`.
+- GitHub Actions run #267 / ID `45130586984` passed for that exact SHA: WebAssembly build, C++ gameplay regression, PWA assembly/validation, and Chromium browser-smoke checks succeeded.
+- The PWA ReferenceError was fixed in both browser bundles by registering listeners against the two declared sound buttons. Cache version and assertions are synchronized at `tagbound-v27`.
+- PR #13 is still open/unmerged; production was not deployed or changed. Do not merge without explicit approval. Physical Android playtesting is still pending.
+- Continue development on independent feature branches. The next identified requirement mismatch is the five-city order: the requested campaign sequence places Imperial fourth and Spire fifth, while current code has Spire fourth and Imperial fifth. Correct this with versioned legacy-save migration and tests; preserve existing local progress.

@@ -210,3 +210,10 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Fixed both browser scripts to attach the sound listener to `[soundToggle,settingsSoundToggle].filter(Boolean)`. This restores shared sound toggling and allows the rest of the script initialization to execute.
 - Since cached assets changed after the previous v26 checkpoint, both service-worker files now use `tagbound-v27`; the HTML application-version metadata is also synchronized to v27. Normal CI and live-smoke expectations have been updated to v27.
 - These changes are committed on the PR branch but are not yet verified by a new hosted run. Do not merge or deploy until the new exact-head CI checks pass and the user explicitly approves any production-triggering merge/deploy.
+
+
+## Latest CI verification — PR #13 (2026-11-23)
+
+- Run #267 (ID `45130586984`) tested the exact source head `ea2b29b988c8b515012eb974163bb10cd1bbbc6c` and completed successfully.
+- The WebAssembly compile, C++ gameplay regression suite, static PWA assembly/validation, and Chromium browser-smoke workflow all passed. The browser tests now complete after the PWA initialization fix; they cover class weapon/Bow visibility, saved progress, pause/resume, sound, service-worker cache v27, offline reload, mobile landscape controls and portrait guidance.
+- PR #13 remains open and unmerged. The production deployment remains unchanged; no merge or production deploy was initiated. Physical Android testing remains unverified.
