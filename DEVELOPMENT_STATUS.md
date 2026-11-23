@@ -191,3 +191,12 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 4. Update this document and `CONTINUATION_PROMPT.md` with exact merge, runtime bundle, CI, live-smoke, and deployment identifiers.
 5. Have the user perform a physical Android playtest on the updated build; this has not yet been recorded.
 6. Continue gameplay balancing, boss/AI/pathfinding review, objective variety, visual/animation work, audio tuning, performance, and release verification. Do not stop after the icon-controls task.
+
+
+## Follow-up fix — default Bow control visibility
+
+- CI run #257 (`45123933188`) for commit `ab279200a3f5dbd70fe07ee06371763404f26d30` passed the build job but failed browser-smoke at the class-specific Bow visibility assertion: for Vanguard, the element's `hidden` property was false after selecting class 0.
+- The prior CSS correction only affects rendering when the `hidden` attribute is present; it cannot set the DOM property itself. The Bow button markup had no initial `hidden` attribute, leaving a brief/initial visibility risk before JavaScript synchronization.
+- Added the native `hidden` attribute directly to the Bow button in both `web/index.html` and `dist/index.html`. Existing `syncClassControls()` removes it only when Skirmisher is selected and restores it for Vanguard/Warden. The CSS `[hidden]` rule remains to preserve layout behavior.
+- Commits: `c763d3a0058001b77053a2d9caff41b45ea4b86c` (`web/index.html`) and `34966f568602b272b5878ade4ec5ce0699ac4f4a` (`dist/index.html`).
+- This correction is committed but not yet CI-verified. PR #13 remains open and not deployed. Next: inspect the newest exact-head CI run, verify the Bow property is false for Vanguard/Warden and true only for Skirmisher, then proceed through all remaining tests.
