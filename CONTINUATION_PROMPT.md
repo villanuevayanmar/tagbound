@@ -99,3 +99,26 @@ After the exact-head CI result is known, continue with a test-backed review of p
 
 
 - Follow-up run #277 (`45137349773`) found a second regression at `tests/gameplay.cpp:558`: body-radius expansion on corner-waypoint LOS rejected a valid open-side route. Commit `1c48ec1806a2d8593aa61b184471eface72ae5aa` keeps body-radius clearance for direct pursuit but restores the established waypoint ray tests. Verify the latest exact head in CI before claiming the routing fix passes.
+
+
+## Authoritative checkpoint override — 2026-11-23
+
+### Latest verified branch and tests
+- PR #13: open, unmerged, branch `feat/icon-only-game-controls`, head `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14: open, draft, unmerged, branch `feat/campaign-imperial-before-spire`, latest gameplay/test commit `37bffda9a20139393b9074d4e7e43fa002a62c3f`.
+- Exact run #287 (`45141318209`) passed for `37bffda...`: Emscripten/WebAssembly build, C++ regression tests, PWA artifact validation, desktop/mobile Chromium, service-worker cache and offline reload. The pull-request `publish-dist` job was skipped.
+- Run #286 (`45140870041`) passed the PLAY AGAIN restart browser test. It verifies progression resets on a reload while Skirmisher/Bow selection and the stored sound preference remain intact.
+- Run #285 (`45139427079`) passed the Skirmisher base-speed regression. Run #284 (`45138923137`) passed wall-run stamina and wall-jump regressions. Run #283 (`45138485082`) passed the body-aware and sequential rooftop pursuit routing tests.
+- Sprint stamina behavior is now explicit: holding Sprint without enough stamina does not regenerate it; release Sprint to regenerate; wall-running drains stamina. README touch-control guidance was updated to match.
+
+### Deployment hold and Vercel integration
+- Production remains READY at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`.
+- No PR merge or production deployment was performed. User-reported deployment limit hold remains active; deployment still requires explicit user authorization after the stated 24-hour window.
+- `vercel.json` contains the existing ignored-build guard `git diff --quiet HEAD^ HEAD -- dist/`. Read-only inspection of PR #14 commit `a8d1688...` showed Vercel canceled the preview attempt because this command returned exit code 0. Keep all PR #14 changes away from `dist/` during the hold and do not bypass or weaken the guard.
+- Vercel history showed READY preview builds from older PR #13 commits created at 13:59 and 15:10 PHT on Nov 23, before the user's 15:35 PHT hold. A PR #14 source-only attempt at 15:42 PHT was canceled by the ignored-build step. Production stayed on its original READY deployment.
+- PR #13 bumps the service-worker cache to `tagbound-v27`; PR #14's current workflow still expects `tagbound-v25`. Their shared `.github/workflows/ci.yml` and docs require careful integration: preserve PR #13's icon-only assertions and PR #14's survival-objective, save-migration, pursuit, and restart coverage, and reconcile the service-worker version. Neither PR may be merged while the hold is active.
+
+### Remaining scope and next action
+- Physical Android testing is still pending; do not claim hosted mobile emulation is physical-device verification.
+- Continue with a code/test review of boss telegraph shapes and strike boundaries, then other demonstrable gameplay/balance gaps. Inspect actual implementation first and add boundary tests; do not invent mechanics.
+- Keep PR #14 source/test changes off `dist/`, preserve saves and history, run exact-head Actions, and update these documents after each meaningful checkpoint.

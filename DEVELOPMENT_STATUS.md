@@ -222,3 +222,36 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 
 - Follow-up run #277 (`45137349773`) showed that applying the body radius to corner-waypoint LOS broke the existing open-side wall-routing regression at `tests/gameplay.cpp:558`. The follow-up commit `1c48ec1806a2d8593aa61b184471eface72ae5aa` limits body-radius clearance to direct pursuit LOS and restores the prior waypoint ray checks. Re-run all tests against the newest exact branch head; neither routing fix is verified until CI passes.
+
+
+## Verified checkpoint — parkour stamina, class speed, and campaign restart (2026-11-23)
+
+### Current branch and CI
+- PR #14 remains open and draft: `feat/campaign-imperial-before-spire`.
+- Latest gameplay/test commit: `37bffda9a20139393b9074d4e7e43fa002a62c3f`.
+- Exact Actions run #287 (`45141318209`) passed on that SHA. WebAssembly compile, C++ gameplay tests, PWA validation, desktop/mobile Chromium smoke, service-worker cache checks, and offline reload all passed. The PR-only `publish-dist` job was skipped.
+- Run #286 (`45140870041`) also passed on `73c5fb35f2430345d9eb5b44a031f8088fe80ed1` with the campaign-restart browser check.
+- Earlier exact-head runs #283 (`eb85bab387f12e8c05bd285eeb55a829820a1e0c`), #284 (`ecaff196d843d78b5b17ff69fb3c59023df1da1b`), and #285 (`262dd881edba4651769ec6d9f679bf200079f80a`) passed as well.
+
+### Gameplay corrections and regression coverage
+- Pursuit pathfinding now accounts for pursuer body clearance on direct line-of-sight checks and retains waypoints while navigating around sequential rooftop obstacles. Existing wall-routing assertions were kept intact; run #283 passed the full C++ suite.
+- Sprint stamina correction: holding Sprint when stamina is too low to pay the sprint cost no longer regenerates stamina. Stamina regenerates after Sprint is released; wall-running continues to drain it and stops when exhausted. C++ tests cover normal wall-run drain, wall-jump launch direction, and low-stamina behavior. Run #284 passed.
+- Added a direct movement comparison proving Skirmisher's unsprinted base movement exceeds Vanguard's under identical starting conditions and input. Run #285 passed.
+- Added a browser regression for PLAY AGAIN from the fifth-city victory screen. Run #286 confirmed city, unlocked stage, quest, level, XP, and finished state reset on reload.
+- Extended that restart check to verify the selected Skirmisher class, Bow loadout, and sound preference survive the reset. Exact run #287 passed.
+
+### Vercel safety and deployment state
+- Production remains **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. This was checked read-only after run #287.
+- The user's deployment hold remains in force. No PR has been merged and no production deployment has been initiated.
+- Read-only Vercel event inspection confirmed the existing `vercel.json` ignored-build command (`git diff --quiet HEAD^ HEAD -- dist/`) canceled a source-only PR #14 preview attempt before deployment because the command returned exit code 0. Keep PR #14 commits away from `dist/`; do not change this guard or manually deploy during the hold.
+- Vercel's history also contains older READY preview deployments from PR #13 commits at 13:59 and 15:10 Philippine time on November 23, before the user's reported 15:35 hold. The source-only PR #14 attempt at 15:42 was canceled by the ignored-build step; production's READY deployment did not change.
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at the commit recorded above.
+- Integration note: PR #13 bumps the service-worker cache to `tagbound-v27`, while this PR #14 branch still validates `tagbound-v25`. The combined CI workflow must reconcile the cache-version assertion and preserve both PRs' icon-only, survival-objective, legacy-save, and restart browser checks before integration. The PRs also both edit `.github/workflows/ci.yml` and the project documentation. Do not merge during the deployment hold.
+
+### Remaining verification
+- Physical Android playtesting remains unverified. Hosted Chromium mobile emulation is not a substitute.
+- Remaining work includes review of boss telegraph/counterplay consistency, parkour behavior on more complex rooftop geometry, balance across the five cities, and any concrete findings from the user's Android playtest.
+
+### Exact next task
+Review each boss variant's telegraph geometry against its actual strike damage region and facing/line-of-sight rules. Add targeted C++ boundary tests before changing any combat behavior. Keep source/test changes on PR #14; do not edit `dist/`, merge, or deploy.

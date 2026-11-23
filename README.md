@@ -148,7 +148,7 @@ During a run, tap SETTINGS in the top HUD row to pause the game. The Settings sc
 - Block: defend against incoming attacks
 - Bow: aim with the Skirmisher's bow; use Attack to fire
 - Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
-- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
+- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump. Wall-running drains stamina; release Sprint to regenerate it.
 
 ### Keyboard / mouse
 
