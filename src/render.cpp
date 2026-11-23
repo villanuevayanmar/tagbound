@@ -123,10 +123,10 @@ static void DrawGroundGrid(Vector3 center,int city) {
     for(int i=-20;i<=20;i++) {
         float offset=i*spacing;
         Color line=(i%5==0)?major:minor;
-        DrawLine3D({center.x-half,-0.305f,center.z+offset},
-                   {center.x+half,-0.305f,center.z+offset},line);
-        DrawLine3D({center.x+offset,-0.305f,center.z-half},
-                   {center.x+offset,-0.305f,center.z+half},line);
+        DrawLine3D({center.x-half,0.012f,center.z+offset},
+                   {center.x+half,0.012f,center.z+offset},line);
+        DrawLine3D({center.x+offset,0.012f,center.z-half},
+                   {center.x+offset,0.012f,center.z+half},line);
     }
 }
 
@@ -343,8 +343,13 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     Color sunTint=g.city==2?Color{255,142,78,255}:Color{255,205,143,255};
     DrawCircleGradient((int)(screenW*0.79f),(int)(screenH*0.19f),66,Fade(sunTint,0.34f),Fade(sunTint,0.0f));
     BeginMode3D(camera);
-    DrawPlane({0,-0.32f,0},{120,120},{45,50,57,255});
+    DrawPlane({0,0,0},{120,120},{45,50,57,255});
     for(const auto& p:g.platforms) {
+        // The world-floor collision slab is represented visually by DrawPlane above.
+        // Keep the slab in GameState for collision, but avoid drawing its duplicate cube/wireframe.
+        const bool worldFloor=p.size.x>=100.0f&&p.size.z>=100.0f&&p.size.y<=1.0f&&
+                             std::fabs(p.position.y+p.size.y*0.5f)<0.01f;
+        if(worldFloor) continue;
         DrawCubeV(p.position,p.size,p.color);
         DrawCubeWiresV(p.position,p.size,{28,29,36,255});
         DrawBuildingDetails(p,g.city,g.player.position);
