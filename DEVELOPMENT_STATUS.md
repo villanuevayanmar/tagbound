@@ -200,3 +200,22 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Survival-objective implementation and browser assertions passed run #274 (`45133786317`) for exact head `095fb05665f6b100fb3c9f5db0b5d18d05ca6d82`.
 - The navigation regression commit below has a new CI run pending. If it fails, inspect the actual C++ test output and correct the navigation behavior at its source.
 - PR #13 and #14 remain open/unmerged. Production remains on the previously verified READY deployment; no Vercel deploy has been attempted.
+
+
+## Latest checkpoint — body-aware rooftop pursuit routing (2026-11-23)
+
+- PR #14 branch head before this fix: `c1837d212db35c224389534268f61fc3b21a254f`.
+- Exact-head run #275 (`45134277135`) built WebAssembly successfully but failed the C++ gameplay regression at `tests/gameplay.cpp:712`: a pursuer could not route around a rooftop wall and reach the player.
+- Root cause: pursuit line-of-sight used a small ray margin while movement collision used the enemy's full body radius. The pursuer therefore resumed direct movement before its body could clear the wall and stalled against it.
+- Fix committed as `15938b998823fe9bc7a9e4ca8ae57954e6ac2a9c`: obstacle segment tests now accept a clearance margin; pursuit routing and waypoint validation use the enemy radius (0.42 for pursuers, 0.62 for bosses). Combat line-of-sight retains its existing default margin.
+- The existing regression remains unchanged: it still requires the pursuer to get within 3 units and not overlap the wall. No assertion was weakened.
+- CI for `15938b9...` must be checked against that exact SHA. Do not infer success from the earlier run #274.
+- Current PR #14 remains open/draft/unmerged. PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; its matching run #268 passed.
+- Vercel production was checked read-only and remains READY at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, deployed runtime `9115f13b4021f9052a95eea66ceaa1000f134978`. The user-reported deployment hold remains in force. No merge or deployment has been attempted.
+
+### Exact next task
+
+1. Verify the latest PR #14 branch head and matching GitHub Actions run after `15938b9...` (including the new documentation commits); inspect job steps/logs.
+2. If the routing regression still fails, use its actual coordinates/trace to correct path selection without weakening the assertion.
+3. If it passes, continue with another concrete gameplay gap, prioritizing parkour collision/ledge transitions and boss counterplay; add reproducible tests before changing behavior.
+4. Keep both PRs open and production unchanged. Physical Android testing remains unverified.
