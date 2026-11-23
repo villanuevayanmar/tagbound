@@ -200,3 +200,13 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Added the native `hidden` attribute directly to the Bow button in both `web/index.html` and `dist/index.html`. Existing `syncClassControls()` removes it only when Skirmisher is selected and restores it for Vanguard/Warden. The CSS `[hidden]` rule remains to preserve layout behavior.
 - Commits: `c763d3a0058001b77053a2d9caff41b45ea4b86c` (`web/index.html`) and `34966f568602b272b5878ade4ec5ce0699ac4f4a` (`dist/index.html`).
 - This correction is committed but not yet CI-verified. PR #13 remains open and not deployed. Next: inspect the newest exact-head CI run, verify the Bow property is false for Vanguard/Warden and true only for Skirmisher, then proceed through all remaining tests.
+
+
+## Latest continuation checkpoint — 2026-11-23 (PR #13 PWA initialization)
+
+- PR #13 remains open and unmerged on `feat/icon-only-game-controls`. The production deployment remains the previously verified READY deployment for runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`; no merge or production deployment was started.
+- PR CI run #261 (ID `45130001937`) tested head `8b47a3558393577c2fea6310d6c5de4a424d878f`. The WebAssembly build and C++ gameplay regression suite passed. Browser smoke timed out while waiting for the per-class test page to initialize.
+- Exact source inspection found a real runtime bug: `web/pwa.js` and `dist/pwa.js` registered button listeners with undefined `soundButtons.forEach(...)`, despite only declaring `soundToggle` and `settingsSoundToggle`. This ReferenceError aborted the remainder of the PWA IIFE, preventing the class-selection, Start, touch, and pause event handlers from attaching.
+- Fixed both browser scripts to attach the sound listener to `[soundToggle,settingsSoundToggle].filter(Boolean)`. This restores shared sound toggling and allows the rest of the script initialization to execute.
+- Since cached assets changed after the previous v26 checkpoint, both service-worker files now use `tagbound-v27`; the HTML application-version metadata is also synchronized to v27. Normal CI and live-smoke expectations have been updated to v27.
+- These changes are committed on the PR branch but are not yet verified by a new hosted run. Do not merge or deploy until the new exact-head CI checks pass and the user explicitly approves any production-triggering merge/deploy.
