@@ -504,14 +504,18 @@ jobs:
             const restarted = await page.evaluate(() => ({
               introVisible: !document.querySelector('#intro').classList.contains('hidden'),
               endingHidden: document.querySelector('#ending').classList.contains('hidden'),
+              selectedClass: document.querySelector('.class-card.selected')?.dataset.class,
+              soundSetting: localStorage.getItem('tagbound-sound'),
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
             if (!restarted.introVisible || !restarted.endingHidden ||
                 restarted.save?.city !== 0 || restarted.save?.unlocked !== 0 ||
                 restarted.save?.quest !== 0 || restarted.save?.level !== 1 ||
                 restarted.save?.xp !== 0 || restarted.save?.finished !== 0 ||
-                restarted.save?.schemaVersion !== 1) {
-              throw new Error('Campaign restart did not reset saved progression: ' + JSON.stringify(restarted));
+                restarted.save?.schemaVersion !== 1 ||
+                restarted.save?.klass !== 1 || restarted.save?.weapon !== 3 ||
+                restarted.selectedClass !== '1' || restarted.soundSetting !== 'on') {
+              throw new Error('Campaign restart did not reset progression while preserving class and sound: ' + JSON.stringify(restarted));
             }
 
             // Seed an old installed-PWA cache, then verify the new worker removes it.
