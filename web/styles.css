@@ -25,6 +25,7 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .stick-knob{width:54px;height:54px;border-radius:50%;background:#d9c29a99;border:2px solid #f3dfb7}
 .action-pad{pointer-events:auto;position:absolute;right:3vw;bottom:4vh;width:min(42vw,310px);display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .action{border:1px solid #e8d0a466;background:#14202dbb;color:#fff2d7;border-radius:50%;aspect-ratio:1;padding:0;display:grid;place-items:center;box-shadow:0 3px 10px #0008}
+.action[hidden]{display:none}
 .action svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .action:active,.action.active{background:#a97143;color:#fff}.action.attack{grid-row:1;grid-column:3;width:78px;justify-self:end;background:#722d2dce}
 .action.jump{grid-row:1;grid-column:2}.action.skill{grid-row:2;grid-column:3}.action.sprint{grid-row:3;grid-column:1}
