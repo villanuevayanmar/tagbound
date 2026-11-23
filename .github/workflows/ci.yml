@@ -379,6 +379,23 @@ jobs:
             if (healthTextPixels < 12) {
               throw new Error('The in-game health HUD is not visibly rendered in the gameplay frame.');
             }
+            const staminaRegion = PNG.sync.read(gameplayImage);
+            let staminaDigitPixels = 0;
+            let staminaOverlapGreenPixels = 0;
+            for (let y = 56; y < 70; y++) {
+              for (let x = 108; x < 127; x++) {
+                const pixel = (y * staminaRegion.width + x) * 4;
+                const red = staminaRegion.data[pixel];
+                const green = staminaRegion.data[pixel + 1];
+                const blue = staminaRegion.data[pixel + 2];
+                if (red > 170 && green > 170 && blue > 170) staminaDigitPixels++;
+                if (y >= 60 && y < 67 && green > 100 && green > red + 30 && green > blue + 30) staminaOverlapGreenPixels++;
+              }
+            }
+            if (staminaDigitPixels < 5 || staminaOverlapGreenPixels !== 0) {
+              throw new Error('Desktop stamina value is clipped/covered by its bar: ' +
+                JSON.stringify({ staminaDigitPixels, staminaOverlapGreenPixels }));
+            }
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
               save.finished = 1;
@@ -543,6 +560,24 @@ jobs:
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobilePage.waitForTimeout(1500);
             await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
+            const mobileGameplayImage = await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
+            const mobileStaminaRegion = PNG.sync.read(mobileGameplayImage);
+            let mobileStaminaDigitPixels = 0;
+            let mobileStaminaOverlapGreenPixels = 0;
+            for (let y = 56; y < 70; y++) {
+              for (let x = 108; x < 127; x++) {
+                const pixel = (y * mobileStaminaRegion.width + x) * 4;
+                const red = mobileStaminaRegion.data[pixel];
+                const green = mobileStaminaRegion.data[pixel + 1];
+                const blue = mobileStaminaRegion.data[pixel + 2];
+                if (red > 170 && green > 170 && blue > 170) mobileStaminaDigitPixels++;
+                if (y >= 60 && y < 67 && green > 100 && green > red + 30 && green > blue + 30) mobileStaminaOverlapGreenPixels++;
+              }
+            }
+            if (mobileStaminaDigitPixels < 5 || mobileStaminaOverlapGreenPixels !== 0) {
+              throw new Error('Mobile stamina value is clipped/covered by its bar: ' +
+                JSON.stringify({ mobileStaminaDigitPixels, mobileStaminaOverlapGreenPixels }));
+            }
             await mobileContext.close();
 
             const portraitContext = await browser.newContext({
