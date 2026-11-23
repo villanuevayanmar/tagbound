@@ -173,6 +173,8 @@ function resetTouchInput(){
  knob.style.transform='translate(0,0)';
  send();
 }
+window.addEventListener('blur',resetTouchInput);
+document.addEventListener('visibilitychange',resetTouchInput);
 function openSettings(){
  resetTouchInput();
  window.TagboundAudio?.pauseMusic?.();
