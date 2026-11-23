@@ -72,6 +72,7 @@ float QuestSurvivalDuration(int city,int quest);
 bool UpdateQuestObjective(GameState& game,float dt);
 float BossWindupDuration(int variant,bool enraged=false);
 float BossStrikeRange(int variant);
+float BossStrikeHalfWidth(int variant,float forward);
 const char* WeaponName(Weapon weapon);
 Weapon ClassWeapon(PlayerClass playerClass);
 float ClassMaxHealth(PlayerClass playerClass);

@@ -117,6 +117,14 @@ float BossStrikeRange(int variant) {
     static const float range[5]={4.0f,2.3f,5.5f,4.5f,8.0f};
     return range[std::clamp(variant,0,4)];
 }
+float BossStrikeHalfWidth(int variant,float forward) {
+    switch(std::clamp(variant,0,4)) {
+        case 0: return std::max(0.0f,forward)*0.38f;
+        case 1:
+        case 4: return 0.9f;
+        default: return 0.0f;
+    }
+}
 const char* WeaponName(Weapon w) {
     static const char* names[5]={"SWORD","AXE","SHIELD","BOW","SPEAR"};
     return names[std::clamp((int)w,0,4)];

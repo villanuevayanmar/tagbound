@@ -460,14 +460,14 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                 if(variant==0) {
                     Vector3 right={direction.z,0,-direction.x};
                     Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius));
-                    Vector3 side=Vector3Scale(right,warningRadius*0.38f);
+                    Vector3 side=Vector3Scale(right,BossStrikeHalfWidth(variant,warningRadius));
                     DrawCylinderEx(start,end,0.13f,0.13f,8,warning);
                     DrawCylinderEx(start,Vector3Add(end,side),0.055f,0.055f,6,warning);
                     DrawCylinderEx(start,Vector3Subtract(end,side),0.055f,0.055f,6,warning);
                 } else {
                     Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius));
-                    float width=variant==1?0.38f:0.45f;
-                    DrawCylinderEx(start,end,width,width*0.75f,8,warning);
+                    float width=BossStrikeHalfWidth(variant,warningRadius);
+                    DrawCylinderEx(start,end,width,width,8,warning);
                 }
             } else {
                 DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius,{1,0,0},90,warning);

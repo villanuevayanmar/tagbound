@@ -914,6 +914,33 @@ int main() {
     assert(near(game.player.health,100.0f));
     assert(game.enemies.front().phase==BossPhase::Recover);
 
+    // Telegraph and damage share the same half-width for lane-based boss strikes.
+    assert(near(BossStrikeHalfWidth(0,8.0f),3.04f));
+    assert(near(BossStrikeHalfWidth(1,8.0f),0.9f));
+    assert(near(BossStrikeHalfWidth(4,8.0f),0.9f));
+    assert(near(BossStrikeHalfWidth(2,8.0f),0.0f));
+    for(int variant : {1,4}) {
+        const float expectedDamage=variant==1?30.0f:18.0f;
+        for(int edge=0;edge<2;edge++) {
+            game.platforms.clear();
+            game.enemies.clear();
+            game.player.position={edge==0?0.89f:0.91f,0.3f,2.0f};
+            game.player.health=100;
+            game.player.invulnerable=0;
+            game.player.blocking=false;
+            Enemy laneBoss{{0,0.3f,0},100,100,0,0,true,true};
+            laneBoss.variant=variant;
+            laneBoss.phase=BossPhase::Strike;
+            laneBoss.phaseTime=1.0f;
+            laneBoss.strikeDirection={0,0,1};
+            laneBoss.strikeOrigin=laneBoss.position;
+            game.enemies.push_back(laneBoss);
+            UpdatePursuit(game,0.01f);
+            assert(near(game.player.health,edge==0?100.0f-expectedDamage:100.0f));
+            assert(game.enemies.front().phase==BossPhase::Recover);
+        }
+    }
+
     // Each city boss has a distinct attack pattern, range and damage profile.
     const float bossDistances[5]={3.5f,2.2f,5.0f,4.0f,7.0f};
     const float bossDamage[5]={24,30,32,28,18};
