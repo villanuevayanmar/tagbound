@@ -26,7 +26,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
 
-This is an early playable foundation, not a finished commercial game. Character models, animation, detailed city layouts, advanced parkour traversal, quest variety and complete boss encounter tuning remain development work. The current renderer uses procedural low-poly geometry. No online accounts or game server are required.
+TAGBOUND is a playable five-city campaign prototype with the listed movement, objective, class, boss, progression, save, audio and offline-PWA systems implemented. It remains in active development: the renderer uses intentionally stylized procedural low-poly assets, encounter balance and visual polish still benefit from playtesting, and real mid-range Android performance has not yet been measured. No online accounts or game server are required.
 
 ## Requirements
 
