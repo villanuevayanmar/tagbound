@@ -5,11 +5,11 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #define KEEP EMSCRIPTEN_KEEPALIVE
-EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest,int version), {
-  try { localStorage.setItem("tagbound-save",JSON.stringify({city,level,xp,unlocked,klass,weapon,finished,quest,version})); } catch(e) {}
+EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest), {
+  try { localStorage.setItem("tagbound-save",JSON.stringify({city,level,xp,unlocked,klass,weapon,finished,quest})); } catch(e) {}
 });
 EM_JS(int, loadLocal, (int field), {
-  try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest","version"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
+  try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
 });
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
@@ -18,7 +18,7 @@ EM_JS(void, playGameAudio, (int kind), { try { window.TagboundAudio?.play?.(kind
 EM_JS(int, isSettingsOpen, (), { return document.getElementById("settings")?.classList.contains("hidden") ? 0 : 1; });
 #else
 #define KEEP
-static void saveLocal(int,int,int,int,int,int,int,int,int) {}
+static void saveLocal(int,int,int,int,int,int,int,int) {}
 static int loadLocal(int) { return -1; }
 static void hideIntro() {}
 static void showEnding() {}
@@ -35,7 +35,7 @@ static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
-    saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0,game.quest,2);
+    saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0,game.quest);
 }
 extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
@@ -45,7 +45,6 @@ KEEP void StartGame() {
     game.player.stamina=ClassMaxStamina(game.player.playerClass);
     game.player.weapon=ClassWeapon(game.player.playerClass);
     int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6), quest=loadLocal(7);
-    if(loadLocal(8)<2) { c=MigrateLegacyCityIndex(c); u=MigrateLegacyCityIndex(u); }
     if(c>=0) {
         game.city=std::clamp(c,0,4); game.unlockedCity=std::clamp(u,0,4);
         game.player.level=std::max(1,l); game.player.xp=std::max(0,x);

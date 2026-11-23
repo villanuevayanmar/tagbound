@@ -57,7 +57,6 @@ void BuildCity(GameState& game);
 void SetQuestProgress(GameState& game,int quest);
 void DrawGame(const GameState& game, const Camera3D& camera);
 const char* CityName(int city);
-int MigrateLegacyCityIndex(int city);
 const char* BossName(int city);
 Vector3 QuestTarget(int city,int quest);
 Vector3 QuestCheckpoint(int city,int quest);
