@@ -244,7 +244,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     float speed=p.playerClass==PlayerClass::Skirmisher?7.5f:6.0f;
     float sprintCost=18.0f*dt;
     if(c.sprint&&p.stamina>=sprintCost) { speed*=1.5f; p.stamina-=sprintCost; }
-    else p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
+    else if(!c.sprint) p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
     if(c.slide&&p.grounded) speed*=1.22f;
     if(c.skill&&p.escapeSkill>0&&p.stamina>=20&&p.dashCooldown<=0) {
         p.dashTime=0.24f; p.dashCooldown=1.8f; p.stamina-=20;
