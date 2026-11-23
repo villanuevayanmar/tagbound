@@ -181,3 +181,15 @@ Audit local save restoration at each city/quest checkpoint. Verify the saved cam
 
 ### Next task
 Inspect existing city rendering before changing it: city-specific landmarks, tint/materials, lighting, ground grids and procedural draw calls. Identify concrete visual duplication or high per-frame cost. Prefer a small city-specific render correction or a measurable draw-call reduction over adding new models/dependencies. Validate through existing browser screenshots/CI; physical Android rendering and frame-time testing remain unverified. Do not merge or deploy during the hold.
+
+
+## Latest verified render checkpoint — enemy model orientation (2026-11-23)
+
+- Latest PR #14 code/test SHA: `a93a7e4327570630cbc4cc884ea2982eea90aa57`.
+- Exact GitHub Actions run #302 (`45150660649`) passed: WebAssembly build, complete C++ gameplay regression tests, PWA validation, Chromium desktop/mobile browser smoke, service-worker cache and offline reload. Pull-request publishing was skipped.
+- Enemy render models now orient toward the player's horizontal position. Bosses keep their locked `strikeDirection` during Windup/Strike, then resume tracking the player in other phases. A deterministic fallback handles coincident positions.
+- Tests cover normal target-facing, normalized locked strike direction, recovery tracking and fallback. No gameplay mechanics, hitboxes, or damage changed.
+- PR #13/#14 remain open/unmerged. Production remains READY on main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`; deployment hold remains active. Do not merge/deploy or edit `dist/`.
+
+### Next exact task
+Review the renderer for proven redundant per-frame geometry/draw work and any concrete five-city visual inconsistencies. Inspect actual screenshots and source; make no speculative performance or quality changes. Use existing CI/browser smoke for verification, but state clearly that actual Android frame time has not been measured. Keep all source/test work on PR #14 and avoid the deployable bundle during the hold.

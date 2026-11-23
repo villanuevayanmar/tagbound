@@ -335,3 +335,23 @@ Review campaign save/restore behavior at every city and objective checkpoint. Co
 
 ### Next task
 Review the five city render paths for visible differentiation and mobile rendering cost. Inspect existing city-specific meshes, landmarks, lighting and per-frame draw calls first. Avoid adding high-cost geometry or new dependencies; make only changes that can be checked with the existing screenshot/browser smoke workflow. Keep source changes out of `dist/`, with no merge or deploy during the hold.
+
+
+## Verified checkpoint — enemy and boss model facing (2026-11-23)
+
+- PR #14 source/test head `a93a7e4327570630cbc4cc884ea2982eea90aa57` passed exact Actions run #302 (`45150660649`): Emscripten/WebAssembly compile, full C++ gameplay regression suite, PWA assembly/validation, Chromium browser smoke, and service-worker/offline checks. The PR-only `publish-dist` job was skipped.
+- Screenshot/source review found that all enemy and boss models used a fixed local forward vector `{0,0,-1}`, regardless of player approach direction or a boss's locked attack direction.
+- Added pure `EnemyFacing(enemy,target)` logic and supplied the player's position to the enemy renderer. Pursuers and bosses in Hunt/Recover face the player's horizontal direction. Bosses in Windup/Strike retain their normalized, locked `strikeDirection`, keeping their pose consistent with the warning/attack lane. Coincident positions use a deterministic fallback.
+- C++ tests cover target-facing normalization, locked boss windup direction despite target relocation, returning to target tracking after recovery, and the zero-length fallback. No movement, pursuit, hitbox, damage or animation timing changed.
+- Run #302 passed both CI jobs. Browser log explicitly reported the WebAssembly/WebGL/gameplay/save/PWA/offline/mobile smoke PASS marker.
+
+### Current branch and deployment state
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at `a93a7e4327570630cbc4cc884ea2982eea90aa57`.
+- Production remains **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, deployed runtime `9115f13b4021f9052a95eea66ceaa1000f134978`. This render-only branch change was not published.
+- Vercel deployment hold is still in force. No merge, production deployment, or `dist/` edit was performed.
+- Integration still needs PR #13's `tagbound-v27` service-worker cache reconciled with PR #14's `tagbound-v25` CI expectation.
+- Physical Android performance/orientation testing remains unverified; browser emulation is not an Android device measurement.
+
+### Next task
+Review the remaining low-poly rendering path for redundant or duplicated per-frame geometry. Keep the review evidence-based: profile/draw-call counts where the source permits, inspect generated screenshots, and avoid changing geometry or quality settings without a reproducible visual/performance defect. Prefer small renderer-only changes and keep all changes out of `dist/` during the deployment hold.
