@@ -491,6 +491,29 @@ jobs:
               throw new Error('A completed save started ambient music behind the victory screen: ' + JSON.stringify(victoryAudio));
             }
 
+            // Restart from the fifth-city ending and verify campaign progress is reset.
+            await Promise.all([
+              page.waitForNavigation({ waitUntil: 'networkidle' }),
+              page.locator('#restart').click()
+            ]);
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            const restarted = await page.evaluate(() => ({
+              introVisible: !document.querySelector('#intro').classList.contains('hidden'),
+              endingHidden: document.querySelector('#ending').classList.contains('hidden'),
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!restarted.introVisible || !restarted.endingHidden ||
+                restarted.save?.city !== 0 || restarted.save?.unlocked !== 0 ||
+                restarted.save?.quest !== 0 || restarted.save?.level !== 1 ||
+                restarted.save?.xp !== 0 || restarted.save?.finished !== 0 ||
+                restarted.save?.schemaVersion !== 1) {
+              throw new Error('Campaign restart did not reset saved progression: ' + JSON.stringify(restarted));
+            }
+
             // Seed an old installed-PWA cache, then verify the new worker removes it.
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
