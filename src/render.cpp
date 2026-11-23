@@ -487,8 +487,8 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawRectangle(24,42,215,9,DARKGRAY);
     DrawRectangle(24,42,(int)(215*std::clamp(g.player.health/ClassMaxHealth(g.player.playerClass),0.0f,1.0f)),9,RED);
     DrawText(TextFormat("STAMINA  %d",(int)g.player.stamina),24,56,14,WHITE);
-    DrawRectangle(112,60,127,7,DARKGRAY);
-    DrawRectangle(112,60,(int)(127*std::clamp(g.player.stamina/ClassMaxStamina(g.player.playerClass),0.0f,1.0f)),7,GREEN);
+    DrawRectangle(128,60,111,7,DARKGRAY);
+    DrawRectangle(128,60,(int)(111*std::clamp(g.player.stamina/ClassMaxStamina(g.player.playerClass),0.0f,1.0f)),7,GREEN);
     if(g.player.escapeSkill) DrawText(g.player.dashCooldown<=0?"DASH READY":TextFormat("DASH %.1fs",g.player.dashCooldown),24,73,10,GOLD);
     else DrawText("DASH UNLOCKS AT LVL 3",24,73,10,GRAY);
     if(g.player.wallRunning) DrawText("WALL RUN",180,73,10,ORANGE);
