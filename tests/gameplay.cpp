@@ -217,6 +217,19 @@ int main() {
     UpdateMovement(game, move, camera, 0.1f);
     assert(game.player.position.z > 0.4f);
 
+    // Skirmisher keeps the fastest base movement speed without sprinting.
+    GameState vanguardMovement;
+    vanguardMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    vanguardMovement.player.position={0,0.3f,0};
+    vanguardMovement.player.playerClass=PlayerClass::Vanguard;
+    GameState skirmisherMovement;
+    skirmisherMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    skirmisherMovement.player.position={0,0.3f,0};
+    skirmisherMovement.player.playerClass=PlayerClass::Skirmisher;
+    UpdateMovement(vanguardMovement,move,camera,0.1f);
+    UpdateMovement(skirmisherMovement,move,camera,0.1f);
+    assert(skirmisherMovement.player.position.z>vanguardMovement.player.position.z+0.1f);
+
     // A high-speed Skirmisher dash cannot tunnel through a thin wall.
     GameState dashCollision;
     dashCollision.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
