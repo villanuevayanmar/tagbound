@@ -72,6 +72,7 @@ KEEP void StartGame() {
         game.player.position=QuestCheckpoint(game.city,game.quest);
         game.player.facing=QuestCheckpointFacing(game.city,game.quest);
     }
+    ResetCamera(game.player,camera);
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
 }

@@ -9,6 +9,13 @@ static bool near(float a, float b, float epsilon=0.02f) {
     return std::fabs(a-b) <= epsilon;
 }
 
+static float cameraTargetYaw(const Camera3D& camera,Vector3 player) {
+    return std::atan2(camera.target.x-player.x,camera.target.z-player.z);
+}
+static float angleDistance(float a,float b) {
+    return std::atan2(std::sin(a-b),std::cos(a-b));
+}
+
 int main() {
     GameState game;
     BuildCity(game);
@@ -298,6 +305,46 @@ int main() {
     move.move.y = 1.0f;
     UpdateMovement(game, move, camera, 0.1f);
     assert(game.player.position.z > 0.4f);
+
+    // The camera-relative control scheme keeps its heading while moving, then follows
+    // the direction the character last faced after movement and any manual-look override end.
+    GameState cameraFollow;
+    cameraFollow.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    cameraFollow.player.position={0,0.3f,0};
+    cameraFollow.player.facing={0,0,1};
+    Camera3D followCamera{};
+    ResetCamera(cameraFollow.player,followCamera);
+    assert(near(cameraTargetYaw(followCamera,cameraFollow.player.position),0.0f));
+    assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
+    Controls strafe{};
+    strafe.move.x=1.0f;
+    UpdateMovement(cameraFollow,strafe,followCamera,0.1f);
+    assert(cameraFollow.player.facing.x>0.99f&&std::abs(cameraFollow.player.facing.z)<0.02f);
+    assert(near(cameraTargetYaw(followCamera,cameraFollow.player.position),0.0f));
+    for(int frame=0;frame<30;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),PI/2.0f))<0.05f);
+
+    // A manual swipe overrides automatic follow briefly while preserving camera-relative input.
+    ResetCamera(cameraFollow.player,followCamera);
+    Controls manualStrafe{};
+    manualStrafe.move.x=1.0f;
+    manualStrafe.lookX=60.0f;
+    UpdateMovement(cameraFollow,manualStrafe,followCamera,0.1f);
+    const float manuallySetYaw=cameraTargetYaw(followCamera,cameraFollow.player.position);
+    assert(near(manuallySetYaw,-0.48f));
+    for(int frame=0;frame<4;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),manuallySetYaw))<0.01f);
+    for(int frame=0;frame<30;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    const float strafeFacingYaw=std::atan2(cameraFollow.player.facing.x,cameraFollow.player.facing.z);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),strafeFacingYaw))<0.05f);
+
+    // Starting a new run resets yaw, pitch and manual-look override to the new spawn facing.
+    cameraFollow.player.facing={-1,0,0};
+    ResetCamera(cameraFollow.player,followCamera);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
+    assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
+    UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
 
     // Skirmisher keeps the fastest base movement speed without sprinting.
     GameState vanguardMovement;

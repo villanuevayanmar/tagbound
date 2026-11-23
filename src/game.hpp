@@ -58,6 +58,7 @@ struct GameState {
     bool started=false, finished=false, bossUnlocked=false;
 };
 
+void ResetCamera(const Player& player, Camera3D& camera);
 void UpdateMovement(GameState& game, const Controls& controls, Camera3D& camera, float dt);
 void UpdatePursuit(GameState& game, float dt);
 void UpdateCombat(GameState& game, const Controls& controls, float dt);
