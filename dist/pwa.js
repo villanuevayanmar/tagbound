@@ -127,7 +127,7 @@ window.TagboundAudio={
  getMusicNoteCount:()=>musicNotesPlayed
 };
 syncSoundButtons();
-soundButtons.forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
+[soundToggle,settingsSoundToggle].filter(Boolean).forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 const classCards=[...document.querySelectorAll('.class-card')];
