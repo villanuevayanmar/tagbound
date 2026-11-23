@@ -388,3 +388,15 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 - Run #309's first browser attempt failed only because an old assertion expected visible `SOUND: OFF` text on the now icon-only pause button. The assertion was corrected to verify accessible label, `aria-pressed`, muted class, and persisted preference; run #310 passed.
 - No merge, production deployment, billing change, or Vercel deployment attempt occurred. Production remains on the existing main deployment; the deployment hold remains active.
 - Physical Android FPS and device-specific touch behavior remain unmeasured.
+
+
+## Verified checkpoint — browser lifecycle and input recovery (2026-11-23)
+
+- PR #14 head before this documentation update: `29fee596ac204be433ff18d25266e722b18bd249`.
+- Run #314 (`45182902026`) passed on exact commit `a418bc44638cef1fc54bc0ca0f7002a43d29bfe5`: Emscripten/WebAssembly build, C++ gameplay regression suite, PWA assembly/static validation, Chromium desktop/mobile smoke and offline reload. The PR-only `publish-dist` job was skipped.
+- Run #314 added browser checks and source handling for `window.blur` and `document.visibilitychange`: clear held joystick/action/look input, active-button styling and tracked pointer IDs.
+- Run #315 (`45184017300`) passed on exact commit `29fee596ac204be433ff18d25266e722b18bd249`: all build, gameplay, PWA, browser, audio, save, and offline checks passed. `publish-dist` was skipped.
+- Run #315 verifies ambient music pauses on browser focus loss and document backgrounding, then resumes on focus/visibility return only when gameplay remains active. Settings and the ending continue to suppress automatic resume.
+- No C++ gameplay mechanics, campaign ordering, save schema, or progression behavior changed in these two fixes. No `dist/` files changed.
+- PR #13 remains open/unmerged; PR #14 remains open/draft/unmerged. Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- No merge, production deployment, Vercel deployment attempt, quota bypass, or billing change occurred. Physical Android touch and frame-time measurements remain outstanding.
