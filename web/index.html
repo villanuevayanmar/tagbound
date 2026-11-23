@@ -103,7 +103,8 @@ Module.canvas.addEventListener('webglcontextlost',event=>{
  loading.textContent='RESTORING GRAPHICS…';
  loading.classList.remove('hidden');
  try{
-  if(Module.calledRun&&typeof Module.ccall==='function')Module.ccall('SaveNow',null,[],[]);
+  if(typeof Module.ccall==='function')Module.ccall('SaveNow',null,[],[]);
+  else console.error('TAGBOUND save flush is unavailable during WebGL context loss.');
  }catch(error){console.error('Could not flush TAGBOUND save after WebGL context loss.',error);}
  graphicsRecoveryTimer=window.setTimeout(recoverGraphicsContext,8000);
 },false);
