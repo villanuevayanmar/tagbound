@@ -392,6 +392,31 @@ jobs:
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
 
+            // Losing browser focus or being backgrounded must clear held touch/look input.
+            const restoreHeldInput = async pointerId => page.evaluate(pointerId => {
+              Module.ccall('SetTouch', null, ['number', 'number', 'number'], [0.7, -0.6, 4]);
+              Module.ccall('SetLook', null, ['number', 'number'], [6, -3]);
+              const action = document.querySelector('.action');
+              action.classList.add('active');
+              action.dataset.pointerId = String(pointerId);
+            }, pointerId);
+            const assertTouchReset = async label => {
+              const state = await page.evaluate(() => ({
+                clear: Module.ccall('IsInputStateClear', 'number', [], []),
+                activeButtons: document.querySelectorAll('.action.active').length,
+                pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              }));
+              if (state.clear !== 1 || state.activeButtons || state.pointerIds) {
+                throw new Error(label + ' did not clear held input: ' + JSON.stringify(state));
+              }
+            };
+            await restoreHeldInput(997);
+            await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+            await assertTouchReset('Window blur');
+            await restoreHeldInput(996);
+            await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
+            await assertTouchReset('Document visibility change');
+
             // Settings must expose install only while open and pause the actual C++ simulation.
             await page.evaluate(() => {
               Module.ccall('SetTouch', null, ['number', 'number', 'number'], [0.65, -0.35, 4]);
