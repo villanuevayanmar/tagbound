@@ -347,6 +347,8 @@ int main() {
     assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
     UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
     assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
+    Player defaultCameraPlayer;
+    ResetCamera(defaultCameraPlayer,camera);
 
     // Skirmisher keeps the fastest base movement speed without sprinting.
     GameState vanguardMovement;
