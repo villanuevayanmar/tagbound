@@ -156,3 +156,15 @@ Review actual rooftop route reachability for Harbor, Gilded, Foundry, Imperial, 
 
 ### Next exact task
 Extend the existing five-city transfer simulation from the third objective platform into each boss arena, based on actual boss placement/spawn geometry and normal movement. Then inspect checkpoint/save restoration at boss unlock, death, and restart. Keep all save migration and preference-preservation checks; do not change gameplay mechanics without a reproducible failure.
+
+
+## Latest verified checkpoint — boss-gate entry in all five cities (2026-11-23)
+
+- PR #14 latest source/test commit: `8f6aa99e53b69f8da116ab6ac38e4954be347721`.
+- Exact run #298 (`45148968483`) passed all jobs: WebAssembly build, C++ gameplay suite, PWA validation, desktop/mobile Chromium smoke, service-worker and offline reload. The pull-request `publish-dist` job was skipped.
+- The 20-transition route simulation now creates each city's actual boss before the final approach. It verifies the boss is unlocked, exactly one live boss exists, its `variant` matches the city, and its spawn position matches the gate target. The approach then lands on the boss gate using normal Skirmisher jump/sprint and ledge-climb controls.
+- No runtime mechanics or route geometry changed in this test-only extension. All five routes and boss gate approaches pass.
+- Production is still READY on main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`; PR #13 and #14 remain open/unmerged. Deployment hold still applies. Do not merge, deploy, or modify `dist/`.
+
+### Next exact task
+Audit local save restoration at each city/quest checkpoint. Verify the saved campaign index, unlock progression, quest, level/XP, selected class and fixed weapon are preserved through reload; confirm boss-gate restoration rebuilds the correct city-specific boss and player checkpoint. Reuse the existing browser and C++ tests, adding only missing assertions. Retain legacy stage 3/4 one-time migration and restart preference preservation. Keep all edits on PR #14 and outside `dist/`.

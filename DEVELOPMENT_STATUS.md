@@ -296,3 +296,23 @@ Review rooftop-route geometry and jump envelopes for all five cities. Compare ea
 
 ### Next task
 Inspect how boss progression is unlocked after the third objective on each city and whether every boss arena is actually reachable from the final objective using normal movement. Extend the route simulation to cover objective 3 → boss arena entry. Then audit save/checkpoint restoration at boss entry and after defeat, preserving the legacy-save migration and existing player preferences. Do not modify `dist/`, merge, or deploy during the hold.
+
+
+## Verified checkpoint — boss-gate spawn and final approach (2026-11-23)
+
+- PR #14 source/test head `8f6aa99e53b69f8da116ab6ac38e4954be347721` passed exact Actions run #298 (`45148968483`): Emscripten/WebAssembly build, full C++ gameplay regressions, static PWA validation, Chromium browser smoke, service-worker cache and offline reload. The PR-only `publish-dist` job was skipped.
+- Extended the five-city rooftop simulation so the final transition (objective 3 → boss gate) instantiates the actual boss first using `SetQuestProgress(routeGame, 3)`.
+- For every city, the test verifies boss unlock, exactly one live boss, the expected city-specific boss variant, and exact spawn coordinates at that city's gate before simulating the final approach.
+- All 20 rooftop transfers still pass. The run also retains the existing boss-gate browser restore check and the C++ checkpoint-after-defeat tests.
+- No gameplay or route geometry was changed in this checkpoint; only regression coverage was extended.
+
+### Current repository and deployment status
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at `8f6aa99e53b69f8da116ab6ac38e4954be347721`.
+- Production is still **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. A read-only production lookup after run #298 confirmed it is unchanged.
+- No merge, deployment, or `dist/` edit occurred. The user's deployment hold remains active.
+- Integration still needs PR #13's `tagbound-v27` service-worker cache reconciled with PR #14's `tagbound-v25` CI assertion. Preserve both PRs' icon-only, survival, migration, restart, boss and route checks when integrating.
+- Physical Android playtesting remains unverified. Hosted Chromium mobile emulation is not a substitute.
+
+### Next task
+Review campaign save/restore behavior at every city and objective checkpoint. Confirm city, unlocked-city, quest, XP/level, class/weapon and schema version survive reload; verify boss-gate reload reconstructs the correct city-specific boss and checkpoint location. Add only missing targeted assertions, keeping the existing legacy-stage remap and class/sound preservation tests intact. Do not edit `dist/`, merge or deploy during the hold.
