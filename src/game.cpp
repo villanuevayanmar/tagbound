@@ -207,7 +207,18 @@ void BuildCity(GameState& g) {
     }
     Vector3 gate=QuestTarget(g.city,3);
     g.platforms.push_back({{gate.x,gate.y-0.25f,gate.z},{8,0.5f,8},{160,139,96,255}});
-    g.bossArena={gate,{4.0f,4.0f},gate.y,false};
+    const Platform& gateFloor=g.platforms.back();
+    const Vector3 gateFloorTop={
+        gateFloor.position.x,
+        gateFloor.position.y+gateFloor.size.y*0.5f,
+        gateFloor.position.z
+    };
+    g.bossArena={
+        gateFloorTop,
+        {gateFloor.size.x*0.5f,gateFloor.size.z*0.5f},
+        gateFloorTop.y,
+        false
+    };
     // Keep skyline buildings outside the central rooftop routes.
     for(int i=0;i<28;i++) {
         float a=i*0.2244f+g.city*0.08f, r=38.0f+(i%3)*1.0f;
