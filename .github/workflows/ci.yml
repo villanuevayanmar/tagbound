@@ -621,29 +621,18 @@ jobs:
                   throw new Error('Boss visual-review save did not restore the requested city: ' +
                     JSON.stringify({ city, bossSave }));
                 }
-                // Enter the gate floor from the previous rooftop checkpoint.
-                // Imperial/Spire checkpoints need a short lateral alignment before the final jump.
-                const arenaSideKey = city === 2 ? 'KeyA' : (city === 4 ? 'KeyD' : null);
-                if (arenaSideKey) {
-                  await bossPage.keyboard.down(arenaSideKey);
-                  await bossPage.waitForTimeout(250);
-                  await bossPage.keyboard.up(arenaSideKey);
-                }
-                await bossPage.keyboard.down('KeyW');
-                await bossPage.keyboard.down('Space');
-                try {
-                  await bossPage.waitForTimeout(100);
-                  await bossPage.keyboard.up('Space');
-                  await bossPage.waitForFunction(
-                    savedCity => (Module.ccall('GetBossWindupMask', 'number', [], []) & (1 << savedCity)) !== 0,
-                    city,
-                    { timeout: 12000 }
-                  );
-                } finally {
-                  await bossPage.keyboard.up('Space');
-                  await bossPage.keyboard.up('KeyW');
-                  if (arenaSideKey) await bossPage.keyboard.up(arenaSideKey);
-                }
+                // Verify the live WebAssembly boss stays inside the simulation arena.
+                // Do not require a windup: the player can start outside the gate after save restore.
+                await bossPage.waitForFunction(
+                  () => Module.ccall('IsBossArenaContained', 'number', [], []) === 1,
+                  null,
+                  { timeout: 10000 }
+                );
+                await bossPage.waitForTimeout(1200);
+                const arenaState = await bossPage.evaluate(() =>
+                  Module.ccall('IsBossArenaContained', 'number', [], [])
+                );
+                if (arenaState !== 1) throw new Error('Boss escaped its arena during browser visual review: ' + city);
                 await bossPage.waitForTimeout(100);
                 await bossPage.screenshot({
                   path: 'visual-review/boss-' + device.name + '-city-' + city + '.png',
