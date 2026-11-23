@@ -267,7 +267,6 @@ int main() {
             const float targetHalf=segment==3?4.0f:2.5f;
             bool airborne=false;
             bool landed=false;
-            std::string routeTrace;
             for(int frame=0;frame<180;frame++) {
                 Vector3 toTarget={target.x-routeGame.player.position.x,0,target.z-routeGame.player.position.z};
                 const float remaining=Vector3Length(toTarget);
@@ -279,19 +278,9 @@ int main() {
                     input.move.y=desired.z;
                     input.sprint=true;
                 }
-                input.jump=frame==0;
-                if(city==3&&segment==0&&frame<12)
-                    std::cout << "ROUTE PRE " << frame << " jump=" << input.jump
-                              << " grounded=" << routeGame.player.grounded
-                              << " class=" << (int)routeGame.player.playerClass
-                              << " stamina=" << routeGame.player.stamina << std::endl;
+                // If the jump reaches a ledge, use the game's required jump-to-climb action.
+                input.jump=frame==0||routeGame.player.ledgeGrabbing;
                 UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
-                if(city==3&&segment==0&&frame<12)
-                    std::cout << "ROUTE POST " << frame << " pos=" << routeGame.player.position.x
-                              << "," << routeGame.player.position.y << "," << routeGame.player.position.z
-                              << " vel=" << routeGame.player.velocity.x << "," << routeGame.player.velocity.y
-                              << "," << routeGame.player.velocity.z << " grounded=" << routeGame.player.grounded
-                              << " wall=" << routeGame.player.wallRunning << std::endl;
                 if(!routeGame.player.grounded) airborne=true;
                 const bool insideTarget=std::fabs(routeGame.player.position.x-target.x)<targetHalf-0.2f &&
                                         std::fabs(routeGame.player.position.z-target.z)<targetHalf-0.2f;
@@ -307,7 +296,6 @@ int main() {
                           << " player=(" << routeGame.player.position.x << ","
                           << routeGame.player.position.y << ","
                           << routeGame.player.position.z << ")" << std::endl;
-                if(city==3&&segment==0) std::cerr << routeTrace;
                 assert(landed);
             }
         }
