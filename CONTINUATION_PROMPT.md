@@ -168,3 +168,16 @@ Extend the existing five-city transfer simulation from the third objective platf
 
 ### Next exact task
 Audit local save restoration at each city/quest checkpoint. Verify the saved campaign index, unlock progression, quest, level/XP, selected class and fixed weapon are preserved through reload; confirm boss-gate restoration rebuilds the correct city-specific boss and player checkpoint. Reuse the existing browser and C++ tests, adding only missing assertions. Retain legacy stage 3/4 one-time migration and restart preference preservation. Keep all edits on PR #14 and outside `dist/`.
+
+
+## Latest verified save checkpoint — 2026-11-23
+
+- PR #14 head: `39c128f65e0ffc722b44f850aee2f32ab34d615e`.
+- Exact run #300 (`45149650762`) passed: WebAssembly/C++ build, gameplay regressions, PWA artifact validation, Chromium smoke, and offline reload. Pull-request publishing was skipped.
+- Legacy stage 3/4 migration browser checks now verify city/unlocked, quest, level 2, XP 15, Skirmisher/Bow, finished false and schema v1 after both the first migration reload and the second idempotent reload.
+- Boss-gate reload now verifies the saved city/unlocked, quest 3, level/XP, class/weapon, finished state and schema version alongside one active reconstructed boss.
+- Runtime save schema and game behavior were not changed; only CI assertions were strengthened.
+- PR #13 and #14 remain open/unmerged. Production remains READY on main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`; Vercel deployment hold remains active. Keep `dist/` untouched.
+
+### Next task
+Inspect existing city rendering before changing it: city-specific landmarks, tint/materials, lighting, ground grids and procedural draw calls. Identify concrete visual duplication or high per-frame cost. Prefer a small city-specific render correction or a measurable draw-call reduction over adding new models/dependencies. Validate through existing browser screenshots/CI; physical Android rendering and frame-time testing remain unverified. Do not merge or deploy during the hold.

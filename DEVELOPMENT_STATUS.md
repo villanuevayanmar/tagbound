@@ -316,3 +316,22 @@ Inspect how boss progression is unlocked after the third objective on each city 
 
 ### Next task
 Review campaign save/restore behavior at every city and objective checkpoint. Confirm city, unlocked-city, quest, XP/level, class/weapon and schema version survive reload; verify boss-gate reload reconstructs the correct city-specific boss and checkpoint location. Add only missing targeted assertions, keeping the existing legacy-stage remap and class/sound preservation tests intact. Do not edit `dist/`, merge or deploy during the hold.
+
+
+## Verified checkpoint — full save-field reload assertions (2026-11-23)
+
+- PR #14 commit `39c128f65e0ffc722b44f850aee2f32ab34d615e` passed exact GitHub Actions run #300 (`45149650762`): WebAssembly compile, C++ gameplay suite, PWA validation, Chromium desktop/mobile smoke, service-worker cache and offline reload. The PR-only `publish-dist` job was skipped.
+- Strengthened legacy stage 3/4 migration tests to confirm level 2 and 15 XP, selected Skirmisher class, Bow loadout, quest, completion flag, and `schemaVersion: 1` survive both the initial migration reload and a second reload. The one-time remap remains idempotent.
+- Strengthened the browser boss-gate restoration check to confirm the complete saved campaign fields (city/unlocked, quest, level/XP, class/weapon, finished flag, schema version) are preserved while the boss is reconstructed.
+- No save-format or runtime logic change was required. The new assertions passed against the existing save implementation.
+
+### Current repository/deployment
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at `39c128f65e0ffc722b44f850aee2f32ab34d615e`.
+- Production remains **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. Read-only Vercel lookup after run #300 confirmed production was unchanged.
+- No merge, deployment or `dist/` edit occurred. The user-reported deployment hold still applies.
+- The PR integration issue remains: PR #13 updates the service-worker cache to `tagbound-v27`, whereas PR #14's PWA workflow currently expects `tagbound-v25`. Resolve this when preparing a combined candidate; preserve both PRs' CI assertions.
+- Physical Android testing remains outstanding.
+
+### Next task
+Review the five city render paths for visible differentiation and mobile rendering cost. Inspect existing city-specific meshes, landmarks, lighting and per-frame draw calls first. Avoid adding high-cost geometry or new dependencies; make only changes that can be checked with the existing screenshot/browser smoke workflow. Keep source changes out of `dist/`, with no merge or deploy during the hold.
