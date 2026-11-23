@@ -207,7 +207,7 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - PR #14 branch head before this fix: `c1837d212db35c224389534268f61fc3b21a254f`.
 - Exact-head run #275 (`45134277135`) built WebAssembly successfully but failed the C++ gameplay regression at `tests/gameplay.cpp:712`: a pursuer could not route around a rooftop wall and reach the player.
 - Root cause: pursuit line-of-sight used a small ray margin while movement collision used the enemy's full body radius. The pursuer therefore resumed direct movement before its body could clear the wall and stalled against it.
-- Fix committed as `15938b998823fe9bc7a9e4ca8ae57954e6ac2a9c`: obstacle segment tests now accept a clearance margin; pursuit routing and waypoint validation use the enemy radius (0.42 for pursuers, 0.62 for bosses). Combat line-of-sight retains its existing default margin.
+- Fix committed as `15938b998823fe9bc7a9e4ca8ae57954e6ac2a9c`: obstacle segment tests now accept a clearance margin; direct pursuit line-of-sight uses the enemy body radius (0.42 for pursuers, 0.62 for bosses), preventing early direct movement. Corner-waypoint visibility checks retain their existing narrow ray margin; waypoint offsets already include the enemy radius plus clearance.
 - The existing regression remains unchanged: it still requires the pursuer to get within 3 units and not overlap the wall. No assertion was weakened.
 - CI for `15938b9...` must be checked against that exact SHA. Do not infer success from the earlier run #274.
 - Current PR #14 remains open/draft/unmerged. PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; its matching run #268 passed.
@@ -219,3 +219,6 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 2. If the routing regression still fails, use its actual coordinates/trace to correct path selection without weakening the assertion.
 3. If it passes, continue with another concrete gameplay gap, prioritizing parkour collision/ledge transitions and boss counterplay; add reproducible tests before changing behavior.
 4. Keep both PRs open and production unchanged. Physical Android testing remains unverified.
+
+
+- Follow-up run #277 (`45137349773`) showed that applying the body radius to corner-waypoint LOS broke the existing open-side wall-routing regression at `tests/gameplay.cpp:558`. The follow-up commit `1c48ec1806a2d8593aa61b184471eface72ae5aa` limits body-radius clearance to direct pursuit LOS and restores the prior waypoint ray checks. Re-run all tests against the newest exact branch head; neither routing fix is verified until CI passes.
