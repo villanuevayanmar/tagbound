@@ -84,7 +84,7 @@ Use this section as the authoritative state; earlier next-action text in this fi
 - PR #14 remains open, draft, and unmerged: `feat/campaign-imperial-before-spire`.
 - PR #14 commit `c1837d212db35c224389534268f61fc3b21a254f` added a rooftop pursuit pathing regression. Its exact run #275 (`45134277135`) failed at `tests/gameplay.cpp:712` after the WebAssembly compile passed.
 - Failure root cause: pursuit LOS did not account for the pursuer's physical radius, so direct pursuit resumed while the body still collided with the obstacle.
-- Fix: `15938b998823fe9bc7a9e4ca8ae57954e6ac2a9c` updates `src/systems.cpp` so obstacle segment tests and pursuit waypoint LOS use body clearance (0.42 normal pursuer / 0.62 boss); attack LOS keeps its prior default.
+- Fix: `15938b998823fe9bc7a9e4ca8ae57954e6ac2a9c` updates `src/systems.cpp` so direct pursuit line-of-sight uses body clearance (0.42 normal pursuer / 0.62 boss), while corner-waypoint LOS keeps its proven narrow ray margin and radius-offset corners. Attack LOS keeps its prior default.
 - Documentation commit: `0204f9cfc206d98a94038527c6f872d4c3d59729`.
 - Recheck the latest branch HEAD and its exact SHA-matched CI run; it may include this documentation commit. Inspect all job steps and logs. Do not claim the fix passes until the regression job actually passes.
 - The existing navigation test must remain intact and pass both distance and no-wall-overlap assertions.
@@ -96,3 +96,6 @@ Production remains READY at deployment `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, runti
 ### Next development task
 
 After the exact-head CI result is known, continue with a test-backed review of parkour ledge/vault/wall-run collision transitions, then combat/boss counterplay. Preserve existing behavior and user saves. Keep `DEVELOPMENT_STATUS.md` and this prompt current after meaningful changes. Physical Android testing is still pending and must not be represented as completed.
+
+
+- Follow-up run #277 (`45137349773`) found a second regression at `tests/gameplay.cpp:558`: body-radius expansion on corner-waypoint LOS rejected a valid open-side route. Commit `1c48ec1806a2d8593aa61b184471eface72ae5aa` keeps body-radius clearance for direct pursuit but restores the established waypoint ray tests. Verify the latest exact head in CI before claiming the routing fix passes.
