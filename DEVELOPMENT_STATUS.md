@@ -103,7 +103,9 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Synchronized `web/` with the committed `dist/` files and bumped the service-worker cache to `tagbound-v26`.
 - Added browser assertions in the normal CI and live-smoke workflows.
 - Added `CONTINUATION_PROMPT.md` for recovery across interrupted conversations.
-- PR #13 CI run #248 is in progress. This change is NOT yet verified, merged, or deployed.
+- PR #13 CI run #254 (`45121695420`) failed in the browser-smoke job after the WebAssembly build passed. The actual failure was the existing class-specific Bow visibility assertion: `.action` had `display:grid`, which overrode the browser's default hidden-attribute display behavior, so the Bow button remained visible for Vanguard. This is a real CSS regression introduced by the icon-button layout, not a gameplay loadout failure.
+- Fixed the underlying cause by adding `.action[hidden]{display:none}` to `web/styles.css` and synchronizing the exact same CSS into `dist/styles.css` in commits `65909d7bea9c2820bb89665ad63d806e9dbd6c14` and `0206ec4534b856e9955967ec204f5e60211e974b`. This preserves the existing JavaScript class-visibility contract and does not weaken the test.
+- The CSS fix has been committed to `feat/icon-only-game-controls`. A new run for the latest branch head must be inspected; no passing result is claimed yet. PR #13 remains open, unmerged, and not deployed.
 
 ## Verified cloud testing
 
@@ -123,7 +125,7 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Main after PR #10 workflow merge: run `45105714359` passed, including WebAssembly build, C++ regressions, desktop/mobile browser checks and PWA artifact validation.
 - Latest main CI run #247: `45107305759` passed.
 - Latest live production smoke #9: `45107305802` passed against the READY production alias and runtime bundle `9115f13`.
-- PR #13 build/browser smoke runs #248 (`45121351189`) and #249 (`45121459290`) were cancelled after newer commits superseded their tested heads. Run #250 (`45121515646`) was still in progress for earlier head `e2a5e29d1cbebb4e3d90b67199605d9616cfd586`. At the last run inspection, #251 (`45121627995`) was pending for PR head `533157582ed3bbe18963536ade08b3dcc8516d73`. Continuity-document commits were made afterward and may have triggered newer runs; this run is historical checkpoint information, not proof of the current branch's status. Inspect the latest PR head and its matching Actions run before proceeding. No passing result is claimed for PR #13.
+- PR #13 run #254 (`45121695420`) on commit `313c9f97aba3e7144c0f53fbe4e15ff7e6290474`: WebAssembly/C++ build job passed; browser-smoke job failed at the class-specific Bow visibility assertion; publishing the generated `dist/` artifact was skipped. Log evidence: `CI class BOW control visibility mismatch` for Vanguard (`klass:0`, expected `bowVisible:false`, observed `true`). The root cause was CSS `[hidden]` handling overridden by `.action{display:grid}`. The correction `.action[hidden]{display:none}` is committed to both `web/styles.css` and `dist/styles.css`. The latest branch head now needs a fresh hosted CI run; do not merge or deploy until the latest exact-head run passes.
 - Live smoke confirmed WebAssembly/WebGL startup, gameplay, class selection, save restoration, Settings pause/resume, touch/look input reset, ambient music pause/resume, HUD visibility, install placement, service-worker control/cache, offline reload, mobile controls and portrait rotation guidance.
 - These hosted checks do not replace physical Android playtesting.
 
@@ -183,7 +185,7 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 ## Exact next task
 
-1. Resume by checking PR #13 and its latest CI run #251 (`45121627995`) for head `533157582ed3bbe18963536ade08b3dcc8516d73`. It was pending when this checkpoint was saved; inspect the current run state rather than assuming its outcome.
+1. Resume by checking PR #13's current head and the newest Actions run for that exact SHA. Run #254 (`45121695420`) failed because the icon CSS overrode the `hidden` attribute on the Bow action. The fix `.action[hidden]{display:none}` is committed to `web/styles.css` and `dist/styles.css`; verify the latest branch contents and run.
 2. Merge PR #13 only after the hosted WebAssembly, C++ regression, browser, and PWA checks pass.
 3. Verify Vercel automatically deploys the updated committed `dist/` files, then run the live production smoke workflow against that exact READY deployment.
 4. Update this document and `CONTINUATION_PROMPT.md` with exact merge, runtime bundle, CI, live-smoke, and deployment identifiers.
