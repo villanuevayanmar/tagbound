@@ -134,7 +134,7 @@ The first visit must download the game assets. The service worker caches the HTM
 
 ## Settings and pause
 
-During a run, tap the pause icon in the top HUD row to open Settings. The sound and install actions, and the Resume action, use icons with accessible labels. The saved sound preference is shared with Home. The install action appears only while Settings is open. Resume returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay.
+During a run, tap the pause icon in the top HUD row to open Settings. The sound and install actions, and the Resume action, use icons with accessible labels. The saved sound preference is shared with Home. The install action appears only while Settings is open. Resume returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. When the browser loses focus or the app moves to the background, held touch/look input is cleared and the ambient score pauses. Returning to active gameplay resumes the score; it does not resume over Settings or the ending.
 
 ## Controls
 
