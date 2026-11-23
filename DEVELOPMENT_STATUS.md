@@ -8,9 +8,9 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `f778777accc3ba26cd876a338d180a9fb999187c`  
-Latest tested runtime bundle commit: `679a6d6ae5d7b3b338e91d9cb000d47b9e2615ac`  
-Production deployment: `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`  
+Current main commit: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`  
+Latest tested runtime bundle commit: `9115f13b4021f9052a95eea66ceaa1000f134978`  
+Production deployment: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`  
 Production deployment state: **READY**  
 Production alias: `tagbound.vercel.app` → `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`
 
@@ -82,6 +82,29 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Added a push trigger limited to updates of `.github/workflows/live-smoke.yml`, so the live production suite can be run and verified without a manual workflow-dispatch action.
 - This trigger does not deploy game code and does not run on ordinary source/documentation changes.
 
+### Stamina HUD overlap fix — PR #11
+
+- Moved the stamina bar so it no longer covers the final digit of the stamina value.
+- Added desktop and landscape-mobile screenshot-pixel checks for the digits and overlap area.
+- Main CI and generated WebAssembly bundle synchronization completed.
+
+### Live production smoke rerun — PR #12
+
+- Added an explicit production base-URL diagnostic to the live-smoke workflow.
+- Re-ran production smoke against the READY deployment serving runtime bundle `9115f13`.
+- Latest main CI run #247 and live production smoke #9 both passed.
+
+### Icon-only gameplay and pause controls — PR #13 (in progress)
+
+- Replaced visible touch action labels with game-themed SVG icons.
+- Replaced the in-game pause control and pause overlay actions with icons.
+- Kept accessible labels for assistive technology without visible button text or hover titles.
+- Removed the word-based touch-help strip while retaining necessary story, objective, and status text.
+- Synchronized `web/` with the committed `dist/` files and bumped the service-worker cache to `tagbound-v26`.
+- Added browser assertions in the normal CI and live-smoke workflows.
+- Added `CONTINUATION_PROMPT.md` for recovery across interrupted conversations.
+- PR #13 CI run #248 is in progress. This change is NOT yet verified, merged, or deployed.
+
 ## Verified cloud testing
 
 - Settings and pause feature: run `45073264491` passed.
@@ -98,6 +121,9 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - PR #10 workflow change: run `45105430992` passed.
 - Live production suite: run `45105714358` passed against `https://tagbound.vercel.app`.
 - Main after PR #10 workflow merge: run `45105714359` passed, including WebAssembly build, C++ regressions, desktop/mobile browser checks and PWA artifact validation.
+- Latest main CI run #247: `45107305759` passed.
+- Latest live production smoke #9: `45107305802` passed against the READY production alias and runtime bundle `9115f13`.
+- PR #13 build/browser smoke run #248: `45121351189` was in progress at the time of this update; no pass is claimed.
 - Live smoke confirmed WebAssembly/WebGL startup, gameplay, class selection, save restoration, Settings pause/resume, touch/look input reset, ambient music pause/resume, HUD visibility, install placement, service-worker control/cache, offline reload, mobile controls and portrait rotation guidance.
 - These hosted checks do not replace physical Android playtesting.
 
@@ -105,11 +131,11 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 <badge>READY</badge>
 
-- Production deployment ID: `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`
-- Deployed runtime bundle commit: `679a6d6ae5d7b3b338e91d9cb000d47b9e2615ac`
+- Production deployment ID: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`
+- Deployed runtime bundle commit: `9115f13b4021f9052a95eea66ceaa1000f134978`
 - Production alias: `tagbound.vercel.app`
 - Vercel deployment metadata and alias lookup both confirmed the production alias points to this READY deployment.
-- The current main SHA `f778777...` contains only the live-smoke workflow trigger change after the deployed runtime bundle; no game code was changed after the deployed bundle.
+- Current main SHA: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`. The READY production deployment serves runtime bundle `9115f13b4021f9052a95eea66ceaa1000f134978`.
 - Do not create a manual deployment unless the automatic Git deployment path stops working. Keep Vercel at the free tier; no paid plan or billing changes were made.
 
 ## Remaining development work
@@ -157,7 +183,9 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 ## Exact next task
 
-1. Have the user perform the first production Android playtest now that live smoke has passed.
-2. Collect the first concrete device findings (loading/performance, controls, class weapons, Settings/pause, audio, beacon captures, boss warnings, save restore, install/offline).
-3. Prioritize and reproduce the most serious issue through GitHub-hosted code and tests.
-4. Preserve the current READY deployment until the next runtime change has passed hosted CI and a new READY production deployment is available.
+1. Finish checking PR #13 CI run `45121351189`; fix every failure and rerun the required checks.
+2. Merge PR #13 only after the hosted WebAssembly, C++ regression, browser, and PWA checks pass.
+3. Verify Vercel automatically deploys the updated committed `dist/` files, then run the live production smoke workflow against that exact READY deployment.
+4. Update this document and `CONTINUATION_PROMPT.md` with exact merge, runtime bundle, CI, live-smoke, and deployment identifiers.
+5. Have the user perform a physical Android playtest on the updated build; this has not yet been recorded.
+6. Continue gameplay balancing, boss/AI/pathfinding review, objective variety, visual/animation work, audio tuning, performance, and release verification. Do not stop after the icon-controls task.
