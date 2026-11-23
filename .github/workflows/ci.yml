@@ -885,6 +885,14 @@ jobs:
             );
             await recoveryPage.locator('#start').click();
             await recoveryPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            // Corrupt only the test fixture after gameplay has started. SaveNow must replace it
+            // with the actual in-memory city before the page reloads.
+            await recoveryPage.evaluate(() => {
+              const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
+              save.city = 4;
+              save.unlocked = 4;
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            });
             const recoveryNavigation = recoveryPage.waitForNavigation({
               waitUntil: 'domcontentloaded',
               timeout: 15000
@@ -909,8 +917,10 @@ jobs:
               attempted: !!sessionStorage.getItem('tagbound-webgl-recovery-at'),
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
-            if (!recoveryState.attempted || recoveryState.save?.city !== 0) {
-              throw new Error('WebGL context recovery did not reload with saved progress: ' + JSON.stringify(recoveryState));
+            if (!recoveryState.attempted || recoveryState.save?.city !== 0 ||
+                recoveryState.save?.unlocked !== 0 || recoveryState.save?.schemaVersion !== 1) {
+              throw new Error('WebGL context recovery did not flush the in-memory save before reloading: ' +
+                JSON.stringify(recoveryState));
             }
             await recoveryPage.locator('#start').click();
             await recoveryPage.waitForFunction(

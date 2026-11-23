@@ -241,3 +241,16 @@ Continue auditing the agreed gameplay/PWA scope for concrete uncovered edge case
 
 ### Next exact task
 Continue the remaining source/test audit for concrete issues. Prioritize gameplay defects with reproducible regressions over speculative additions or balance changes without playtest evidence. Keep all work outside `dist/` during the deployment hold.
+
+
+## Latest active continuation — 2026-11-24
+
+- Current development branch: fix/boss-arena-floor-bounds; draft PR #15 is temporarily based on main so CI can validate the accumulated source changes. Do not merge it.
+- PR #15 contains the tested boss-arena containment work: arena geometry is taken from the actual gate platform; simulation movement, knockback and charge cannot take the boss body beyond its valid floor area; boss Y is kept on the floor; five-city deterministic regressions and a read-only browser containment check are included.
+- Exact-head Actions run #320 (45269952163) passed on f97682834a3de0a98b539b2b75bac2426f218c4c, including C++ tests, WebAssembly build, PWA validation, Chromium browser/offline tests and desktop/mobile boss screenshots.
+- A WebGL context-loss recovery path and a forced Chromium context-loss test have since been added. They are not yet verified: wait for an exact-head run on the current branch head and fix failures before claiming success.
+- The black-flicker root cause remains unknown. No actual WebGL loss has been observed in available production/browser logs; context-loss recovery is a robustness measure, not proof that this is the cause.
+- Production and Vercel billing remain untouched; there are no dist/ changes. PRs #13/#14/#15 remain open and unmerged. Physical Android testing remains pending.
+
+### Next task
+Run exact-head CI for the context-loss recovery, inspect logs/artifacts, then restore PR #15's base to feat/campaign-imperial-before-spire. Continue investigating flicker with evidence; follow with the camera/movement/grounding audit. Keep the ₱0/$0 constraint and do not merge/deploy without explicit authorization.

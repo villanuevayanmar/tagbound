@@ -400,3 +400,34 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 - No C++ gameplay mechanics, campaign ordering, save schema, or progression behavior changed in these two fixes. No `dist/` files changed.
 - PR #13 remains open/unmerged; PR #14 remains open/draft/unmerged. Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
 - No merge, production deployment, Vercel deployment attempt, quota bypass, or billing change occurred. Physical Android touch and frame-time measurements remain outstanding.
+
+
+## Active development checkpoint — 2026-11-24
+
+### Boss arena containment — PR #15
+
+- Draft PR #15: https://github.com/villanuevayanmar/tagbound/pull/15, branch fix/boss-arena-floor-bounds, currently targeted at main to run the repository's pull-request CI. It is not merged.
+- The boss arena is derived from the final gate platform's actual center, top surface and dimensions. The simulated boss body is constrained by its collision radius during normal pursuit, knockback and the Gilded Charger's forward strike; boundary corrections also clear stale pursuit waypoints.
+- Deterministic C++ regressions cover all five city bosses, every cardinal edge, forced vertical knockback, pursuit toward a player outside the floor, the Gilded Charger strike, and attack recovery.
+- Exact-head run #320 (45269952163) passed on f97682834a3de0a98b539b2b75bac2426f218c4c: Emscripten/WebAssembly build, C++ gameplay suite, PWA validation and Chromium desktop/mobile/offline smoke. Its visual-review artifact was inspected at full resolution for all five boss arenas at desktop and mobile-landscape sizes.
+
+### Black flicker / WebGL resilience — investigation status
+
+- Source inspection found one application frame loop and one BeginDrawing/EndDrawing pair, with one BeginMode3D/EndMode3D pair. No per-frame model/texture loading or offscreen-render-target churn was found.
+- The repository had no explicit canvas webglcontextlost / webglcontextrestored handling. A recovery path is now present in web/index.html: it prevents the browser's default loss handling, flushes current local progress through SaveNow, displays a recovery message, and reloads after context restoration (or after an 8-second timeout). A 30-second session guard prevents repeated automatic reload loops.
+- A Chromium regression now deliberately loses/restores WebGL and checks that the game reloads and can start again. That new test and recovery code are not yet verified by exact-head CI as of this checkpoint.
+- WebGL context loss has not been observed in the existing production/Chromium logs. The recovery is a resilience improvement, not a confirmed root-cause fix for the user's intermittent black flicker. Physical Android reproduction and graphics diagnostics are still required to identify the cause.
+
+### Release and device constraints
+
+- PR #13 and PR #14 remain open/unmerged; PR #14 remains draft. PR #15 remains draft and must remain stacked on PR #14 after its exact-head CI validation.
+- Production remains the existing READY deployment; no merge, dist/ change, production deployment, quota bypass or Vercel billing change occurred during this work.
+- Physical Android touch, frame-time and flicker verification remain unperformed. Hosted Chromium is not a substitute for the user's Android device.
+- The project remains on the zero-cost path.
+
+### Next exact task
+
+1. Run and inspect full exact-head CI for the WebGL recovery change, including the forced context-loss Chromium test.
+2. Fix any failure before marking the recovery test complete.
+3. After passing, restore PR #15's base to feat/campaign-imperial-before-spire and update this checkpoint with the exact verified SHA/run.
+4. Continue the black-flicker investigation without assuming context loss is the cause; then proceed to camera orientation and movement/grounding defects.
