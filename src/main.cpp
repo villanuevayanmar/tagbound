@@ -75,6 +75,7 @@ KEEP void StartGame() {
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
 }
+KEEP void SaveNow() { Save(); }
 KEEP void SetTouch(float x,float y,int buttons) { touchX=std::clamp(x,-1.0f,1.0f); touchY=std::clamp(y,-1.0f,1.0f); touchButtons=buttons; }
 KEEP void SetLook(float x,float y) { lookX+=x; lookY+=y; }
 KEEP void ResetLook() { lookX=lookY=0; }

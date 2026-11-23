@@ -71,6 +71,49 @@ var Module={
  setStatus:text=>{const e=document.getElementById('loading');if(e)e.textContent=text||'';},
  onRuntimeInitialized:()=>document.getElementById('loading').classList.add('hidden')
 };
+const graphicsRecoveryKey='tagbound-webgl-recovery-at';
+window.TagboundGraphics={contextLosses:0,contextRestores:0,recoveryAttempted:!!sessionStorage.getItem(graphicsRecoveryKey)};
+let graphicsRecoveryTimer=0,graphicsRecoveryStarted=false;
+function recoverGraphicsContext(){
+ if(graphicsRecoveryStarted)return;
+ graphicsRecoveryStarted=true;
+ const previous=Number(sessionStorage.getItem(graphicsRecoveryKey)||0);
+ const now=Date.now();
+ if(previous&&now-previous<30000){
+  const loading=document.getElementById('loading');
+  loading.textContent='GRAPHICS RECOVERY FAILED — RELOAD TO CONTINUE';
+  loading.classList.remove('hidden');
+  return;
+ }
+ try{sessionStorage.setItem(graphicsRecoveryKey,String(now));}
+ catch(error){
+  const loading=document.getElementById('loading');
+  loading.textContent='GRAPHICS INTERRUPTED — RELOAD TO CONTINUE';
+  loading.classList.remove('hidden');
+  return;
+ }
+ window.location.reload();
+}
+Module.canvas.addEventListener('webglcontextlost',event=>{
+ event.preventDefault();
+ window.TagboundGraphics.contextLosses++;
+ const loading=document.getElementById('loading');
+ loading.textContent='RESTORING GRAPHICS…';
+ loading.classList.remove('hidden');
+ try{
+  if(Module.calledRun&&typeof Module.ccall==='function')Module.ccall('SaveNow',null,[],[]);
+ }catch(error){console.error('Could not flush TAGBOUND save after WebGL context loss.',error);}
+ graphicsRecoveryTimer=window.setTimeout(recoverGraphicsContext,8000);
+},false);
+Module.canvas.addEventListener('webglcontextrestored',()=>{
+ window.TagboundGraphics.contextRestores++;
+ window.clearTimeout(graphicsRecoveryTimer);
+ recoverGraphicsContext();
+},false);
+window.setTimeout(()=>{
+ const previous=Number(sessionStorage.getItem(graphicsRecoveryKey)||0);
+ if(previous&&Date.now()-previous>=30000)sessionStorage.removeItem(graphicsRecoveryKey);
+},31000);
 </script>
 <script src="/game.js"></script><script src="/pwa.js"></script>
 </body></html>

@@ -871,7 +871,57 @@ jobs:
             }
             await portraitContext.close();
 
-            console.log('PASS: WebAssembly runtime, WebGL, gameplay start/input/save, service-worker cache, offline reload, mobile landscape controls, and portrait rotation guidance.');
+            // Force a real WebGL context loss in an isolated session and verify recovery reloads raylib.
+            const recoveryContext = await browser.newContext({
+              viewport: { width: 844, height: 390 },
+              deviceScaleFactor: 1
+            });
+            const recoveryPage = await recoveryContext.newPage();
+            await recoveryPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await recoveryPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            await recoveryPage.locator('#start').click();
+            await recoveryPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const recoveryNavigation = recoveryPage.waitForNavigation({
+              waitUntil: 'domcontentloaded',
+              timeout: 15000
+            });
+            await recoveryPage.evaluate(() => {
+              const canvas = document.querySelector('#canvas');
+              const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+              const extension = gl?.getExtension('WEBGL_lose_context');
+              if (!extension) throw new Error('Chromium WEBGL_lose_context extension is unavailable.');
+              canvas.addEventListener('webglcontextlost', () => {
+                setTimeout(() => extension.restoreContext(), 200);
+              }, { once: true });
+              extension.loseContext();
+            });
+            await recoveryNavigation;
+            await recoveryPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            const recoveryState = await recoveryPage.evaluate(() => ({
+              attempted: !!sessionStorage.getItem('tagbound-webgl-recovery-at'),
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!recoveryState.attempted || recoveryState.save?.city !== 0) {
+              throw new Error('WebGL context recovery did not reload with saved progress: ' + JSON.stringify(recoveryState));
+            }
+            await recoveryPage.locator('#start').click();
+            await recoveryPage.waitForFunction(
+              () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                Module.ccall('IsGameUpdating', 'number', [], []) === 1,
+              null,
+              { timeout: 10000 }
+            );
+            await recoveryContext.close();
+
+            console.log('PASS: WebAssembly runtime, WebGL, context-loss recovery, gameplay start/input/save, service-worker cache, offline reload, mobile landscape controls, and portrait rotation guidance.');
           } finally {
             await browser.close();
           }
