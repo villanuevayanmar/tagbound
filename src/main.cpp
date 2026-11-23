@@ -135,6 +135,10 @@ static int TaggerWindupCount() {
         [](const Enemy& e){return e.alive&&!e.boss&&e.attackWindup>0;});
 }
 
+extern "C" {
+KEEP unsigned int GetBossWindupMask() { return BossWindupMask(); }
+}
+
 static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
