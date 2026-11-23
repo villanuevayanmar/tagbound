@@ -410,12 +410,42 @@ jobs:
                 throw new Error(label + ' did not clear held input: ' + JSON.stringify(state));
               }
             };
+            const notesBeforeBlur = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
             await restoreHeldInput(997);
             await page.evaluate(() => window.dispatchEvent(new Event('blur')));
             await assertTouchReset('Window blur');
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score did not pause when the browser lost focus.');
+            }
+            await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+            await page.waitForFunction(
+              previous => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previous,
+              notesBeforeBlur,
+              { timeout: 5000 }
+            );
+
+            const notesBeforeHidden = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
             await restoreHeldInput(996);
-            await page.evaluate(() => document.dispatchEvent(new Event('visibilitychange')));
-            await assertTouchReset('Document visibility change');
+            await page.evaluate(() => {
+              Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+              document.dispatchEvent(new Event('visibilitychange'));
+            });
+            await assertTouchReset('Document hidden');
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score did not pause when the document became hidden.');
+            }
+            await page.evaluate(() => {
+              Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+              document.dispatchEvent(new Event('visibilitychange'));
+              delete document.hidden;
+            });
+            await page.waitForFunction(
+              previous => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previous,
+              notesBeforeHidden,
+              { timeout: 5000 }
+            );
 
             // Settings must expose install only while open and pause the actual C++ simulation.
             await page.evaluate(() => {
