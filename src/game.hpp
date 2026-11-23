@@ -65,6 +65,8 @@ Vector3 QuestCheckpointFacing(int city,int quest);
 bool ReachedQuestBeacon(Vector3 position,int city,int quest);
 bool QuestRequiresHold(int city,int quest);
 float QuestHoldDuration(int city,int quest);
+bool QuestRequiresSurvival(int city,int quest);
+float QuestSurvivalDuration(int city,int quest);
 bool UpdateQuestObjective(GameState& game,float dt);
 float BossWindupDuration(int variant,bool enraged=false);
 float BossStrikeRange(int variant);

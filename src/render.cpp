@@ -373,10 +373,13 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         }
     }
     const Vector3 objectiveTarget=QuestTarget(g.city,g.quest);
-    Vector3 marker=Vector3Add(objectiveTarget,{0,g.quest<3?1.2f:1.45f,0});
-    const Color objectiveColor=g.quest<3&&QuestRequiresHold(g.city,g.quest)?Color{86,190,211,255}:(g.quest<3?GOLD:RED);
-    DrawCylinder(marker,0.38f,0.08f,2.1f,8,objectiveColor);
-    DrawSphere(Vector3Add(marker,{0,1.2f,0}),0.5f,g.quest<3?objectiveColor:MAROON);
+    const bool survivalObjective=g.quest<3&&QuestRequiresSurvival(g.city,g.quest);
+    if(!survivalObjective) {
+        Vector3 marker=Vector3Add(objectiveTarget,{0,g.quest<3?1.2f:1.45f,0});
+        const Color objectiveColor=g.quest<3&&QuestRequiresHold(g.city,g.quest)?Color{86,190,211,255}:(g.quest<3?GOLD:RED);
+        DrawCylinder(marker,0.38f,0.08f,2.1f,8,objectiveColor);
+        DrawSphere(Vector3Add(marker,{0,1.2f,0}),0.5f,g.quest<3?objectiveColor:MAROON);
+    }
 
     const Player& player=g.player;
     static float animationClock=0.0f;
@@ -492,7 +495,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     if(g.player.escapeSkill) DrawText(g.player.dashCooldown<=0?"DASH READY":TextFormat("DASH %.1fs",g.player.dashCooldown),24,73,10,GOLD);
     else DrawText("DASH UNLOCKS AT LVL 3",24,73,10,GRAY);
     if(g.player.wallRunning) DrawText("WALL RUN",180,73,10,ORANGE);
-    if(!g.finished) {
+    if(!g.finished&&!survivalObjective) {
         Vector3 toward=Vector3Subtract(objectiveTarget,g.player.position);
         toward.y=0;
         Vector3 facing=g.player.facing;
@@ -541,12 +544,16 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawText(TextFormat("%s  |  %s",CityName(g.city),WeaponName(g.player.weapon)),24,objectiveHudY+9,16,GOLD);
     const bool holdObjective=g.quest<3&&QuestRequiresHold(g.city,g.quest);
     DrawText(g.quest<3?
-        TextFormat("QUEST %d/3  -  %s",g.quest+1,holdObjective?"HOLD THE BEACON":"REACH THE BEACON"):
+        TextFormat("QUEST %d/3  -  %s",g.quest+1,holdObjective?"HOLD THE BEACON":(survivalObjective?"SURVIVE THE PURSUIT":"REACH THE BEACON")):
         TextFormat("BOSS GATE OPEN  -  %s",BossName(g.city)),24,objectiveHudY+34,14,WHITE);
     int taggers=(int)std::count_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e){return e.alive&&!e.boss;});
     int targetDistance=(int)std::round(Vector3Distance(g.player.position,objectiveTarget));
     if(holdObjective) {
         DrawText(TextFormat("CAPTURE %.1f/%.1fs  |  TAGGERS %d",g.beaconHoldTime,QuestHoldDuration(g.city,g.quest),taggers),
+                 24,objectiveHudY+54,12,Color{126,215,231,255});
+    } else if(survivalObjective) {
+        const float remaining=std::max(0.0f,QuestSurvivalDuration(g.city,g.quest)-g.beaconHoldTime);
+        DrawText(TextFormat("SURVIVE %.1fs  |  TAGGERS %d",remaining,taggers),
                  24,objectiveHudY+54,12,Color{126,215,231,255});
     } else {
         DrawText(g.quest<3?TextFormat("BEACON %dm  |  TAGGERS %d  |  WAVE %ds",targetDistance,taggers,std::max(0,(int)std::ceil(g.questLimit-g.questTime))):TextFormat("BOSS %dm  |  TAGGERS %d",targetDistance,taggers),

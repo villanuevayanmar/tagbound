@@ -85,6 +85,8 @@ KEEP int GetQuestProgress() { return game.quest; }
 KEEP int IsCurrentQuestHoldObjective() { return QuestRequiresHold(game.city,game.quest)?1:0; }
 KEEP float GetBeaconHoldProgress() { return game.beaconHoldTime; }
 KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,game.quest); }
+KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
+KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
 KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});

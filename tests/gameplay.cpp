@@ -71,12 +71,25 @@ int main() {
         {true,false,true},
         {false,true,false}
     };
+    const bool survivalStages[5][3]={
+        {false,false,false},
+        {false,true,false},
+        {false,true,false},
+        {false,false,false},
+        {true,false,false}
+    };
     for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
         assert(QuestRequiresHold(city,quest)==holdStages[city][quest]);
+        assert(QuestRequiresSurvival(city,quest)==survivalStages[city][quest]);
+        assert(!(holdStages[city][quest]&&survivalStages[city][quest]));
         if(holdStages[city][quest]) {
             float duration=QuestHoldDuration(city,quest);
             assert(duration>=2.5f&&duration<=4.0f);
         } else assert(near(QuestHoldDuration(city,quest),0.0f));
+        if(survivalStages[city][quest]) {
+            float duration=QuestSurvivalDuration(city,quest);
+            assert(duration>=18.0f&&duration<=22.0f);
+        } else assert(near(QuestSurvivalDuration(city,quest),0.0f));
     }
 
     // Reach objectives complete as soon as the beacon radius is entered.
@@ -103,6 +116,27 @@ int main() {
     assert(!UpdateQuestObjective(holdObjective,holdDuration*0.5f));
     assert(UpdateQuestObjective(holdObjective,holdDuration*0.5f+0.01f));
     assert(near(holdObjective.beaconHoldTime,0.0f));
+
+    // Survival objectives progress away from the beacon and finish only after their timer.
+    const int survivalCities[3]={1,2,4};
+    const int survivalQuests[3]={1,1,0};
+    for(int i=0;i<3;i++) {
+        GameState survivalObjective;
+        survivalObjective.city=survivalCities[i];
+        BuildCity(survivalObjective);
+        SetQuestProgress(survivalObjective,survivalQuests[i]);
+        const float duration=QuestSurvivalDuration(survivalObjective.city,survivalObjective.quest);
+        assert(QuestRequiresSurvival(survivalObjective.city,survivalObjective.quest));
+        assert(!QuestRequiresHold(survivalObjective.city,survivalObjective.quest));
+        assert(near(QuestHoldDuration(survivalObjective.city,survivalObjective.quest),0.0f));
+        survivalObjective.player.position={-30,0.3f,30};
+        assert(!UpdateQuestObjective(survivalObjective,duration*0.4f));
+        assert(near(survivalObjective.beaconHoldTime,duration*0.4f));
+        assert(!UpdateQuestObjective(survivalObjective,duration*0.5f));
+        assert(UpdateQuestObjective(survivalObjective,duration*0.1f+0.01f));
+        assert(near(survivalObjective.beaconHoldTime,0.0f));
+    }
+
 
     // Changing the quest or rebuilding the city never carries old capture time forward.
     holdObjective.beaconHoldTime=0.9f;

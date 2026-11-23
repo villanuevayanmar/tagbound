@@ -48,9 +48,38 @@ float QuestHoldDuration(int city,int quest) {
     };
     return city>=0&&city<5&&quest>=0&&quest<3?durations[city][quest]:0.0f;
 }
+bool QuestRequiresSurvival(int city,int quest) {
+    static const bool survival[5][3]={
+        {false,false,false},
+        {false,true,false},
+        {false,true,false},
+        {false,false,false},
+        {true,false,false}
+    };
+    return city>=0&&city<5&&quest>=0&&quest<3?survival[city][quest]:false;
+}
+float QuestSurvivalDuration(int city,int quest) {
+    static const float durations[5][3]={
+        {0.0f,0.0f,0.0f},
+        {0.0f,18.0f,0.0f},
+        {0.0f,20.0f,0.0f},
+        {0.0f,0.0f,0.0f},
+        {22.0f,0.0f,0.0f}
+    };
+    return city>=0&&city<5&&quest>=0&&quest<3?durations[city][quest]:0.0f;
+}
 bool UpdateQuestObjective(GameState& g,float dt) {
     if(g.quest<0||g.quest>=3) {
         g.beaconHoldTime=0.0f;
+        return false;
+    }
+    if(QuestRequiresSurvival(g.city,g.quest)) {
+        const float duration=QuestSurvivalDuration(g.city,g.quest);
+        g.beaconHoldTime=std::min(duration,g.beaconHoldTime+std::max(0.0f,dt));
+        if(g.beaconHoldTime+0.0001f>=duration) {
+            g.beaconHoldTime=0.0f;
+            return true;
+        }
         return false;
     }
     if(!QuestRequiresHold(g.city,g.quest)) {
