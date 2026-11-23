@@ -55,6 +55,15 @@ Commit meaningful work before risky or interruption-prone operations and after v
 - Physical Android testing has not been recorded. The user can test the deployed game on Android; no laptop or local commands may be requested.
 - The existing project is still described by its README as an early playable foundation with substantial gameplay, visual, animation, quest, balancing, and physical-device verification work remaining.
 
+## Latest verified continuation checkpoint — 2026-11-23
+
+- PR #13 remains open and unmerged: https://github.com/villanuevayanmar/tagbound/pull/13
+- Run #254 (45121695420) for commit 313c9f97aba3e7144c0f53fbe4e15ff7e6290474 completed with failure. The WebAssembly/C++ build job passed; the browser-smoke job failed at the class-specific Bow visibility assertion because .action{display:grid} overrode the browser's default [hidden] display behavior. Vanguard incorrectly displayed the Bow action even though its saved weapon mapping was still Sword.
+- Root cause fixed without weakening tests: added .action[hidden]{display:none} to web/styles.css and synchronized dist/styles.css. Commits: 65909d7bea9c2820bb89665ad63d806e9dbd6c14 and 0206ec4534b856e9955967ec204f5e60211e974b.
+- DEVELOPMENT_STATUS.md was updated with the exact failure evidence and correction.
+- Immediate next action: inspect the latest PR head and its matching newest Actions run after the CSS fix and documentation commits. Confirm that the fixed CSS exists identically in web/styles.css and dist/styles.css. Wait for and inspect all build/browser jobs. Do not merge until the latest exact-head run passes. If another failure occurs, inspect its job logs and fix the underlying cause.
+- PR #13 is not merged; icon-only controls are not in production. Existing production remains at the previously verified runtime until a successful merge and automatic deployment.
+
 ## Immediate continuation at the last checkpoint
 
 Checkpoint note: the user explicitly asked to stop development for now and create a continuation prompt. No merge or production release of PR #13 has been authorized or performed. Resume only when the user starts another development session.
