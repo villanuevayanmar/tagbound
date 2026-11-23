@@ -698,6 +698,28 @@ int main() {
     UpdatePursuit(game,0.45f);
     assert(near(game.player.health,89.0f));
 
+    // A pursuer must route around a solid rooftop wall instead of stalling at it.
+    GameState pathing;
+    pathing.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    pathing.platforms.push_back({{0,1.5f,0},{0.4f,3.0f,3.0f},GRAY});
+    pathing.player.position={0,0.3f,-6.0f};
+    pathing.player.invulnerable=1000.0f;
+    pathing.enemies.push_back({{0,0.3f,6.0f},40,40,2.4f,0,false,true});
+    const float blockedRouteDistance=Vector3Distance(pathing.player.position,pathing.enemies.front().position);
+    for(int frame=0;frame<240;frame++) UpdatePursuit(pathing,0.05f);
+    const Enemy& routedPursuer=pathing.enemies.front();
+    const float routedDistance=Vector3Distance(pathing.player.position,routedPursuer.position);
+    assert(routedDistance<3.0f);
+    assert(routedDistance<blockedRouteDistance-7.0f);
+    const Platform& rooftopWall=pathing.platforms[1];
+    const bool overlapsX=routedPursuer.position.x+0.42f>rooftopWall.position.x-rooftopWall.size.x*0.5f &&
+                         routedPursuer.position.x-0.42f<rooftopWall.position.x+rooftopWall.size.x*0.5f;
+    const bool overlapsY=routedPursuer.position.y+1.72f>rooftopWall.position.y-rooftopWall.size.y*0.5f+0.05f &&
+                         routedPursuer.position.y<rooftopWall.position.y+rooftopWall.size.y*0.5f-0.05f;
+    const bool overlapsZ=routedPursuer.position.z+0.42f>rooftopWall.position.z-rooftopWall.size.z*0.5f &&
+                         routedPursuer.position.z-0.42f<rooftopWall.position.z+rooftopWall.size.z*0.5f;
+    assert(!(overlapsX&&overlapsY&&overlapsZ));
+
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
     game.player.facing = {0,0,1};

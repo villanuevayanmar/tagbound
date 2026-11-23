@@ -191,3 +191,12 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Legacy save migration commit `a8d16889816f6681f2163646497f3fa236dd7a3c` passed CI run #272 (`45133035082`): WebAssembly compile, C++ gameplay tests, PWA validation, and browser smoke all succeeded.
 - Survival feature commit `e498d73408385aaf71c5055c57c25bae676275a9` contains implementation and C++ regressions; browser workflow assertions are being added in the following commit and need a new exact-head CI run.
 - No PR merge or Vercel deployment was performed; the user's deployment hold remains active.
+
+
+### Rooftop pursuit navigation regression — PR #14 development branch
+
+- Added a C++ simulation regression with a solid wall blocking direct line of sight. It requires a pursuer to reach the player by following a waypoint around the wall and verifies it does not finish embedded in the obstacle.
+- This fills a documented test gap; existing tests already covered line-of-sight attack prevention but not successful waypoint traversal.
+- Survival-objective implementation and browser assertions passed run #274 (`45133786317`) for exact head `095fb05665f6b100fb3c9f5db0b5d18d05ca6d82`.
+- The navigation regression commit below has a new CI run pending. If it fails, inspect the actual C++ test output and correct the navigation behavior at its source.
+- PR #13 and #14 remain open/unmerged. Production remains on the previously verified READY deployment; no Vercel deploy has been attempted.
