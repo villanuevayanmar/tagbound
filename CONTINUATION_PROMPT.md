@@ -87,3 +87,12 @@ Current production deployment was inspected through Vercel and is **READY**:
 - Corrected the initial markup by adding the native `hidden` attribute to the Bow button in `web/index.html` and `dist/index.html`; the existing JavaScript reveals it only for Skirmisher. CSS `.action[hidden]{display:none}` remains in both stylesheets.
 - Commits: c763d3a0058001b77053a2d9caff41b45ea4b86c and 34966f568602b272b5878ade4ec5ce0699ac4f4a. Development status update commit: 0c31620f08ec58c71f9df57992230528d1391c59.
 - Immediate next task: inspect the newest PR #13 Actions run for the latest branch head. Confirm Bow hidden property is false only for Skirmisher and all desktop/mobile checks pass. Do not merge until latest exact-head CI passes. Then verify deployment and continue remaining game scope.
+
+## Latest verified investigation — PR #13 PWA initialization (2026-11-23)
+
+- PR #13: https://github.com/villanuevayanmar/tagbound/pull/13 (open and unmerged).
+- Run #261 / ID `45130001937`, head `8b47a3558393577c2fea6310d6c5de4a424d878f`: WebAssembly build and C++ gameplay regression suite passed; browser smoke timed out waiting for the per-class page's browser-control initialization.
+- The timeout exposed a real application defect. `web/pwa.js` called `soundButtons.forEach(...)` even though no `soundButtons` variable was defined. The resulting ReferenceError stopped the rest of the IIFE, so class selection, Start, touch, and pause handlers were not installed.
+- Fixed listener registration in both `web/pwa.js` and `dist/pwa.js` by attaching to the two declared sound buttons via `[soundToggle,settingsSoundToggle].filter(Boolean)`.
+- Updated both service workers to cache version `tagbound-v27`, synchronized both HTML application-version metadata values to v27, and changed normal CI and live-smoke assertions to require v27.
+- Immediate next action: fetch the current PR head and the latest Actions run for that exact SHA. Confirm the browser no longer times out at initialization; investigate any further runtime/test failures from logs and fix their actual causes. Keep PR #13 unmerged and production unchanged until the user explicitly authorizes a production-triggering merge/deploy.
