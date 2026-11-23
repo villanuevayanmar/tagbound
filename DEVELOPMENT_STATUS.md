@@ -431,3 +431,37 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 2. Fix any failure before marking the recovery test complete.
 3. After passing, restore PR #15's base to feat/campaign-imperial-before-spire and update this checkpoint with the exact verified SHA/run.
 4. Continue the black-flicker investigation without assuming context loss is the cause; then proceed to camera orientation and movement/grounding defects.
+
+
+## Verified checkpoint — 2026-11-24, boss containment and WebGL recovery
+
+### Boss arenas
+
+- Draft PR #15: https://github.com/villanuevayanmar/tagbound/pull/15, branch fix/boss-arena-floor-bounds. During this exact-head verification pass, PR #15 is temporarily targeted at main so the repository's pull_request workflow runs; it will be restored to feat/campaign-imperial-before-spire after validation.
+- Each arena derives its center, floor height and half-extents from the visible final gate platform. Boss simulation position is constrained by its body radius during pursuit, knockback and Gilded Charger strike movement. Boundary correction also clears stale path waypoints.
+- Deterministic C++ regression coverage checks all five city bosses, all four boundary directions, vertical knockback, player pursuit outside the platform, Gilded Charger charge and attack recovery.
+
+### WebGL context-loss recovery
+
+- Added canvas webglcontextlost / webglcontextrestored handling in web/index.html. The loss event is cancelled so the browser may restore the context; TAGBOUND flushes the current in-memory save through the exported SaveNow function, displays a recovery message and reloads after restoration. An 8-second fallback reload handles a context that does not restore; a 30-second session guard prevents repeated reload loops.
+- Chromium now forces a real WebGL loss through WEBGL_lose_context, triggers restoration, verifies the page reloads, and starts gameplay again. Before loss, the test deliberately changes only its localStorage fixture to city/unlocked 4; after recovery it verifies SaveNow restored the actual in-memory city/unlocked values (0), schemaVersion 1, and gameplay can start.
+- Run #321 (45271918529) exposed a real defect: the first recovery implementation gated SaveNow on Module.calledRun, which is not defined by the generated Emscripten runtime. The page reloaded but the sentinel save remained. The guard was removed; the call now uses the exported Module.ccall function when available.
+- Exact-head run #322 (45273216472) passed on 53fcaf598804963c1602c3acf852e7bcaf23482b. Build job: Emscripten/WebAssembly compile, C++ gameplay regressions and PWA validation all passed. Browser-smoke job: Chromium runtime, desktop/mobile checks, offline cache and the forced WebGL-loss/save-flush/reload/restart test all passed. PR-only publish-dist was skipped.
+
+### Flicker diagnosis remains open
+
+- Source inspection found a single application frame loop and one BeginDrawing/EndDrawing pair per frame, with one BeginMode3D/EndMode3D pair. No per-frame model/texture creation or offscreen render-target churn was found.
+- Context loss is now handled and tested, but no context-loss event has been observed in the previously available production/Chromium logs. This is a recovery improvement, not proof that context loss caused the user's intermittent black flicker. The actual Android symptom still needs physical-device diagnostics.
+
+### Release and device state
+
+- PR #13 and PR #14 remain open/unmerged; PR #14 is draft. PR #15 remains draft and is being stacked on PR #14 after this exact-head CI pass.
+- No dist/ file changed. The PR-only publish-dist step was skipped. Vercel shows no deployment for the development branch.
+- Production alias tagbound.vercel.app remains READY on deployment dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ, runtime commit 9115f13b4021f9052a95eea66ceaa1000f134978. No merge, release, deployment, quota bypass or billing change occurred.
+- Physical Android input, performance and black-flicker behavior remain unverified. The project remains on the zero-cost path.
+
+### Next exact task
+
+1. Restore PR #15's base to feat/campaign-imperial-before-spire and confirm the stacked diff/mergeability.
+2. Continue P1 camera orientation: current movement is camera-relative, but camera yaw is changed by look input and is not automatically aligned to the character's movement-facing direction. Add a deliberate follow/override model and deterministic tests before tuning movement acceleration and grounding.
+3. Continue the flicker investigation without assuming the context-loss path is the root cause; collect physical Android evidence only after an authorized release.

@@ -254,3 +254,17 @@ Continue the remaining source/test audit for concrete issues. Prioritize gamepla
 
 ### Next task
 Run exact-head CI for the context-loss recovery, inspect logs/artifacts, then restore PR #15's base to feat/campaign-imperial-before-spire. Continue investigating flicker with evidence; follow with the camera/movement/grounding audit. Keep the ₱0/$0 constraint and do not merge/deploy without explicit authorization.
+
+
+## Verified continuation checkpoint — 2026-11-24, TAGBOUND arena and graphics recovery
+
+- Current feature branch: fix/boss-arena-floor-bounds. Draft PR #15 is temporarily based on main for exact-head CI; restore it to feat/campaign-imperial-before-spire after the documentation-validation run.
+- Boss arenas now derive from actual gate-floor geometry. The simulated boss body stays within collision-radius-adjusted bounds and on the floor through pursuit, knockback and Gilded Charger charge movement. All five boss variants and boundary cases have C++ regression coverage.
+- WebGL context-loss recovery is implemented in web/index.html. The lost event is cancelled, SaveNow flushes current local progress, and the page reloads after restoration or an 8-second fallback. A 30-second session guard prevents automatic reload loops.
+- CI deliberately triggers WEBGL_lose_context, restores it, checks that the actual in-memory save overwrites a deliberately corrupted test fixture, then verifies reload and gameplay restart.
+- Run #321 failed because Module.calledRun was not present in the generated Emscripten runtime, so the save-flush guard skipped SaveNow. That guard was removed. Run #322 (45273216472) passed on exact head 53fcaf598804963c1602c3acf852e7bcaf23482b: C++ gameplay tests, WebAssembly build, PWA validation, Chromium desktop/mobile/offline smoke and forced context-loss/save/reload/restart.
+- The intermittent black-flicker root cause remains unconfirmed. Context-loss handling is a verified resilience feature, not proof the symptom is caused by context loss. No Android device testing has occurred.
+- Production remains READY on the existing main deployment; no merge, dist/ change, release deployment, quota bypass or billing change has occurred. PRs #13/#14/#15 remain open/unmerged. Zero-cost constraints remain mandatory.
+
+### Next exact task
+Restore PR #15's base to PR #14 after the full current-head CI. Then continue the P1 camera follow/orientation fix: preserve the existing camera-relative control scheme, add a predictable camera-follow rule with manual-look override, reset camera state for a new run, and write tests for yaw, facing and movement. Follow with movement acceleration/deceleration, grounding and parkour edge cases. Continue investigating flicker with evidence rather than assuming the new recovery path is its root cause.
