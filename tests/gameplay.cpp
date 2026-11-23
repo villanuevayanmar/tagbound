@@ -280,15 +280,18 @@ int main() {
                     input.sprint=true;
                 }
                 input.jump=frame==0;
+                if(city==3&&segment==0&&frame<12)
+                    std::cout << "ROUTE PRE " << frame << " jump=" << input.jump
+                              << " grounded=" << routeGame.player.grounded
+                              << " class=" << (int)routeGame.player.playerClass
+                              << " stamina=" << routeGame.player.stamina << std::endl;
                 UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
-                if(city==3&&segment==0&&frame<30) {
-                    routeTrace += std::to_string(frame)+": "+std::to_string(routeGame.player.position.x)+","+
-                        std::to_string(routeGame.player.position.y)+","+
-                        std::to_string(routeGame.player.position.z)+" vy="+
-                        std::to_string(routeGame.player.velocity.y)+" grounded="+
-                        std::to_string(routeGame.player.grounded)+" stamina="+
-                        std::to_string(routeGame.player.stamina)+"\\n";
-                }
+                if(city==3&&segment==0&&frame<12)
+                    std::cout << "ROUTE POST " << frame << " pos=" << routeGame.player.position.x
+                              << "," << routeGame.player.position.y << "," << routeGame.player.position.z
+                              << " vel=" << routeGame.player.velocity.x << "," << routeGame.player.velocity.y
+                              << "," << routeGame.player.velocity.z << " grounded=" << routeGame.player.grounded
+                              << " wall=" << routeGame.player.wallRunning << std::endl;
                 if(!routeGame.player.grounded) airborne=true;
                 const bool insideTarget=std::fabs(routeGame.player.position.x-target.x)<targetHalf-0.2f &&
                                         std::fabs(routeGame.player.position.z-target.z)<targetHalf-0.2f;
