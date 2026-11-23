@@ -260,10 +260,9 @@ int main() {
             routeGame.player.grounded=true;
             routeGame.player.stamina=100.0f;
 
+            // BuildCity spawns the player grounded slightly above the roof collision top.
+            // A zero-delta movement update would clear grounded before the jump input.
             Camera3D routeCamera=camera;
-            UpdateMovement(routeGame,Controls{},routeCamera,0.0f);
-            routeGame.player.grounded=true;
-            routeGame.player.velocity={0,0,0};
 
             const float targetHalf=segment==3?4.0f:2.5f;
             bool airborne=false;
@@ -274,15 +273,10 @@ int main() {
                 Controls input{};
                 if(remaining>0.25f) {
                     const Vector3 desired=Vector3Scale(toTarget,1.0f/remaining);
-                    Vector3 forward={routeCamera.target.x-routeGame.player.position.x,0,
-                                     routeCamera.target.z-routeGame.player.position.z};
-                    if(Vector3Length(forward)>0.001f) {
-                        forward=Vector3Normalize(forward);
-                        const Vector3 right={forward.z,0,-forward.x};
-                        input.move.x=Vector3DotProduct(desired,right);
-                        input.move.y=Vector3DotProduct(desired,forward);
-                        input.sprint=true;
-                    }
+                    // The test leaves camera yaw at its default +Z orientation.
+                    input.move.x=desired.x;
+                    input.move.y=desired.z;
+                    input.sprint=true;
                 }
                 input.jump=frame==0;
                 UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
