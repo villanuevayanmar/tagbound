@@ -140,8 +140,8 @@ During a run, tap the pause icon in the top HUD row to open Settings. The sound 
 
 ### Touch
 
-- Left joystick: move
-- Right side of the screen: swipe to look
+- Left joystick: move relative to the camera
+- Right side of the screen: swipe to look; when movement stops, the camera smoothly follows the character's facing direction. A manual swipe temporarily overrides automatic follow.
 - Gameplay actions are icon-only and have accessible labels; the Bow icon appears only for Skirmisher
 - Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
 - Slide: short speed boost while grounded; hold it through a hard landing to roll forward; while hanging, slide or push down on the joystick to drop

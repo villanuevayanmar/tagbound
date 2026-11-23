@@ -268,3 +268,17 @@ Run exact-head CI for the context-loss recovery, inspect logs/artifacts, then re
 
 ### Next exact task
 Restore PR #15's base to PR #14 after the full current-head CI. Then continue the P1 camera follow/orientation fix: preserve the existing camera-relative control scheme, add a predictable camera-follow rule with manual-look override, reset camera state for a new run, and write tests for yaw, facing and movement. Follow with movement acceleration/deceleration, grounding and parkour edge cases. Continue investigating flicker with evidence rather than assuming the new recovery path is its root cause.
+
+
+## Latest verified continuation — 2026-11-24, camera orientation
+
+- Current camera branch: fix/camera-facing-follow, draft PR #16, temporarily targeting main for the repository's pull_request CI. After its final exact-head CI, retarget it to fix/boss-arena-floor-bounds (PR #15). PR #15 is draft and stacked on PR #14.
+- Camera-relative movement remains the control model. When movement stops and the player is not aiming, camera yaw smoothly follows the character's last facing direction after the 1.2-second manual-look override. Touch/mouse look remains responsive and takes priority during the override.
+- ResetCamera initializes yaw from the restored spawn/checkpoint facing, resets pitch and clears manual-look state. StartGame applies this after restoring the player position/facing.
+- Regression tests cover reset, strafe facing, camera-relative controls, idle follow, manual-look override and follow resumption. Existing rooftop route tests now derive joystick input from the live camera basis rather than assuming a fixed world-aligned camera.
+- Exact-head run #327 (45276625519) passed on 015c6013c5db740729f33d96789a7ed2eccb5c7f: C++ gameplay tests, WebAssembly build, PWA validation and Chromium desktop/mobile/offline smoke. Visual artifacts for all five boss arenas were reviewed at desktop resolution; mobile-landscape gameplay and Spire boss captures were also reviewed.
+- PR #15's boss containment and WebGL context-loss save/reload recovery passed exact-head run #322 (45273216472), with docs head revalidated by run #323 (45274447641). Black-flicker cause remains unconfirmed; no Android test has occurred.
+- Production is unchanged and READY on the older main runtime. No dist output, merge, deploy, Vercel billing change or quota workaround was made. All services remain zero-cost.
+
+### Next task
+After the documentation/control README update passes exact-head CI, stack PR #16 on PR #15 and check the clean stacked diff. Continue with movement acceleration/deceleration, air control, jump/landing and parkour grounding/collision; preserve existing routes and add deterministic regressions. Keep physical Android limitations and the still-unconfirmed black flicker cause explicit.

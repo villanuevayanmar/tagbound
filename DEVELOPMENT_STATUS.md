@@ -465,3 +465,28 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 1. Restore PR #15's base to feat/campaign-imperial-before-spire and confirm the stacked diff/mergeability.
 2. Continue P1 camera orientation: current movement is camera-relative, but camera yaw is changed by look input and is not automatically aligned to the character's movement-facing direction. Add a deliberate follow/override model and deterministic tests before tuning movement acceleration and grounding.
 3. Continue the flicker investigation without assuming the context-loss path is the root cause; collect physical Android evidence only after an authorized release.
+
+
+## Verified checkpoint — 2026-11-24, camera follow and arena/graphics recovery
+
+### Third-person camera — PR #16
+
+- Draft PR #16: https://github.com/villanuevayanmar/tagbound/pull/16, branch fix/camera-facing-follow. Its current CI base is main; after exact-head verification it will be retargeted to PR #15 (fix/boss-arena-floor-bounds), which is itself stacked on PR #14.
+- Kept camera-relative controls: joystick movement is resolved against camera forward/right. Character facing changes with intended movement/aim direction.
+- When movement stops and there is no aim or active manual-look override, camera yaw eases toward the character's last facing direction using shortest-angle interpolation. Manual mouse/touch look gets a 1.2-second priority window so automatic follow does not fight a swipe.
+- ResetCamera derives the initial camera yaw from the restored player's spawn facing, restores the default pitch and clears the manual-look timer. StartGame calls it after the player spawn/checkpoint is restored.
+- C++ regression tests cover initial camera alignment, camera-relative strafe, idle follow after release, manual-look override, follow resumption and reset. The rooftop route-transfer tests now compute their movement input in the camera's current basis, preserving the declared camera-relative control scheme.
+- Exact-head run #327 (45276625519) passed on 015c6013c5db740729f33d96789a7ed2eccb5c7f: Emscripten/WebAssembly compile, full C++ gameplay regression suite, PWA validation, Chromium desktop/mobile smoke and offline-cache checks. Full-resolution browser visual artifacts were inspected for all five boss arenas at desktop and for gameplay plus Spire boss at mobile landscape.
+
+### Previously verified foundations
+
+- PR #15 boss-arena containment and WebGL context-loss recovery remain in draft, stacked on PR #14. Exact-head run #322 (45273216472) passed the simulated WebGL loss/restore, save flush, reload and gameplay restart; PR #15's docs head was revalidated by run #323 (45274447641).
+- The black-flicker root cause remains unknown. WebGL context-loss recovery is tested resilience, not proof that context loss caused the reported symptom.
+- Production alias remains READY on deployment dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ, runtime commit 9115f13b4021f9052a95eea66ceaa1000f134978. No dist/ changes, merge, deployment, billing change or quota workaround occurred.
+- Physical Android camera, flicker, touch and performance checks remain unverified. Chromium visual artifacts are not device testing.
+
+### Next exact task
+
+1. Run exact-head CI after these documentation/control-description updates, then stack PR #16 on PR #15 and verify both PR diffs/mergeability.
+2. Continue P1 movement and parkour grounding: acceleration/deceleration, turn response, sprint/air control, jump and landing consistency, ledge/vault/climb transitions and collision/visual alignment. Add deterministic tests before tuning.
+3. Keep investigating flicker with evidence and obtain physical Android observations only after an authorized release. Continue toward the remaining approved scope (medieval-fantasy city layout, floor/zone encounters, separate stamina/mana, stat/skill milestones, fog of war, guaranteed boss keys and performance-based loot) in testable increments.
