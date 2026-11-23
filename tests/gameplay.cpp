@@ -172,6 +172,71 @@ int main() {
         assert(near(BossStrikeRange(variant),bossRanges[variant]));
     }
 
+    // Boss arena collision bounds are derived from the visible final gate floor.
+    // Pursuit, knockback, charge movement and attack phases must keep every boss grounded.
+    for(int city=0;city<5;city++) {
+        GameState arenaGame;
+        arenaGame.city=city;
+        BuildCity(arenaGame);
+        assert(!arenaGame.bossArena.active);
+        arenaGame.enemies.clear();
+        SetQuestProgress(arenaGame,3);
+        assert(arenaGame.bossArena.active);
+        const Vector3 gate=QuestTarget(city,3);
+        assert(near(arenaGame.bossArena.center.x,gate.x));
+        assert(near(arenaGame.bossArena.center.y,gate.y));
+        assert(near(arenaGame.bossArena.center.z,gate.z));
+        assert(near(arenaGame.bossArena.halfExtents.x,4.0f));
+        assert(near(arenaGame.bossArena.halfExtents.y,4.0f));
+        assert(near(arenaGame.bossArena.floorY,gate.y));
+        assert(arenaGame.enemies.size()==1&&arenaGame.enemies.front().boss);
+        Enemy* arenaBoss=&arenaGame.enemies.front();
+        assert(BossArenaContains(arenaGame,*arenaBoss));
+        arenaGame.player.position={gate.x+30.0f,gate.y,gate.z+30.0f};
+        const Vector3 pushes[4]={{1,0,0},{-1,0,0},{0,0,1},{0,0,-1}};
+        for(const Vector3 push:pushes) {
+            arenaBoss->position={
+                gate.x+(push.x>0?3.30f:(push.x<0?-3.30f:0.0f)),
+                gate.y+3.0f,
+                gate.z+(push.z>0?3.30f:(push.z<0?-3.30f:0.0f))
+            };
+            arenaBoss->stunTime=1.0f;
+            arenaBoss->knockback=Vector3Scale(push,100.0f);
+            UpdatePursuit(arenaGame,0.1f);
+            assert(BossArenaContains(arenaGame,*arenaBoss));
+        }
+        // A boss pursuing a player outside the platform cannot walk off its floor.
+        arenaBoss->stunTime=0.0f;
+        arenaBoss->phase=BossPhase::Hunt;
+        arenaBoss->position={gate.x+3.30f,gate.y,gate.z};
+        arenaGame.player.position={gate.x+18.0f,gate.y,gate.z};
+        UpdatePursuit(arenaGame,0.1f);
+        assert(BossArenaContains(arenaGame,*arenaBoss));
+
+        // The Gilded Charger is the only boss with forward strike movement.
+        if(city==1) {
+            arenaBoss->variant=1;
+            arenaBoss->phase=BossPhase::Strike;
+            arenaBoss->phaseTime=0.0f;
+            arenaBoss->strikeDirection={1,0,0};
+            arenaBoss->strikeOrigin=arenaBoss->position;
+            arenaBoss->position={gate.x+3.30f,gate.y,gate.z};
+            UpdatePursuit(arenaGame,0.1f);
+            assert(BossArenaContains(arenaGame,*arenaBoss));
+        }
+        // Resolve each city's attack phase at the boundary, then verify recovery is still grounded.
+        arenaBoss->variant=city;
+        arenaBoss->phase=BossPhase::Strike;
+        arenaBoss->phaseTime=2.0f;
+        arenaBoss->position={gate.x+3.30f,gate.y+2.0f,gate.z};
+        arenaGame.player.position={gate.x+30.0f,gate.y,gate.z+30.0f};
+        UpdatePursuit(arenaGame,0.05f);
+        assert(arenaBoss->phase==BossPhase::Recover);
+        assert(BossArenaContains(arenaGame,*arenaBoss));
+        SetQuestProgress(arenaGame,2);
+        assert(!arenaGame.bossArena.active);
+    }
+
     // Each class has exactly one assigned weapon.
     assert(ClassWeapon(PlayerClass::Vanguard) == Weapon::Sword);
     assert(ClassWeapon(PlayerClass::Skirmisher) == Weapon::Bow);

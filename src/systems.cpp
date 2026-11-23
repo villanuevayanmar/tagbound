@@ -115,6 +115,23 @@ static bool OverlapsWall(Vector3 feet,const Platform& b,float radius=0.34f,float
     bool y=feet.y+height>b.position.y-b.size.y*0.5f+0.05f && feet.y<b.position.y+b.size.y*0.5f-0.05f;
     return x&&z&&y;
 }
+static void ConstrainBossToArena(const GameState& g,Enemy& e) {
+    if(!e.boss||!g.bossArena.active) return;
+    constexpr float radius=0.62f;
+    const BossArena& arena=g.bossArena;
+    const float minX=arena.center.x-arena.halfExtents.x+radius;
+    const float maxX=arena.center.x+arena.halfExtents.x-radius;
+    const float minZ=arena.center.z-arena.halfExtents.y+radius;
+    const float maxZ=arena.center.z+arena.halfExtents.y-radius;
+    const float x=std::clamp(e.position.x,minX,maxX);
+    const float z=std::clamp(e.position.z,minZ,maxZ);
+    if(x!=e.position.x||z!=e.position.z||e.position.y!=arena.floorY)
+        e.hasPursuitWaypoint=false;
+    e.position.x=x;
+    e.position.y=arena.floorY;
+    e.position.z=z;
+}
+
 static void MoveEnemy(GameState& g,Enemy& e,Vector3 delta) {
     const float radius=e.boss?0.62f:0.42f;
     const float height=e.boss?2.2f:1.72f;
@@ -130,6 +147,7 @@ static void MoveEnemy(GameState& g,Enemy& e,Vector3 delta) {
         e.position.z=oldZ;
         break;
     }
+    ConstrainBossToArena(g,e);
 }
 static bool NearWall(Vector3 p,const Platform& b,Vector3& away) {
     float dx=std::abs(std::abs(p.x-b.position.x)-b.size.x*0.5f);
@@ -373,6 +391,7 @@ void UpdatePursuit(GameState& g,float dt) {
     int nearby=0;
     for(auto& e:g.enemies) {
         if(!e.alive) continue;
+        ConstrainBossToArena(g,e);
         float d=Distance(e.position,p.position);
         e.hitTime=std::max(0.0f,e.hitTime-dt);
         e.stunTime=std::max(0.0f,e.stunTime-dt);

@@ -71,6 +71,54 @@ var Module={
  setStatus:text=>{const e=document.getElementById('loading');if(e)e.textContent=text||'';},
  onRuntimeInitialized:()=>document.getElementById('loading').classList.add('hidden')
 };
+const graphicsRecoveryKey='tagbound-webgl-recovery-at';
+let graphicsRecoveryAttempted=false;
+try{graphicsRecoveryAttempted=!!sessionStorage.getItem(graphicsRecoveryKey);}catch(error){}
+window.TagboundGraphics={contextLosses:0,contextRestores:0,recoveryAttempted:graphicsRecoveryAttempted};
+let graphicsRecoveryTimer=0,graphicsRecoveryStarted=false;
+function showGraphicsRecoveryError(message){
+ const loading=document.getElementById('loading');
+ loading.textContent=message;
+ loading.classList.remove('hidden');
+}
+function recoverGraphicsContext(){
+ if(graphicsRecoveryStarted)return;
+ graphicsRecoveryStarted=true;
+ let previous=0;
+ try{previous=Number(sessionStorage.getItem(graphicsRecoveryKey)||0);}
+ catch(error){showGraphicsRecoveryError('GRAPHICS INTERRUPTED — RELOAD TO CONTINUE');return;}
+ const now=Date.now();
+ if(previous&&now-previous<30000){
+  showGraphicsRecoveryError('GRAPHICS RECOVERY FAILED — RELOAD TO CONTINUE');
+  return;
+ }
+ try{sessionStorage.setItem(graphicsRecoveryKey,String(now));}
+ catch(error){showGraphicsRecoveryError('GRAPHICS INTERRUPTED — RELOAD TO CONTINUE');return;}
+ window.location.reload();
+}
+Module.canvas.addEventListener('webglcontextlost',event=>{
+ event.preventDefault();
+ window.TagboundGraphics.contextLosses++;
+ const loading=document.getElementById('loading');
+ loading.textContent='RESTORING GRAPHICS…';
+ loading.classList.remove('hidden');
+ try{
+  if(typeof Module.ccall==='function')Module.ccall('SaveNow',null,[],[]);
+  else console.error('TAGBOUND save flush is unavailable during WebGL context loss.');
+ }catch(error){console.error('Could not flush TAGBOUND save after WebGL context loss.',error);}
+ graphicsRecoveryTimer=window.setTimeout(recoverGraphicsContext,8000);
+},false);
+Module.canvas.addEventListener('webglcontextrestored',()=>{
+ window.TagboundGraphics.contextRestores++;
+ window.clearTimeout(graphicsRecoveryTimer);
+ recoverGraphicsContext();
+},false);
+window.setTimeout(()=>{
+ try{
+  const previous=Number(sessionStorage.getItem(graphicsRecoveryKey)||0);
+  if(previous&&Date.now()-previous>=30000)sessionStorage.removeItem(graphicsRecoveryKey);
+ }catch(error){}
+},31000);
 </script>
 <script src="/game.js"></script><script src="/pwa.js"></script>
 </body></html>
