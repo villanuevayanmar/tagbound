@@ -445,9 +445,9 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                          {1,0,0},64,Color{255,82,38,155});
         }
         if(e.boss&&(e.phase==BossPhase::Windup||e.phase==BossPhase::Strike)) {
-            static const float warningRadius[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
             Color warning=e.phase==BossPhase::Windup?Color{255,166,56,65}:Color{238,62,52,80};
             int variant=std::clamp(e.variant,0,4);
+            const float warningRadius=BossStrikeRange(variant);
             if(variant==0||variant==1||variant==3) {
                 Vector3 direction=e.strikeDirection; direction.y=0;
                 float length=Vector3Length(direction);
@@ -456,18 +456,18 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                 Vector3 start={origin.x,origin.y+0.06f,origin.z};
                 if(variant==0) {
                     Vector3 right={direction.z,0,-direction.x};
-                    Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
-                    Vector3 side=Vector3Scale(right,warningRadius[variant]*0.38f);
+                    Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius));
+                    Vector3 side=Vector3Scale(right,warningRadius*0.38f);
                     DrawCylinderEx(start,end,0.13f,0.13f,8,warning);
                     DrawCylinderEx(start,Vector3Add(end,side),0.055f,0.055f,6,warning);
                     DrawCylinderEx(start,Vector3Subtract(end,side),0.055f,0.055f,6,warning);
                 } else {
-                    Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius[variant]));
+                    Vector3 end=Vector3Add(start,Vector3Scale(direction,warningRadius));
                     float width=variant==1?0.38f:0.45f;
                     DrawCylinderEx(start,end,width,width*0.75f,8,warning);
                 }
             } else {
-                DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius[variant],{1,0,0},90,warning);
+                DrawCircle3D({e.position.x,e.position.y+0.04f,e.position.z},warningRadius,{1,0,0},90,warning);
             }
         }
         DrawCylinder({e.position.x,e.position.y+0.025f,e.position.z},e.boss?0.62f:0.42f,e.boss?0.62f:0.42f,0.025f,12,Fade(BLACK,0.24f));
