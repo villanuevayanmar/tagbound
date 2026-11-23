@@ -104,6 +104,7 @@ static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target
         float blockedByCurrent=0.0f;
         if(SegmentPlatform(cornerRay,to,*blocker,blockedByCurrent,bodyRadius)) continue;
         float route=Distance(e.position,corner)+Distance(corner,target);
+        if(Distance(e.position,corner)<0.65f) continue;
         if(route<best) { best=route; waypoint=corner; found=true; }
     }
     return found;
@@ -379,6 +380,7 @@ void UpdatePursuit(GameState& g,float dt) {
         if(d<25) nearby++;
         if(!e.boss&&(d>1.45f||e.stunTime>0)) e.attackWindup=0;
         if(e.stunTime>0) {
+            e.hasPursuitWaypoint=false;
             e.attackWindup=0;
             MoveEnemy(g,e,Vector3Scale(e.knockback,dt));
             e.knockback=Vector3Scale(e.knockback,std::max(0.0f,1.0f-8.0f*dt));
@@ -386,13 +388,21 @@ void UpdatePursuit(GameState& g,float dt) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f&&(!e.boss||e.phase==BossPhase::Dormant||e.phase==BossPhase::Hunt)) {
-                Vector3 destination=p.position,waypoint{};
                 const float bodyRadius=e.boss?0.62f:0.42f;
-                if(!HasLineOfSight(g,e.position,p.position,bodyRadius)&&FindPursuitWaypoint(g,e,p.position,waypoint))
-                    destination=waypoint;
+                if(HasLineOfSight(g,e.position,p.position,bodyRadius)) e.hasPursuitWaypoint=false;
+                else if(!e.hasPursuitWaypoint) {
+                    Vector3 waypoint{};
+                    if(FindPursuitWaypoint(g,e,p.position,waypoint)) {
+                        e.pursuitWaypoint=waypoint;
+                        e.hasPursuitWaypoint=true;
+                    }
+                }
+                Vector3 destination=e.hasPursuitWaypoint?e.pursuitWaypoint:p.position;
                 Vector3 route=Vector3Subtract(destination,e.position); route.y=0;
                 if(Vector3Length(route)>0.001f)
                     MoveEnemy(g,e,Vector3Scale(Vector3Normalize(route),e.speed*dt));
+                if(e.hasPursuitWaypoint&&Distance(e.position,e.pursuitWaypoint)<0.45f)
+                    e.hasPursuitWaypoint=false;
             } else if(!e.boss) {
                 bool canStrike=d<=1.45f&&HasLineOfSight(g,e.position,p.position);
                 if(!canStrike||e.cooldown>0) e.attackWindup=0;
