@@ -8,11 +8,11 @@ Last updated: 2026-11-23
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `f778777accc3ba26cd876a338d180a9fb999187c`  
-Latest tested runtime bundle commit: `679a6d6ae5d7b3b338e91d9cb000d47b9e2615ac`  
-Production deployment: `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`  
+Current main commit (verified at session start): `a18e39e9eca221a15d75c4070de9d06ef94abc3e`  
+Latest tested runtime bundle commit: `9115f13b4021f9052a95eea66ceaa1000f134978`  
+Production deployment: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`  
 Production deployment state: **READY**  
-Production alias: `tagbound.vercel.app` → `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`
+Production alias: `tagbound.vercel.app` → `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`
 
 The latest generated WebAssembly bundle is deployed. The live production Chromium suite passed against the public production alias. Physical Android testing has not yet been performed by the assistant; the user can now test the deployed game on Android.
 
@@ -105,11 +105,11 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 <badge>READY</badge>
 
-- Production deployment ID: `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`
+- Production deployment ID: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`
 - Deployed runtime bundle commit: `679a6d6ae5d7b3b338e91d9cb000d47b9e2615ac`
 - Production alias: `tagbound.vercel.app`
 - Vercel deployment metadata and alias lookup both confirmed the production alias points to this READY deployment.
-- The current main SHA `f778777...` contains only the live-smoke workflow trigger change after the deployed runtime bundle; no game code was changed after the deployed bundle.
+- The current main SHA `a18e39e...` adds a live-smoke target diagnostic after the generated runtime bundle commit `9115f13...`; the verified READY production deployment runs that generated bundle.
 - Do not create a manual deployment unless the automatic Git deployment path stops working. Keep Vercel at the free tier; no paid plan or billing changes were made.
 
 ## Remaining development work
@@ -161,3 +161,21 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 2. Collect the first concrete device findings (loading/performance, controls, class weapons, Settings/pause, audio, beacon captures, boss warnings, save restore, install/offline).
 3. Prioritize and reproduce the most serious issue through GitHub-hosted code and tests.
 4. Preserve the current READY deployment until the next runtime change has passed hosted CI and a new READY production deployment is available.
+
+
+## Active checkpoint — campaign order and legacy-save preservation (2026-11-23)
+
+- Production was checked read-only: deployment `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ` is **READY**, with alias `https://tagbound.vercel.app`; its generated runtime commit is `9115f13b4021f9052a95eea66ceaa1000f134978`.
+- The user reported that the Vercel deployment limit is active. Do not merge a PR that may trigger deployment, manually deploy, or attempt to bypass the limit. The earliest retry is after November 24, 2026 at approximately 3:35 PM Philippine time, and deployment still requires the user's explicit authorization.
+- PR #13 remains open at `6b7bd74fa832ffef50225307d3ed2db419222243`; matching run #268 passed. It is separate from PR #14 and is not in production.
+- PR #14 remains an open draft: `https://github.com/villanuevayanmar/tagbound/pull/14`, branch `feat/campaign-imperial-before-spire`. Its parent checkpoint `fe7cc9182deb` passed run #271 (WebAssembly/C++ build and browser smoke).
+- Review found that PR #14 changes the meaning of campaign indices 3 and 4 while the old local save contains no schema version. Its original browser test incorrectly expected raw indices to remain unchanged, which would change an existing save's city identity.
+- This checkpoint adds a one-time legacy-save migration: old stage 3 (High Spire) maps to new stage 4, and old stage 4 (Imperial Capital) maps to new stage 3. Saves are then written with `schemaVersion: 1`; later loads do not remap them again. The C++ regression suite and hosted browser smoke test are extended to check the mapping and repeat-load behavior.
+- The new migration commit's CI is triggered by this PR update. Recheck the latest run against the exact branch head before treating it as verified. PR #14 remains draft/unmerged; PR #13 remains open/unmerged; production must remain unchanged.
+- Physical Android testing is still unverified.
+
+### Exact next task
+
+1. Inspect the latest PR #14 head and matching GitHub Actions run after the legacy-save migration commit. Read logs and fix any failures without weakening assertions.
+2. Verify PR #13 and PR #14 remain open and compare overlapping `.github/workflows/ci.yml` changes before any later merge planning.
+3. Continue the next verified gameplay, campaign, visual, performance, or audio gap on a development branch. Do not merge or deploy while the user-reported Vercel limit is active or without explicit authorization.

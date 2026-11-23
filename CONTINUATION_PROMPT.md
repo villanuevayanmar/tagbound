@@ -1,0 +1,53 @@
+# TAGBOUND — Current Continuation Checkpoint
+
+Continue the existing TAGBOUND: The Five Cities project from its actual GitHub state. Do not restart, provide only a plan, or stop after one commit. Inspect current source and CI, implement the next verified gap, test it, checkpoint, and continue.
+
+## Repository and architecture
+- Repository: https://github.com/villanuevayanmar/tagbound
+- Production: https://tagbound.vercel.app
+- Stack: C++17, Raylib 5.5, Emscripten, WebAssembly/WebGL, JavaScript, HTML/CSS, PWA, CMake, GitHub Actions, Vercel.
+- Keep the existing engine and project structure. The user develops from ChatGPT on Android and has no laptop; do not require local terminal, build, or Git steps.
+- Cost must remain ₱0/$0. No paid APIs/services/upgrades, billing changes, purchases, or quota bypasses.
+- Preserve user data, save progression, Git history, and working features. Never claim unverified tests, deployments, or physical-device results.
+
+## Non-negotiable game requirements
+- Exactly three classes with fixed loadouts: Vanguard → Sword, Skirmisher → Bow, Warden → Shield. No weapon switching; Bow action only for Skirmisher.
+- Five campaign cities in order: Harbor, Gilded, Foundry, Imperial, Spire.
+- Preserve each city's rooftop routes, objectives, enemies, bosses, checkpoints, boss progression, ending, restart, and saves.
+- Preserve parkour, combat, health/stamina, pursuits, boss telegraphs, XP/skills, touch controls, real pause/resume, sound, and PWA offline behavior.
+- Action controls and pause actions are icon-only, with accessible aria-labels but no visible button words or hover labels.
+- PWA installation appears only on Home and pause/settings, never during active gameplay.
+- The user has not yet physically tested TAGBOUND on Android.
+
+## Critical Vercel deployment hold
+The user reported a Vercel deployment limit on November 23, 2026, at about 3:35 PM Philippine time, requiring at least 24 hours before another deployment attempt.
+- Do not deploy or manually trigger a deployment.
+- Do not merge a PR if merge could trigger a Vercel deployment.
+- Do not bypass the limit or change billing.
+- Earliest possible retry: after November 24, 2026 at approximately 3:35 PM Philippine time. This is not a guaranteed reset.
+- Even after that time, deployment requires the user's explicit authorization.
+- Continue on GitHub development branches and use GitHub Actions only for builds/tests.
+- Production was checked read-only and is READY at deployment `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, URL `https://tagbound-3ly5acjad-yanmar.vercel.app`, alias `https://tagbound.vercel.app`, generated runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`.
+
+## Current GitHub checkpoint (verify again before acting)
+- Main at session start: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- PR #13: `https://github.com/villanuevayanmar/tagbound/pull/13`, open/unmerged, branch `feat/icon-only-game-controls`, head `6b7bd74fa832ffef50225307d3ed2db419222243`. Matching CI run #268 passed. It implements icon-only game and pause controls; its branch is separate from PR #14.
+- PR #14: `https://github.com/villanuevayanmar/tagbound/pull/14`, open/draft/unmerged, branch `feat/campaign-imperial-before-spire`. Previous head `fe7cc9182deb` passed run #271.
+- Review found a real regression risk in PR #14: it swaps the identities at campaign indices 3 and 4, while the existing local save had no schema version. Leaving numeric save values unchanged makes an old Spire save restore as Imperial, and vice versa.
+- The current checkpoint adds migration from unversioned saves: index 3 → 4 and 4 → 3, then writes `schemaVersion: 1`; future loads must not remap again. Regression tests cover both directions and repeated loading.
+- The new migration commit has just been pushed and its CI must be rechecked against the exact latest PR #14 head. Do not assume run #271 covers it.
+- PR #13 and #14 both modify the CI workflow and may overlap. Do not merge either while deployment hold is active.
+
+## Development workflow
+1. Inspect repository tree, README, DEVELOPMENT_STATUS, this file, main/PR branches, open PRs, latest commits, latest exact-SHA Actions runs/logs, source, tests, PWA, CMake, workflows, and deployment state (read-only).
+2. Compare docs to actual code; docs can be stale.
+3. Find a concrete implementation gap or reproducible bug.
+4. Make the smallest reliable fix on a development branch.
+5. Run the relevant WebAssembly/C++ build, gameplay regression tests, browser/desktop/mobile/PWA checks in GitHub Actions.
+6. Fix actual causes; never weaken or remove assertions to get green CI.
+7. Commit logical changes and keep DEVELOPMENT_STATUS.md and this file accurate.
+8. Move to the next unfinished requirement without asking for "continue" after every task.
+9. Never merge or deploy during the Vercel hold, or later without explicit deployment authorization.
+
+## Exact next action
+Inspect the newest PR #14 commit and the matching Actions run generated by the legacy-save migration commit. Confirm the C++ build, gameplay regression suite, and browser smoke all pass; fix failures from logs. Then continue development on the branch. Keep PRs open and production unchanged.

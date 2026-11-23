@@ -4,6 +4,11 @@
 
 static const char* cityNames[5]={"PORT TOWN","MERCHANT TIER","CLOCKWORK FOUNDRY","IMPERIAL CAPITAL","HIGH SPIRE"};
 const char* CityName(int c) { return cityNames[std::clamp(c,0,4)]; }
+int MigrateLegacyCityIndex(int city) {
+    if(city==3) return 4; // Legacy stage 3 was High Spire.
+    if(city==4) return 3; // Legacy stage 4 was Imperial Capital.
+    return city;
+}
 static const char* bossNames[5]={"HARBOR WARDEN","GILDED CHARGER","FOUNDRY COLOSSUS","IMPERIAL REGENT","SPIRE SENTINEL"};
 const char* BossName(int c) { return bossNames[std::clamp(c,0,4)]; }
 Vector3 QuestTarget(int city,int quest) {

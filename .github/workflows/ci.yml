@@ -230,8 +230,8 @@ jobs:
             }
             await holdContext.close();
 
-            // City is the campaign-stage index. Keep legacy stage, unlock, and quest
-            // values unchanged when the city identities are reordered at stages 3 and 4.
+            // Legacy saves used stage 3 = High Spire and stage 4 = Imperial Capital.
+            // Re-map the city identities once, then persist schemaVersion 1 so reloads do not swap them again.
             for (const savedStage of [3, 4]) {
               const stageContext = await browser.newContext();
               const stagePage = await stageContext.newPage();
@@ -248,10 +248,25 @@ jobs:
               );
               await stagePage.locator('#start').click();
               await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const expectedStage = savedStage === 3 ? 4 : 3;
               const restoredStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
-              if (restoredStage?.city !== savedStage || restoredStage?.unlocked !== savedStage ||
-                  restoredStage?.quest !== 1 || restoredStage?.klass !== 1 || restoredStage?.weapon !== 3) {
-                throw new Error('Campaign-stage save was not preserved across city reorder: ' + JSON.stringify({ savedStage, restoredStage }));
+              if (restoredStage?.city !== expectedStage || restoredStage?.unlocked !== expectedStage ||
+                  restoredStage?.schemaVersion !== 1 || restoredStage?.quest !== 1 ||
+                  restoredStage?.klass !== 1 || restoredStage?.weapon !== 3) {
+                throw new Error('Legacy campaign save migration failed: ' + JSON.stringify({ savedStage, expectedStage, restoredStage }));
+              }
+              await stagePage.reload({ waitUntil: 'networkidle' });
+              await stagePage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await stagePage.locator('#start').click();
+              await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const reloadedStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (reloadedStage?.city !== expectedStage || reloadedStage?.unlocked !== expectedStage ||
+                  reloadedStage?.schemaVersion !== 1 || reloadedStage?.quest !== 1) {
+                throw new Error('Legacy campaign save was migrated more than once: ' + JSON.stringify({ savedStage, expectedStage, reloadedStage }));
               }
               await stageContext.close();
             }

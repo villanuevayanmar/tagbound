@@ -21,6 +21,12 @@ int main() {
     assert(std::string(BossName(0)) == "HARBOR WARDEN");
     assert(std::string(BossName(3)) == "IMPERIAL REGENT");
     assert(std::string(BossName(4)) == "SPIRE SENTINEL");
+    assert(MigrateLegacyCityIndex(0)==0);
+    assert(MigrateLegacyCityIndex(1)==1);
+    assert(MigrateLegacyCityIndex(2)==2);
+    assert(MigrateLegacyCityIndex(3)==4);
+    assert(MigrateLegacyCityIndex(4)==3);
+    assert(MigrateLegacyCityIndex(-1)==-1);
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
 
     // Each city has its own rooftop route with consistent climb spacing.
