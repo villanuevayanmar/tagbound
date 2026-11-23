@@ -108,12 +108,16 @@ function setAudioEnabled(enabled){
 }
 const soundToggle=document.getElementById('sound-toggle');
 const settingsSoundToggle=document.getElementById('settings-sound');
-const soundButtons=[soundToggle,settingsSoundToggle].filter(Boolean);
 function syncSoundButtons(){
- soundButtons.forEach(button=>{
-  button.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
-  button.setAttribute('aria-pressed',String(audioEnabled));
- });
+ if(soundToggle){
+  soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
+  soundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
+ if(settingsSoundToggle){
+  settingsSoundToggle.classList.toggle('muted',!audioEnabled);
+  settingsSoundToggle.setAttribute('aria-label',audioEnabled?'Mute sound':'Enable sound');
+  settingsSoundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
 }
 try { audioEnabled=localStorage.getItem('tagbound-sound')!=='off'; } catch(e) {}
 window.TagboundAudio={
@@ -153,7 +157,6 @@ const ending=document.getElementById('ending');
 const settings=document.getElementById('settings');
 const settingsOpenButton=document.getElementById('settings-open');
 const touchControls=document.getElementById('touch-controls');
-const touchHelp=document.getElementById('touch-help');
 const resumeButton=document.getElementById('resume');
 function resetTouchInput(){
  const stickPointer=pointer,lookPointer=lastLook?.id;
@@ -177,14 +180,12 @@ function openSettings(){
  settingsOpenButton.classList.add('hidden');
  settingsOpenButton.setAttribute('aria-expanded','true');
  touchControls.classList.add('hidden');
- touchHelp.classList.add('hidden');
  resumeButton.focus();
 }
 function closeSettings(){
  settings.classList.add('hidden');
  window.TagboundAudio?.resumeMusic?.();
  touchControls.classList.remove('hidden');
- touchHelp.classList.remove('hidden');
  settingsOpenButton.setAttribute('aria-expanded','false');
  if(intro.classList.contains('hidden')&&ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
  canvas.focus();
