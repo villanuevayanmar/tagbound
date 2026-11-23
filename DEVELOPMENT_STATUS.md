@@ -255,3 +255,25 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 ### Exact next task
 Review each boss variant's telegraph geometry against its actual strike damage region and facing/line-of-sight rules. Add targeted C++ boundary tests before changing any combat behavior. Keep source/test changes on PR #14; do not edit `dist/`, merge, or deploy.
+
+
+## Verified checkpoint — boss telegraph and strike-lane alignment (2026-11-23)
+
+- PR #14 branch: `feat/campaign-imperial-before-spire`; latest source/test commit `81465b29c2943c48c45516054f8ad77696b599a9`.
+- Exact GitHub Actions run #290 (`45142530269`) passed on that SHA: Emscripten/WebAssembly compile, C++ gameplay regression suite, static PWA validation, Chromium browser smoke, and service-worker/offline checks. The PR-only `publish-dist` job was skipped.
+- Root cause: Gilded Charger's and Spire Sentinel's damage lanes accepted player centres up to 0.9 units from the strike centreline, while their warning cylinders were drawn with smaller, tapered radii (0.38 and 0.45). This made the visible warning narrower than the actual damage area.
+- Added shared `BossStrikeHalfWidth(variant, forward)` geometry in `src/game.cpp` / `src/game.hpp`; both combat hit testing and warning rendering now use it. The Charger and Sentinel warning cylinders use a 0.9-unit radius; Harbor's widening cleave uses the same helper for its wedge boundary.
+- C++ regressions assert the shared widths and check both bosses at 0.89 (hit) and 0.91 (miss) units from the lane centreline. Existing damage and dodge tests remain in place.
+- Run #289 (`0fe17ffb9796df41e5dd5f9d126aeb074fcc3fcb`) passed the substantive boss geometry fix; run #290 passed the cleanup commit and full suite.
+
+### Repository / deployment state
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
+- PR #14 remains open/draft/unmerged at `81465b29c2943c48c45516054f8ad77696b599a9`.
+- Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- Production remains **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. Read-only Vercel lookup after run #290 confirmed the production deployment did not change.
+- The deployment hold remains active. No PR merge, production deployment, or `dist/` change was made.
+- Integration warning remains: PR #13's service-worker cache is `tagbound-v27`, while PR #14's CI currently expects `tagbound-v25`. When combining branches, reconcile cache assertions and preserve both PRs' browser tests. Do not merge during the hold.
+- Physical Android testing remains unverified.
+
+### Exact next task
+Review rooftop-route geometry and jump envelopes for all five cities. Compare each pair of consecutive objective platforms and the boss gate against the actual movement/jump physics; add a simulation regression for any route gap that cannot be traversed with the supported controls. Do not change gameplay parameters without a reproducible reachability failure.

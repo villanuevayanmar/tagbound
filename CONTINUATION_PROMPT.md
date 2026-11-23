@@ -122,3 +122,23 @@ After the exact-head CI result is known, continue with a test-backed review of p
 - Physical Android testing is still pending; do not claim hosted mobile emulation is physical-device verification.
 - Continue with a code/test review of boss telegraph shapes and strike boundaries, then other demonstrable gameplay/balance gaps. Inspect actual implementation first and add boundary tests; do not invent mechanics.
 - Keep PR #14 source/test changes off `dist/`, preserve saves and history, run exact-head Actions, and update these documents after each meaningful checkpoint.
+
+
+## Latest verified combat checkpoint — 2026-11-23
+
+- Latest PR #14 code/test SHA: `81465b29c2943c48c45516054f8ad77696b599a9`.
+- Exact run #290 (`45142530269`) passed: WebAssembly build, C++ gameplay tests, PWA validation, desktop/mobile Chromium, service-worker and offline reload. The PR-only publish job was skipped.
+- Boss hitbox/warning mismatch fixed: Gilded Charger and Spire Sentinel had a 0.9-unit damage half-lane but their warning cylinders were narrower/tapered. Shared `BossStrikeHalfWidth` now controls both collision and rendering. Harbor's cleave wedge also uses the helper for its boundary.
+- Boundary regressions verify 0.89 units is hit and 0.91 units is safe for both Charger and Sentinel; existing boss damage, dodge, radial range, and enrage tests remain.
+- Run #289 (`0fe17ffb9796df41e5dd5f9d126aeb074fcc3fcb`) passed the geometry correction; run #290 verified the follow-up cleanup.
+
+## Authoritative deployment / branch state
+- PR #13 is open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243` (run #268 passed).
+- PR #14 is open/draft/unmerged at `81465b29c2943c48c45516054f8ad77696b599a9`.
+- Main: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- Production: READY deployment `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, runtime `9115f13b4021f9052a95eea66ceaa1000f134978`.
+- Vercel deployment hold remains active. Never merge, deploy, change billing, or bypass quotas. Keep PR #14 changes away from `dist/` and preserve the existing ignored-build guard. No physical Android testing has been completed.
+- PR integration still needs reconciliation: PR #13 uses service-worker cache `tagbound-v27`; PR #14's current CI asserts `tagbound-v25`. Preserve icon-only checks from #13 and survival, migration, pursuit, restart, and boss geometry tests from #14 during later integration.
+
+### Next task
+Review actual rooftop route reachability for Harbor, Gilded, Foundry, Imperial, and Spire. Use the movement/jump physics in `src/systems.cpp` and route coordinates from `src/game.cpp`; add a deterministic simulation test for consecutive objective platforms and the final boss gate. Only adjust route positions if the test proves a gap is unreachable. Never modify `dist/`, merge, or deploy during the hold.
