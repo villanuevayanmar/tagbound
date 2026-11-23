@@ -79,6 +79,10 @@ float BossWindupDuration(int variant,bool enraged) {
     static const float duration[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
     return duration[std::clamp(variant,0,4)]*(enraged?0.85f:1.0f);
 }
+float BossStrikeRange(int variant) {
+    static const float range[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+    return range[std::clamp(variant,0,4)];
+}
 const char* WeaponName(Weapon w) {
     static const char* names[5]={"SWORD","AXE","SHIELD","BOW","SPEAR"};
     return names[std::clamp((int)w,0,4)];

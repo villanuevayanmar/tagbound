@@ -104,11 +104,13 @@ int main() {
     BuildCity(holdObjective);
     assert(near(holdObjective.beaconHoldTime,0.0f));
 
-    // Boss warning countdowns use the same durations as combat state transitions.
+    // Boss warning countdowns and strike radii use shared combat/render values.
     const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
+    const float bossRanges[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
     for(int variant=0;variant<5;variant++) {
         assert(near(BossWindupDuration(variant),bossWindups[variant]));
         assert(near(BossWindupDuration(variant,true),bossWindups[variant]*0.85f));
+        assert(near(BossStrikeRange(variant),bossRanges[variant]));
     }
 
     // Each class has exactly one assigned weapon.
@@ -674,11 +676,10 @@ int main() {
     assert(game.unlockedCity == 1);
 
     // Bosses must begin their telegraphed attacks at their own effective ranges.
-    const float bossWindupRanges[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
-        Enemy boss{{0,0.3f,bossWindupRanges[variant]*0.9f},100,100,2.5f,0,true,true};
+        Enemy boss{{0,0.3f,BossStrikeRange(variant)*0.9f},100,100,2.5f,0,true,true};
         boss.variant=variant;
         boss.phase=BossPhase::Hunt;
         game.enemies.push_back(boss);
@@ -824,6 +825,38 @@ int main() {
         UpdatePursuit(game,0.05f);
         assert(near(game.player.health,100.0f-bossDamage[variant]));
         assert(game.enemies.front().phase==BossPhase::Recover);
+    }
+
+    // Foundry Colossus and Imperial Regent use radial strikes that can be dodged beyond their warning ring.
+    const int radialBossVariants[2]={2,4};
+    const float radialBossDamage[2]={32.0f,28.0f};
+    for(int i=0;i<2;i++) {
+        const int variant=radialBossVariants[i];
+        const float radius=BossStrikeRange(variant);
+        for(int evade=0;evade<2;evade++) {
+            game.platforms.clear();
+            game.enemies.clear();
+            game.player.position={0,0.3f,radius*1.05f};
+            game.player.health=100;
+            game.player.stamina=100;
+            game.player.invulnerable=0;
+            game.player.blocking=false;
+            Enemy radialBoss{{0,0.3f,0},100,100,0,0,true,true};
+            radialBoss.variant=variant;
+            radialBoss.phase=BossPhase::Hunt;
+            game.enemies.push_back(radialBoss);
+
+            // Enter the warning just outside the blast ring, then step into or out of it.
+            UpdatePursuit(game,0.016f);
+            assert(game.enemies.front().phase==BossPhase::Windup);
+            game.player.position.z=evade==0?radius*0.85f:radius+0.1f;
+            UpdatePursuit(game,1.0f);
+            assert(game.enemies.front().phase==BossPhase::Strike);
+            UpdatePursuit(game,0.5f);
+            assert(game.enemies.front().phase==BossPhase::Recover);
+            if(evade==0) assert(near(game.player.health,100.0f-radialBossDamage[i]));
+            else assert(near(game.player.health,100.0f));
+        }
     }
 
     // Bosses enter an enrage phase below half health and deal increased strike damage.
