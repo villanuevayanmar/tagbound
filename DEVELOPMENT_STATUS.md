@@ -123,7 +123,7 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 - Main after PR #10 workflow merge: run `45105714359` passed, including WebAssembly build, C++ regressions, desktop/mobile browser checks and PWA artifact validation.
 - Latest main CI run #247: `45107305759` passed.
 - Latest live production smoke #9: `45107305802` passed against the READY production alias and runtime bundle `9115f13`.
-- PR #13 build/browser smoke runs #248 (`45121351189`) and #249 (`45121459290`) were cancelled after newer commits superseded their tested heads. The latest run #250 (`45121515646`) for PR head `e2a5e29d1cbebb4e3d90b67199605d9616cfd586` was in progress at the time of this update; no pass is claimed.
+- PR #13 build/browser smoke runs #248 (`45121351189`) and #249 (`45121459290`) were cancelled after newer commits superseded their tested heads. Run #250 (`45121515646`) was still in progress for earlier head `e2a5e29d1cbebb4e3d90b67199605d9616cfd586`. The latest run #251 (`45121627995`) for the current PR head `533157582ed3bbe18963536ade08b3dcc8516d73` was pending when the checkpoint was saved. No passing result is claimed for PR #13.
 - Live smoke confirmed WebAssembly/WebGL startup, gameplay, class selection, save restoration, Settings pause/resume, touch/look input reset, ambient music pause/resume, HUD visibility, install placement, service-worker control/cache, offline reload, mobile controls and portrait rotation guidance.
 - These hosted checks do not replace physical Android playtesting.
 
@@ -183,7 +183,7 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 
 ## Exact next task
 
-1. Resume by checking PR #13 and its latest CI run #250 (`45121515646`) for head `e2a5e29d1cbebb4e3d90b67199605d9616cfd586`. The run was in progress when this checkpoint was saved; inspect the current run state rather than assuming its outcome.
+1. Resume by checking PR #13 and its latest CI run #251 (`45121627995`) for head `533157582ed3bbe18963536ade08b3dcc8516d73`. It was pending when this checkpoint was saved; inspect the current run state rather than assuming its outcome.
 2. Merge PR #13 only after the hosted WebAssembly, C++ regression, browser, and PWA checks pass.
 3. Verify Vercel automatically deploys the updated committed `dist/` files, then run the live production smoke workflow against that exact READY deployment.
 4. Update this document and `CONTINUATION_PROMPT.md` with exact merge, runtime bundle, CI, live-smoke, and deployment identifiers.
