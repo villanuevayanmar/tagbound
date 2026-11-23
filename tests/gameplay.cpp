@@ -405,8 +405,9 @@ int main() {
                 assert(near(boss.position.x,target.x)&&near(boss.position.y,target.y)&&near(boss.position.z,target.z));
             }
 
-            // Keep BuildCity's valid grounded spawn state for the opening jump.
+            // Keep BuildCity's grounded spawn state and reset the shared camera for this route.
             Camera3D routeCamera=camera;
+            ResetCamera(routeGame.player,routeCamera);
 
             const float targetHalf=segment==3?4.0f:2.5f;
             bool airborne=false;
@@ -417,9 +418,13 @@ int main() {
                 Controls input{};
                 if(remaining>0.25f) {
                     const Vector3 desired=Vector3Scale(toTarget,1.0f/remaining);
-                    // The test leaves camera yaw at its default +Z orientation.
-                    input.move.x=desired.x;
-                    input.move.y=desired.z;
+                    // Controls are camera-relative, so convert the world-space route direction
+                    // into this frame's camera basis before applying the movement input.
+                    const float yaw=cameraTargetYaw(routeCamera,routeGame.player.position);
+                    const Vector3 cameraForward={std::sin(yaw),0,std::cos(yaw)};
+                    const Vector3 cameraRight={cameraForward.z,0,-cameraForward.x};
+                    input.move.x=Vector3DotProduct(desired,cameraRight);
+                    input.move.y=Vector3DotProduct(desired,cameraForward);
                     input.sprint=true;
                 }
                 // If the jump reaches a ledge, use the game's required jump-to-climb action.
@@ -449,6 +454,8 @@ int main() {
             }
         }
     }
+    Player defaultRouteCameraPlayer;
+    ResetCamera(defaultRouteCameraPlayer,camera);
 
     // A high-speed Skirmisher dash cannot tunnel through a thin wall.
     GameState dashCollision;
