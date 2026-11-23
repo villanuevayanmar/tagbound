@@ -117,6 +117,16 @@ float BossStrikeRange(int variant) {
     static const float range[5]={4.0f,2.3f,5.5f,4.5f,8.0f};
     return range[std::clamp(variant,0,4)];
 }
+bool BossArenaContains(const GameState& g,const Enemy& e) {
+    if(!e.boss||!g.bossArena.active) return false;
+    constexpr float radius=0.62f;
+    const BossArena& arena=g.bossArena;
+    return e.position.x>=arena.center.x-arena.halfExtents.x+radius-0.001f&&
+           e.position.x<=arena.center.x+arena.halfExtents.x-radius+0.001f&&
+           e.position.z>=arena.center.z-arena.halfExtents.y+radius-0.001f&&
+           e.position.z<=arena.center.z+arena.halfExtents.y-radius+0.001f&&
+           std::abs(e.position.y-arena.floorY)<=0.025f;
+}
 float BossStrikeHalfWidth(int variant,float forward) {
     switch(std::clamp(variant,0,4)) {
         case 0: return std::max(0.0f,forward)*0.38f;
@@ -197,6 +207,7 @@ void BuildCity(GameState& g) {
     }
     Vector3 gate=QuestTarget(g.city,3);
     g.platforms.push_back({{gate.x,gate.y-0.25f,gate.z},{8,0.5f,8},{160,139,96,255}});
+    g.bossArena={gate,{4.0f,4.0f},gate.y,false};
     // Keep skyline buildings outside the central rooftop routes.
     for(int i=0;i<28;i++) {
         float a=i*0.2244f+g.city*0.08f, r=38.0f+(i%3)*1.0f;
@@ -222,10 +233,12 @@ void SetQuestProgress(GameState& g,int quest) {
     if(nextQuest!=g.quest) g.beaconHoldTime=0.0f;
     g.quest=nextQuest;
     if(g.quest<3) {
+        g.bossArena.active=false;
         g.bossUnlocked=false;
         if(g.quest>0) g.questLimit=100.0f-g.city*8.0f-g.quest*9.0f;
         return;
     }
+    g.bossArena.active=true;
     for(const auto& e:g.enemies) if(e.boss) {
         g.bossUnlocked=true;
         return;

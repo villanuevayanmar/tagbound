@@ -9,6 +9,12 @@ enum class BossPhase { Dormant, Hunt, Windup, Strike, Recover, Defeated };
 
 struct Platform { Vector3 position; Vector3 size; Color color; };
 struct Projectile { Vector3 position; Vector3 velocity; float life; };
+struct BossArena {
+    Vector3 center{};
+    Vector2 halfExtents{};
+    float floorY=0;
+    bool active=false;
+};
 struct Enemy {
     Vector3 position{};
     float hp=40, maxHp=40, speed=2.5f, cooldown=0;
@@ -46,6 +52,7 @@ struct GameState {
     std::vector<Platform> platforms;
     std::vector<Enemy> enemies;
     std::vector<Projectile> projectiles;
+    BossArena bossArena;
     int city=0, unlockedCity=0, quest=0, totalQuests=3, defeated=0;
     float danger=0, questTime=0, questLimit=110, beaconHoldTime=0;
     bool started=false, finished=false, bossUnlocked=false;
@@ -72,6 +79,7 @@ float QuestSurvivalDuration(int city,int quest);
 bool UpdateQuestObjective(GameState& game,float dt);
 float BossWindupDuration(int variant,bool enraged=false);
 float BossStrikeRange(int variant);
+bool BossArenaContains(const GameState& game,const Enemy& boss);
 float BossStrikeHalfWidth(int variant,float forward);
 Vector3 EnemyFacing(const Enemy& enemy,Vector3 target);
 const char* WeaponName(Weapon weapon);
