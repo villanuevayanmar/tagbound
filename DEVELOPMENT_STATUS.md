@@ -4,16 +4,17 @@ Last updated: 2026-11-23
 
 ## Project state
 
-**Active development — not release-ready.**
+**Playable production build available — continued development in progress.**
 
 Repository: https://github.com/villanuevayanmar/tagbound  
 Production: https://tagbound.vercel.app  
-Current main commit: `ad40f8968b8bde81367ab928d4cab3d9d81a0d1f`  
-Latest tested generated WebAssembly bundle: `4c194fd0b55342ed093530086ef7765ef92619bd`  
-Current production deployment: `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`  
-Current production commit: `a15a767daaa76e7abe7d053d76c62c4d4522f7b0`
+Current main commit: `f778777accc3ba26cd876a338d180a9fb999187c`  
+Latest tested runtime bundle commit: `679a6d6ae5d7b3b338e91d9cb000d47b9e2615ac`  
+Production deployment: `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`  
+Production deployment state: **READY**  
+Production alias: `tagbound.vercel.app` → `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`
 
-The production URL is not yet serving the latest runtime bundle. Do not ask the user to test the release until Vercel reports a READY production deployment for the latest runtime-changing main commit and the production alias points to it.
+The latest generated WebAssembly bundle is deployed. The live production Chromium suite passed against the public production alias. Physical Android testing has not yet been performed by the assistant; the user can now test the deployed game on Android.
 
 ## Recently completed and merged
 
@@ -39,16 +40,16 @@ The production URL is not yet serving the latest runtime bundle. Do not ask the 
 
 ### Original ambient score — PR #4
 
-- Added original ambient music synthesized locally using Web Audio oscillators and filters.
+- Added locally synthesized original ambient music using Web Audio oscillators and filters.
 - No downloaded music assets, external audio API or paid dependency.
-- Score stays stopped on Home, starts after Start, pauses in Settings, resumes with the run, follows the shared sound toggle and stops on the victory ending.
-- Hosted desktop/mobile tests verify generated note count, pause, no notes while paused, resumed notes and saved-victory silence.
+- Score remains stopped on Home, starts after Start, pauses in Settings, resumes with the run, follows the shared sound toggle and stops on the victory ending.
+- Hosted desktop/mobile checks verify generated note count, pause, no notes while paused, resumed notes and saved-victory silence.
 
 ### Class-specific BOW control — PR #5
 
 - BOW touch action is hidden for Vanguard and Warden and shown only for Skirmisher.
 - Fixed loadouts remain Vanguard → Sword, Skirmisher → Bow, Warden → Shield.
-- Hosted desktop/mobile tests verify action visibility and saved weapons for each class.
+- Hosted tests verify action visibility and saved weapons for each class.
 
 ### Timed hold-beacon objectives — PR #6
 
@@ -65,44 +66,65 @@ The production URL is not yet serving the latest runtime bundle. Do not ask the 
 
 ### Five-city campaign across all classes — PR #8
 
-- Replaced the prior Axe-only boss-transition test with a full five-city progression loop for Vanguard, Skirmisher and Warden.
-- Verifies the fixed Sword, Bow and Shield loadouts defeat each city's boss.
-- Skirmisher's test uses actual Bow projectile travel and impact.
-- Verifies city unlock progression and the fifth-city ending for all three classes.
+- Verifies Vanguard/Sword, Skirmisher/Bow and Warden/Shield can each defeat all five city bosses.
+- Skirmisher's regression uses actual Bow projectile travel and impact.
+- Verifies boss defeat, city unlock progression, fixed loadouts and the fifth-city ending for all three classes.
+
+### Shared boss warning and strike ranges — PR #9
+
+- Added a single `BossStrikeRange()` source used by both combat hit detection and the visible 3D boss warning rings.
+- Removed duplicate combat and renderer range arrays, preventing warning visuals from drifting away from the actual hit radius.
+- Added radial inside/outside evasion regressions for Foundry Colossus and Imperial Regent.
+
+### Automatic live-production smoke trigger — PR #10
+
+- Kept manual live-smoke dispatch available.
+- Added a push trigger limited to updates of `.github/workflows/live-smoke.yml`, so the live production suite can be run and verified without a manual workflow-dispatch action.
+- This trigger does not deploy game code and does not run on ordinary source/documentation changes.
 
 ## Verified cloud testing
 
-- Settings feature: run `45073264491` passed.
-- HUD/render fix and Settings layout: run `45074803692` passed.
+- Settings and pause feature: run `45073264491` passed.
+- HUD rendering fix and Settings layout: run `45074803692` passed.
 - Pause input reset: run `45075281567` passed.
-- Ambient score: run `45076329628` passed.
-- Class-specific BOW control: run `45077008462` passed.
-- Hold-beacon PR checks: run `45077905618` passed.
-- Main after hold-beacon work: run `45078141314` passed.
-- Death-frame fix: run `45078544251` passed.
-- Main after PR #7 and generated output sync: run `45078768095` passed.
-- PR #8 all-class five-city campaign regression: run `45104171971` passed.
-- Main after PR #8: run `45104378957` passed, including Emscripten build, C++ gameplay regressions, PWA validation, desktop/mobile Chromium and publish-dist.
-- These hosted checks do not replace playtesting on a physical Android device.
+- Original ambient score: run `45076329628` passed.
+- Class-specific BOW controls: run `45077008462` passed.
+- Timed hold-beacon objectives: run `45077905618` passed.
+- Death-frame attack fix and generated output: run `45078768095` passed.
+- All-class five-city campaign PR: run `45104171971` passed.
+- Main after the campaign and runtime bundle sync: run `45104378957` passed.
+- Shared boss range/radial evasion PR: run `45104855315` passed.
+- Main after shared boss range merge and generated output sync: run `45105067345` passed.
+- PR #10 workflow change: run `45105430992` passed.
+- Live production suite: run `45105714358` passed against `https://tagbound.vercel.app`.
+- Main after PR #10 workflow merge: run `45105714359` passed, including WebAssembly build, C++ regressions, desktop/mobile browser checks and PWA artifact validation.
+- Live smoke confirmed WebAssembly/WebGL startup, gameplay, class selection, save restoration, Settings pause/resume, touch/look input reset, ambient music pause/resume, HUD visibility, install placement, service-worker control/cache, offline reload, mobile controls and portrait rotation guidance.
+- These hosted checks do not replace physical Android playtesting.
 
-## Deployment status — Vercel
+## Deployment
 
-The latest runtime bundle is committed to GitHub, but production is still on commit `a15a767`.
+<badge>READY</badge>
 
-- The latest production alias remains `tagbound.vercel.app` → deployment `dpl_EiD7wy3TYXzWUD71ZhNV5fcGA7QD`.
-- The attempted Vercel deployment for PR #8's test-only commit `ad40f896` was canceled by the configured Ignored Build Step. Vercel ran `git diff --quiet HEAD^ HEAD -- dist/`; exit code 0 means that commit did not change `dist/`, so Vercel intentionally skipped a deployment. This is expected for a test-only PR.
-- There is no production deployment record for the latest runtime bundle commit `4c194fd`.
-- Earlier manual Vercel deployment attempts hit the free daily deployment API allowance, and the Git integration reported `build-rate-limit`.
-- Do not upgrade plans, add payment details, bypass limits or use paid build services.
-- A current green PR Vercel status does not mean the production alias has been updated.
+- Production deployment ID: `dpl_XKCpxqGJeALKmogMdui1HLboqJqo`
+- Deployed runtime bundle commit: `679a6d6ae5d7b3b338e91d9cb000d47b9e2615ac`
+- Production alias: `tagbound.vercel.app`
+- Vercel deployment metadata and alias lookup both confirmed the production alias points to this READY deployment.
+- The current main SHA `f778777...` contains only the live-smoke workflow trigger change after the deployed runtime bundle; no game code was changed after the deployed bundle.
+- Do not create a manual deployment unless the automatic Git deployment path stops working. Keep Vercel at the free tier; no paid plan or billing changes were made.
 
 ## Remaining development work
 
+### Physical-device verification
+
+- User has no laptop. Do not request local commands or local development testing.
+- The public production build is now READY and has passed live hosted Chromium tests.
+- The next useful verification is a real Android play session on the user's phone: install/open the PWA, choose each class, test touch movement and attacks, open Settings while moving/holding buttons, Resume, sound/music pause, and complete several beacon and boss encounters.
+- Record real-device findings and reproduce/fix them through GitHub/cloud workflows.
+
 ### Gameplay and campaign
 
-- Add explicit counterplay tests for the radial strikes used by Foundry Colossus and Imperial Regent.
 - Tune city difficulty, reinforcement pacing, boss health/damage, stamina costs and encounter duration based on actual play sessions.
-- Review all boss telegraphs, hitboxes and dodge/block counterplay.
+- Review all boss telegraphs, hitboxes and dodge/block counterplay, especially Foundry Colossus and Imperial Regent radial attacks.
 - Expand quest variety beyond reach and timed hold beacons.
 - Validate city transitions, boss defeat progression, ending/restart and save restoration at every checkpoint.
 - Continue reviewing enemy pathfinding in dense rooftop geometry and reinforcement spawn edge cases.
@@ -117,26 +139,25 @@ The latest runtime bundle is committed to GitHub, but production is still on com
 ### Audio
 
 - Tune ambient score melody/spacing, loudness and balance against combat effects.
-- Test Web Audio unlock/resume behavior on real Android Chrome after deployment.
+- Confirm Web Audio unlock/resume behavior and audio balance on a physical Android device.
 
 ### Release readiness
 
-- Obtain a READY production deployment for the latest runtime-changing main commit without paid upgrades or quota bypasses.
-- Confirm `tagbound.vercel.app` points to that exact deployment.
-- Run manual live-production Chromium only after deployment READY.
-- Only then ask the user to test on Android; record device bugs, fix through GitHub, redeploy and repeat.
+- Continue code improvements from actual Android play feedback.
+- Fix critical/high-severity device bugs through GitHub, rebuild and verify via hosted CI, let Vercel deploy the generated `dist/` bundle, then re-run live production smoke checks.
+- Keep project cost at ₱0/$0; no paid API, subscription or usage-billed service.
 
 ## Testing and development constraints
 
-- The user does not have a laptop. Never require local commands or ask them to test incomplete builds.
+- The user does not have a laptop. Never require local commands or local build/test steps.
 - Use GitHub-hosted CI and authorized cloud workflows for development verification.
-- Actual Android playtesting begins only after a READY production deployment and verified current alias.
-- Keep cost at ₱0/$0. No paid API, paid subscription, paid hosting upgrade, billing change or usage-billed bypass without explicit approval.
+- Ask for Android testing only when the deployed production alias has been verified READY and the live smoke suite has passed.
+- Keep cost at ₱0/$0. No paid API, paid subscription, paid hosting upgrade, billing change or quota bypass without explicit approval.
 - Never claim a test, commit, merge, deployment or device test that has not actually occurred.
 
 ## Exact next task
 
-1. Add focused C++ regression tests for the Foundry Colossus and Imperial Regent radial attack boundaries: inside their radius should take the attack, while a player outside the telegraphed radius should evade it.
-2. Run Emscripten build, C++ regression, and desktop/mobile Chromium checks; merge only after they pass.
-3. Keep reviewing boss counterplay without changing balance values until a real Android playtest can inform tuning.
-4. Recheck Vercel deployment eligibility later. Do not create paid usage or attempt to bypass free-tier limits.
+1. Have the user perform the first production Android playtest now that live smoke has passed.
+2. Collect the first concrete device findings (loading/performance, controls, class weapons, Settings/pause, audio, beacon captures, boss warnings, save restore, install/offline).
+3. Prioritize and reproduce the most serious issue through GitHub-hosted code and tests.
+4. Preserve the current READY deployment until the next runtime change has passed hosted CI and a new READY production deployment is available.
