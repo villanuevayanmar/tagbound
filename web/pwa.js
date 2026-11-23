@@ -108,12 +108,16 @@ function setAudioEnabled(enabled){
 }
 const soundToggle=document.getElementById('sound-toggle');
 const settingsSoundToggle=document.getElementById('settings-sound');
-const soundButtons=[soundToggle,settingsSoundToggle].filter(Boolean);
 function syncSoundButtons(){
- soundButtons.forEach(button=>{
-  button.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
-  button.setAttribute('aria-pressed',String(audioEnabled));
- });
+ if(soundToggle){
+  soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
+  soundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
+ if(settingsSoundToggle){
+  settingsSoundToggle.classList.toggle('muted',!audioEnabled);
+  settingsSoundToggle.setAttribute('aria-label',audioEnabled?'Mute sound':'Enable sound');
+  settingsSoundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
 }
 try { audioEnabled=localStorage.getItem('tagbound-sound')!=='off'; } catch(e) {}
 window.TagboundAudio={
@@ -123,7 +127,7 @@ window.TagboundAudio={
  getMusicNoteCount:()=>musicNotesPlayed
 };
 syncSoundButtons();
-soundButtons.forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
+[soundToggle,settingsSoundToggle].filter(Boolean).forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 const classCards=[...document.querySelectorAll('.class-card')];
@@ -153,7 +157,6 @@ const ending=document.getElementById('ending');
 const settings=document.getElementById('settings');
 const settingsOpenButton=document.getElementById('settings-open');
 const touchControls=document.getElementById('touch-controls');
-const touchHelp=document.getElementById('touch-help');
 const resumeButton=document.getElementById('resume');
 function resetTouchInput(){
  const stickPointer=pointer,lookPointer=lastLook?.id;
@@ -170,6 +173,22 @@ function resetTouchInput(){
  knob.style.transform='translate(0,0)';
  send();
 }
+function resumeBackgroundMusic(){
+ if(document.hidden||!settings.classList.contains('hidden')||
+    !intro.classList.contains('hidden')||!ending.classList.contains('hidden'))return;
+ window.TagboundAudio?.resumeMusic?.();
+}
+function pauseForBackground(){
+ resetTouchInput();
+ window.TagboundAudio?.pauseMusic?.();
+}
+window.addEventListener('blur',pauseForBackground);
+window.addEventListener('focus',resumeBackgroundMusic);
+document.addEventListener('visibilitychange',()=>{
+ resetTouchInput();
+ if(document.hidden)window.TagboundAudio?.pauseMusic?.();
+ else resumeBackgroundMusic();
+});
 function openSettings(){
  resetTouchInput();
  window.TagboundAudio?.pauseMusic?.();
@@ -177,14 +196,12 @@ function openSettings(){
  settingsOpenButton.classList.add('hidden');
  settingsOpenButton.setAttribute('aria-expanded','true');
  touchControls.classList.add('hidden');
- touchHelp.classList.add('hidden');
  resumeButton.focus();
 }
 function closeSettings(){
  settings.classList.add('hidden');
  window.TagboundAudio?.resumeMusic?.();
  touchControls.classList.remove('hidden');
- touchHelp.classList.remove('hidden');
  settingsOpenButton.setAttribute('aria-expanded','false');
  if(intro.classList.contains('hidden')&&ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
  canvas.focus();

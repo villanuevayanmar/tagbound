@@ -37,15 +37,15 @@ static bool SegmentSphere(Vector3 from,Vector3 to,Vector3 center,float radius,fl
     hitTime=t;
     return true;
 }
-static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime) {
+static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime,float clearance=0.12f) {
     Vector3 low=Vector3Subtract(p.position,Vector3Scale(p.size,0.5f));
     Vector3 high=Vector3Add(p.position,Vector3Scale(p.size,0.5f));
     Vector3 delta=Vector3Subtract(to,from);
     float enter=0.0f,exit=1.0f;
     const float start[3]={from.x,from.y,from.z};
     const float step[3]={delta.x,delta.y,delta.z};
-    const float minimum[3]={low.x-0.12f,low.y-0.12f,low.z-0.12f};
-    const float maximum[3]={high.x+0.12f,high.y+0.12f,high.z+0.12f};
+    const float minimum[3]={low.x-clearance,low.y-clearance,low.z-clearance};
+    const float maximum[3]={high.x+clearance,high.y+clearance,high.z+clearance};
     for(int axis=0;axis<3;axis++) {
         if(std::abs(step[axis])<0.000001f) {
             if(start[axis]<minimum[axis]||start[axis]>maximum[axis]) return false;
@@ -62,31 +62,32 @@ static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hit
     hitTime=enter;
     return true;
 }
-static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to) {
+static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to,float clearance=0.12f) {
     from.y+=1.0f;
     to.y+=1.0f;
     for(const auto& platform:g.platforms) {
         float hitTime=0.0f;
-        if(SegmentPlatform(from,to,platform,hitTime)) return false;
+        if(SegmentPlatform(from,to,platform,hitTime,clearance)) return false;
     }
     return true;
 }
 
 static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target,Vector3& waypoint) {
+    const float bodyRadius=e.boss?0.62f:0.42f;
     Vector3 from=e.position; from.y+=1.0f;
     Vector3 to=target; to.y+=1.0f;
     const Platform* blocker=nullptr;
     float nearest=1.0f;
     for(const auto& platform:g.platforms) {
         float hit=0.0f;
-        if(SegmentPlatform(from,to,platform,hit)&&hit<nearest) {
+        if(SegmentPlatform(from,to,platform,hit,bodyRadius)&&hit<nearest) {
             nearest=hit;
             blocker=&platform;
         }
     }
     if(!blocker) return false;
 
-    float clearance=(e.boss?0.62f:0.42f)+0.72f;
+    float clearance=bodyRadius+0.72f;
     float minX=blocker->position.x-blocker->size.x*0.5f-clearance;
     float maxX=blocker->position.x+blocker->size.x*0.5f+clearance;
     float minZ=blocker->position.z-blocker->size.z*0.5f-clearance;
@@ -103,6 +104,7 @@ static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target
         float blockedByCurrent=0.0f;
         if(SegmentPlatform(cornerRay,to,*blocker,blockedByCurrent)) continue;
         float route=Distance(e.position,corner)+Distance(corner,target);
+        if(Distance(e.position,corner)<0.65f) continue;
         if(route<best) { best=route; waypoint=corner; found=true; }
     }
     return found;
@@ -242,7 +244,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     float speed=p.playerClass==PlayerClass::Skirmisher?7.5f:6.0f;
     float sprintCost=18.0f*dt;
     if(c.sprint&&p.stamina>=sprintCost) { speed*=1.5f; p.stamina-=sprintCost; }
-    else p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
+    else if(!c.sprint) p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
     if(c.slide&&p.grounded) speed*=1.22f;
     if(c.skill&&p.escapeSkill>0&&p.stamina>=20&&p.dashCooldown<=0) {
         p.dashTime=0.24f; p.dashCooldown=1.8f; p.stamina-=20;
@@ -378,6 +380,7 @@ void UpdatePursuit(GameState& g,float dt) {
         if(d<25) nearby++;
         if(!e.boss&&(d>1.45f||e.stunTime>0)) e.attackWindup=0;
         if(e.stunTime>0) {
+            e.hasPursuitWaypoint=false;
             e.attackWindup=0;
             MoveEnemy(g,e,Vector3Scale(e.knockback,dt));
             e.knockback=Vector3Scale(e.knockback,std::max(0.0f,1.0f-8.0f*dt));
@@ -385,12 +388,21 @@ void UpdatePursuit(GameState& g,float dt) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f&&(!e.boss||e.phase==BossPhase::Dormant||e.phase==BossPhase::Hunt)) {
-                Vector3 destination=p.position,waypoint{};
-                if(!HasLineOfSight(g,e.position,p.position)&&FindPursuitWaypoint(g,e,p.position,waypoint))
-                    destination=waypoint;
+                const float bodyRadius=e.boss?0.62f:0.42f;
+                if(HasLineOfSight(g,e.position,p.position,bodyRadius)) e.hasPursuitWaypoint=false;
+                else if(!e.hasPursuitWaypoint) {
+                    Vector3 waypoint{};
+                    if(FindPursuitWaypoint(g,e,p.position,waypoint)) {
+                        e.pursuitWaypoint=waypoint;
+                        e.hasPursuitWaypoint=true;
+                    }
+                }
+                Vector3 destination=e.hasPursuitWaypoint?e.pursuitWaypoint:p.position;
                 Vector3 route=Vector3Subtract(destination,e.position); route.y=0;
                 if(Vector3Length(route)>0.001f)
                     MoveEnemy(g,e,Vector3Scale(Vector3Normalize(route),e.speed*dt));
+                if(e.hasPursuitWaypoint&&Distance(e.position,e.pursuitWaypoint)<0.45f)
+                    e.hasPursuitWaypoint=false;
             } else if(!e.boss) {
                 bool canStrike=d<=1.45f&&HasLineOfSight(g,e.position,p.position);
                 if(!canStrike||e.cooldown>0) e.attackWindup=0;
@@ -407,9 +419,9 @@ void UpdatePursuit(GameState& g,float dt) {
             }
         }
         if(e.boss) {
-            static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
-            static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};
-            static const float damage[5]={24,30,32,18,28};
+            static const float strike[5]={0.35f,0.32f,0.38f,0.48f,0.22f};
+            static const float recover[5]={0.8f,0.9f,1.0f,0.65f,0.72f};
+            static const float damage[5]={24,30,32,28,18};
             int v=std::clamp(e.variant,0,4);
             const float attackRange=BossStrikeRange(v);
             bool enraged=e.hp<=e.maxHp*0.5f;
@@ -433,17 +445,13 @@ void UpdatePursuit(GameState& g,float dt) {
                 if(e.phaseTime>strikeDuration) {
                     bool inRange=d<attackRange;
                     Vector3 attackOrigin=e.position;
-                    if(v==0||v==1||v==3) {
+                    if(v==0||v==1||v==4) {
                         attackOrigin=e.strikeOrigin;
                         Vector3 toPlayer=Vector3Subtract(p.position,attackOrigin); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);
-                        if(v==0) {
-                            float halfWidth=std::max(0.0f,forward)*0.38f;
-                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
-                        } else {
-                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=0.9f*0.9f;
-                        }
+                        const float halfWidth=BossStrikeHalfWidth(v,forward);
+                        inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
                     }
                     if(inRange&&HasLineOfSight(g,attackOrigin,p.position)&&p.invulnerable<=0) {
                         float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;

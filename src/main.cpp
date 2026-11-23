@@ -6,7 +6,10 @@
 #include <emscripten.h>
 #define KEEP EMSCRIPTEN_KEEPALIVE
 EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest), {
-  try { localStorage.setItem("tagbound-save",JSON.stringify({city,level,xp,unlocked,klass,weapon,finished,quest})); } catch(e) {}
+  try { localStorage.setItem("tagbound-save",JSON.stringify({schemaVersion:1,city,level,xp,unlocked,klass,weapon,finished,quest})); } catch(e) {}
+});
+EM_JS(int, loadSaveVersion, (), {
+  try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); return Number.isInteger(s.schemaVersion)?s.schemaVersion:0; } catch(e) { return 0; }
 });
 EM_JS(int, loadLocal, (int field), {
   try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
@@ -19,6 +22,7 @@ EM_JS(int, isSettingsOpen, (), { return document.getElementById("settings")?.cla
 #else
 #define KEEP
 static void saveLocal(int,int,int,int,int,int,int,int) {}
+static int loadSaveVersion() { return 0; }
 static int loadLocal(int) { return -1; }
 static void hideIntro() {}
 static void showEnding() {}
@@ -44,8 +48,13 @@ KEEP void StartGame() {
     game.player.health=ClassMaxHealth(game.player.playerClass);
     game.player.stamina=ClassMaxStamina(game.player.playerClass);
     game.player.weapon=ClassWeapon(game.player.playerClass);
+    int saveVersion=loadSaveVersion();
     int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6), quest=loadLocal(7);
     if(c>=0) {
+        if(saveVersion<1) {
+            c=MigrateLegacyCityIndex(c);
+            u=MigrateLegacyCityIndex(u);
+        }
         game.city=std::clamp(c,0,4); game.unlockedCity=std::clamp(u,0,4);
         game.player.level=std::max(1,l); game.player.xp=std::max(0,x);
         if(!classChosen) {
@@ -76,6 +85,8 @@ KEEP int GetQuestProgress() { return game.quest; }
 KEEP int IsCurrentQuestHoldObjective() { return QuestRequiresHold(game.city,game.quest)?1:0; }
 KEEP float GetBeaconHoldProgress() { return game.beaconHoldTime; }
 KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,game.quest); }
+KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
+KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
 KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
@@ -122,6 +133,10 @@ static unsigned int BossWindupMask() {
 static int TaggerWindupCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),
         [](const Enemy& e){return e.alive&&!e.boss&&e.attackWindup>0;});
+}
+
+extern "C" {
+KEEP unsigned int GetBossWindupMask() { return BossWindupMask(); }
 }
 
 static void Frame() {

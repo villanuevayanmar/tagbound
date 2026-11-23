@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v25';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v27';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -134,6 +134,26 @@ jobs:
               return loading && loading.classList.contains('hidden');
             }, { timeout: 45000 });
             await page.screenshot({ path: 'visual-review/desktop-intro.png', fullPage: true });
+
+            const iconOnlyUi = await page.evaluate(() => {
+              const actionButtons = [...document.querySelectorAll('#touch-controls .action')];
+              const iconOnly = button => !!button && !!button.querySelector('svg[aria-hidden="true"]') &&
+                !!button.getAttribute('aria-label') && !button.textContent.trim();
+              const pauseActions = ['#settings-sound', '#settings-install', '#resume']
+                .map(selector => document.querySelector(selector));
+              return {
+                touchHelpRemoved: !document.querySelector('#touch-help'),
+                actionButtonsIconOnly: actionButtons.length === 7 && actionButtons.every(iconOnly),
+                pauseButtonIconOnly: iconOnly(document.querySelector('#settings-open')),
+                pauseActionsIconOnly: pauseActions.every(iconOnly),
+                pauseTitleAccessible: document.querySelector('#settings-title')?.classList.contains('sr-only')
+              };
+            });
+            if (!iconOnlyUi.touchHelpRemoved || !iconOnlyUi.actionButtonsIconOnly ||
+                !iconOnlyUi.pauseButtonIconOnly || !iconOnlyUi.pauseActionsIconOnly ||
+                !iconOnlyUi.pauseTitleAccessible) {
+              throw new Error('Icon-only game controls are incomplete: ' + JSON.stringify(iconOnlyUi));
+            }
 
             const runtime = await page.evaluate(() => ({
               canvas: !!document.querySelector('#canvas'),
@@ -230,6 +250,89 @@ jobs:
             }
             await holdContext.close();
 
+            // Survival objectives advance away from the beacon and expose their own timer.
+            for (const objective of [
+              { city: 1, quest: 1, duration: 18 },
+              { city: 2, quest: 1, duration: 20 },
+              { city: 4, quest: 0, duration: 22 }
+            ]) {
+              const survivalContext = await browser.newContext();
+              const survivalPage = await survivalContext.newPage();
+              const survivalResponse = await survivalPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              if (!survivalResponse?.ok()) throw new Error('Survival-objective test page did not return HTTP 200.');
+              await survivalPage.evaluate((saved) => localStorage.setItem('tagbound-save', JSON.stringify({
+                schemaVersion: 1, city: saved.city, level: 1, xp: 0, unlocked: saved.city,
+                klass: 0, weapon: 0, finished: 0, quest: saved.quest
+              })), objective);
+              await survivalPage.reload({ waitUntil: 'networkidle' });
+              await survivalPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await survivalPage.locator('#start').click();
+              await survivalPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const state = await survivalPage.evaluate(() => ({
+                quest: Module.ccall('GetQuestProgress', 'number', [], []),
+                survival: Module.ccall('IsCurrentQuestSurvivalObjective', 'number', [], []),
+                survivalDuration: Module.ccall('GetCurrentQuestSurvivalDuration', 'number', [], []),
+                hold: Module.ccall('IsCurrentQuestHoldObjective', 'number', [], []),
+                holdDuration: Module.ccall('GetCurrentQuestHoldDuration', 'number', [], [])
+              }));
+              if (state.quest !== objective.quest || state.survival !== 1 ||
+                  Math.abs(state.survivalDuration - objective.duration) > 0.01 ||
+                  state.hold !== 0 || state.holdDuration !== 0) {
+                throw new Error('Survival objective did not restore correctly: ' + JSON.stringify({ objective, state }));
+              }
+              await survivalContext.close();
+            }
+
+            // Legacy saves used stage 3 = High Spire and stage 4 = Imperial Capital.
+            // Re-map the city identities once, then persist schemaVersion 1 so reloads do not swap them again.
+            for (const savedStage of [3, 4]) {
+              const stageContext = await browser.newContext();
+              const stagePage = await stageContext.newPage();
+              const stageResponse = await stagePage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              if (!stageResponse?.ok()) throw new Error('Saved campaign-stage page did not return HTTP 200.');
+              await stagePage.evaluate((city) => localStorage.setItem('tagbound-save', JSON.stringify({
+                city, level: 2, xp: 15, unlocked: city, klass: 1, weapon: 3, finished: 0, quest: 1
+              })), savedStage);
+              await stagePage.reload({ waitUntil: 'networkidle' });
+              await stagePage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await stagePage.locator('#start').click();
+              await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const expectedStage = savedStage === 3 ? 4 : 3;
+              const restoredStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (restoredStage?.city !== expectedStage || restoredStage?.unlocked !== expectedStage ||
+                  restoredStage?.schemaVersion !== 1 || restoredStage?.quest !== 1 ||
+                  restoredStage?.level !== 2 || restoredStage?.xp !== 15 ||
+                  restoredStage?.klass !== 1 || restoredStage?.weapon !== 3 ||
+                  restoredStage?.finished !== 0) {
+                throw new Error('Legacy campaign save migration failed: ' + JSON.stringify({ savedStage, expectedStage, restoredStage }));
+              }
+              await stagePage.reload({ waitUntil: 'networkidle' });
+              await stagePage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await stagePage.locator('#start').click();
+              await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const reloadedStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (reloadedStage?.city !== expectedStage || reloadedStage?.unlocked !== expectedStage ||
+                  reloadedStage?.schemaVersion !== 1 || reloadedStage?.quest !== 1 ||
+                  reloadedStage?.level !== 2 || reloadedStage?.xp !== 15 ||
+                  reloadedStage?.klass !== 1 || reloadedStage?.weapon !== 3 ||
+                  reloadedStage?.finished !== 0) {
+                throw new Error('Legacy campaign save was migrated more than once: ' + JSON.stringify({ savedStage, expectedStage, reloadedStage }));
+              }
+              await stageContext.close();
+            }
+
             await page.locator('#sound-toggle').click();
             const muted = await page.evaluate(() => ({
               label: document.querySelector('#sound-toggle').textContent,
@@ -289,6 +392,61 @@ jobs:
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
 
+            // Losing browser focus or being backgrounded must clear held touch/look input.
+            const restoreHeldInput = async pointerId => page.evaluate(pointerId => {
+              Module.ccall('SetTouch', null, ['number', 'number', 'number'], [0.7, -0.6, 4]);
+              Module.ccall('SetLook', null, ['number', 'number'], [6, -3]);
+              const action = document.querySelector('.action');
+              action.classList.add('active');
+              action.dataset.pointerId = String(pointerId);
+            }, pointerId);
+            const assertTouchReset = async label => {
+              const state = await page.evaluate(() => ({
+                clear: Module.ccall('IsInputStateClear', 'number', [], []),
+                activeButtons: document.querySelectorAll('.action.active').length,
+                pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              }));
+              if (state.clear !== 1 || state.activeButtons || state.pointerIds) {
+                throw new Error(label + ' did not clear held input: ' + JSON.stringify(state));
+              }
+            };
+            const notesBeforeBlur = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
+            await restoreHeldInput(997);
+            await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+            await assertTouchReset('Window blur');
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score did not pause when the browser lost focus.');
+            }
+            await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+            await page.waitForFunction(
+              previous => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previous,
+              notesBeforeBlur,
+              { timeout: 5000 }
+            );
+
+            const notesBeforeHidden = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
+            await restoreHeldInput(996);
+            await page.evaluate(() => {
+              Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+              document.dispatchEvent(new Event('visibilitychange'));
+            });
+            await assertTouchReset('Document hidden');
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score did not pause when the document became hidden.');
+            }
+            await page.evaluate(() => {
+              Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+              document.dispatchEvent(new Event('visibilitychange'));
+              delete document.hidden;
+            });
+            await page.waitForFunction(
+              previous => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previous,
+              notesBeforeHidden,
+              { timeout: 5000 }
+            );
+
             // Settings must expose install only while open and pause the actual C++ simulation.
             await page.evaluate(() => {
               Module.ccall('SetTouch', null, ['number', 'number', 'number'], [0.65, -0.35, 4]);
@@ -321,12 +479,36 @@ jobs:
               throw new Error('Settings screen or install placement failed: ' + JSON.stringify(settingsVisible));
             }
             await page.locator('#settings-sound').click();
-            if (await page.locator('#sound-toggle').textContent() !== 'SOUND: OFF' ||
-                await page.locator('#settings-sound').textContent() !== 'SOUND: OFF' ||
-                await page.evaluate(() => localStorage.getItem('tagbound-sound')) !== 'off') {
-              throw new Error('Settings sound toggle did not synchronize with Home.');
+            const settingsMuted = await page.evaluate(() => {
+              const button = document.querySelector('#settings-sound');
+              return {
+                homeText: document.querySelector('#sound-toggle').textContent,
+                label: button.getAttribute('aria-label'),
+                pressed: button.getAttribute('aria-pressed'),
+                muted: button.classList.contains('muted'),
+                saved: localStorage.getItem('tagbound-sound')
+              };
+            });
+            if (settingsMuted.homeText !== 'SOUND: OFF' || settingsMuted.label !== 'Enable sound' ||
+                settingsMuted.pressed !== 'false' || !settingsMuted.muted || settingsMuted.saved !== 'off') {
+              throw new Error('Icon-only Settings sound toggle did not synchronize with Home: ' +
+                JSON.stringify(settingsMuted));
             }
             await page.locator('#settings-sound').click();
+            const settingsUnmuted = await page.evaluate(() => {
+              const button = document.querySelector('#settings-sound');
+              return {
+                label: button.getAttribute('aria-label'),
+                pressed: button.getAttribute('aria-pressed'),
+                muted: button.classList.contains('muted'),
+                saved: localStorage.getItem('tagbound-sound')
+              };
+            });
+            if (settingsUnmuted.label !== 'Mute sound' || settingsUnmuted.pressed !== 'true' ||
+                settingsUnmuted.muted || settingsUnmuted.saved !== 'on') {
+              throw new Error('Icon-only Settings sound toggle did not restore its accessible state: ' +
+                JSON.stringify(settingsUnmuted));
+            }
             if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
               throw new Error('Ambient score resumed while Settings was still open.');
             }
@@ -361,7 +543,12 @@ jobs:
               bosses: Module.ccall('GetActiveBossCount', 'number', [], []),
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
-            if (restored.quest !== 3 || restored.bosses !== 1 || restored.save?.quest !== 3) {
+            if (restored.quest !== 3 || restored.bosses !== 1 ||
+                restored.save?.city !== 0 || restored.save?.unlocked !== 0 ||
+                restored.save?.quest !== 3 || restored.save?.level !== 1 ||
+                restored.save?.xp !== 0 || restored.save?.klass !== 1 ||
+                restored.save?.weapon !== 3 || restored.save?.finished !== 0 ||
+                restored.save?.schemaVersion !== 1) {
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
@@ -396,6 +583,63 @@ jobs:
               throw new Error('Desktop stamina value is clipped/covered by its bar: ' +
                 JSON.stringify({ staminaDigitPixels, staminaOverlapGreenPixels }));
             }
+
+            // Capture every real boss-gate scene at desktop and mobile landscape sizes.
+            // The saved quest-3 state causes StartGame to reconstruct the city-specific boss.
+            for (const device of [
+              { name: 'desktop', viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false },
+              { name: 'mobile', viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true }
+            ]) {
+              for (let city = 0; city < 5; city++) {
+                const bossContext = await browser.newContext({
+                  viewport: device.viewport, deviceScaleFactor: 1,
+                  isMobile: device.isMobile, hasTouch: device.hasTouch
+                });
+                const bossPage = await bossContext.newPage();
+                const bossResponse = await bossPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+                if (!bossResponse?.ok()) throw new Error('Boss visual-review page did not return HTTP 200.');
+                await bossPage.evaluate((savedCity) => localStorage.setItem('tagbound-save', JSON.stringify({
+                  schemaVersion: 1, city: savedCity, level: 1, xp: 0, unlocked: savedCity,
+                  klass: 0, weapon: 0, finished: 0, quest: 3
+                })), city);
+                await bossPage.reload({ waitUntil: 'networkidle' });
+                await bossPage.waitForFunction(
+                  () => document.querySelector('#loading')?.classList.contains('hidden'),
+                  null,
+                  { timeout: 45000 }
+                );
+                await bossPage.locator('#start').click();
+                await bossPage.waitForFunction(
+                  () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                    Module.ccall('GetQuestProgress', 'number', [], []) === 3 &&
+                    Module.ccall('GetActiveBossCount', 'number', [], []) === 1,
+                  null,
+                  { timeout: 10000 }
+                );
+                const bossSave = await bossPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+                if (bossSave?.city !== city || bossSave?.quest !== 3) {
+                  throw new Error('Boss visual-review save did not restore the requested city: ' +
+                    JSON.stringify({ city, bossSave }));
+                }
+                await bossPage.keyboard.down('KeyW');
+                try {
+                  await bossPage.waitForFunction(
+                    savedCity => (Module.ccall('GetBossWindupMask', 'number', [], []) & (1 << savedCity)) !== 0,
+                    city,
+                    { timeout: 12000 }
+                  );
+                } finally {
+                  await bossPage.keyboard.up('KeyW');
+                }
+                await bossPage.waitForTimeout(100);
+                await bossPage.screenshot({
+                  path: 'visual-review/boss-' + device.name + '-city-' + city + '.png',
+                  fullPage: true
+                });
+                await bossContext.close();
+              }
+            }
+
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
               save.finished = 1;
@@ -413,6 +657,33 @@ jobs:
               throw new Error('A completed save started ambient music behind the victory screen: ' + JSON.stringify(victoryAudio));
             }
 
+            // Restart from the fifth-city ending and verify campaign progress is reset.
+            await Promise.all([
+              page.waitForNavigation({ waitUntil: 'networkidle' }),
+              page.locator('#restart').click()
+            ]);
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            const restarted = await page.evaluate(() => ({
+              introVisible: !document.querySelector('#intro').classList.contains('hidden'),
+              endingHidden: document.querySelector('#ending').classList.contains('hidden'),
+              selectedClass: document.querySelector('.class-card.selected')?.dataset.class,
+              soundSetting: localStorage.getItem('tagbound-sound'),
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!restarted.introVisible || !restarted.endingHidden ||
+                restarted.save?.city !== 0 || restarted.save?.unlocked !== 0 ||
+                restarted.save?.quest !== 0 || restarted.save?.level !== 1 ||
+                restarted.save?.xp !== 0 || restarted.save?.finished !== 0 ||
+                restarted.save?.schemaVersion !== 1 ||
+                restarted.save?.klass !== 1 || restarted.save?.weapon !== 3 ||
+                restarted.selectedClass !== '1' || restarted.soundSetting !== 'on') {
+              throw new Error('Campaign restart did not reset progression while preserving class and sound: ' + JSON.stringify(restarted));
+            }
+
             // Seed an old installed-PWA cache, then verify the new worker removes it.
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
@@ -426,13 +697,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v25');
+              const cache = await caches.open('tagbound-v27');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v25') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v27') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }

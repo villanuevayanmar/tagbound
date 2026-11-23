@@ -17,7 +17,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Warden's shield reduces the stamina cost of blocking both pursuer and boss strikes.
 - Vanguard's sword deals a heavier melee strike; Skirmisher retains the fastest base movement speed; Warden uses less stamina while guarding.
 - Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss.
-- Three mixed beacon objectives per city: some are reached immediately, while selected beacons require the player to remain inside the capture radius for a city-specific duration as pursuers stay active. Leaving the radius or dying resets capture progress. Each city then ends with a unique boss and its own strike pattern, attack range, visual design and telegraphed warning zone: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
+- Three varied objectives per city combine immediate reach beacons, timed hold captures, and selected survival encounters where the player must outlast the pursuit away from the beacon. Leaving a hold beacon or dying resets capture progress; dying also resets survival progress. Pursuers remain active during either timed objective. Each city then ends with a unique boss and its own strike pattern, attack range, visual design and telegraphed warning zone: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
 - Shared beacon and boss-gate coordinates drive gameplay triggers, 3D markers and the live HUD distance readout.
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
 - Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
@@ -26,7 +26,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
 
-This is an early playable foundation, not a finished commercial game. Character models, animation, detailed city layouts, advanced parkour traversal, quest variety and complete boss encounter tuning remain development work. The current renderer uses procedural low-poly geometry. No online accounts or game server are required.
+TAGBOUND is a playable five-city campaign prototype with the listed movement, objective, class, boss, progression, save, audio and offline-PWA systems implemented. It remains in active development: the renderer uses intentionally stylized procedural low-poly assets, encounter balance and visual polish still benefit from playtesting, and real mid-range Android performance has not yet been measured. No online accounts or game server are required.
 
 ## Requirements
 
@@ -134,7 +134,7 @@ The first visit must download the game assets. The service worker caches the HTM
 
 ## Settings and pause
 
-During a run, tap SETTINGS in the top HUD row to pause the game. The Settings screen shares the saved sound preference with Home and exposes INSTALL ON PHONE only while the Settings screen is open. RESUME returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. The install action is not shown during active gameplay.
+During a run, tap the pause icon in the top HUD row to open Settings. The sound and install actions, and the Resume action, use icons with accessible labels. The saved sound preference is shared with Home. The install action appears only while Settings is open. Resume returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. When the browser loses focus or the app moves to the background, held touch/look input is cleared and the ambient score pauses. Returning to active gameplay resumes the score; it does not resume over Settings or the ending.
 
 ## Controls
 
@@ -142,13 +142,14 @@ During a run, tap SETTINGS in the top HUD row to pause the game. The Settings sc
 
 - Left joystick: move
 - Right side of the screen: swipe to look
+- Gameplay actions are icon-only and have accessible labels; the Bow icon appears only for Skirmisher
 - Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
 - Slide: short speed boost while grounded; hold it through a hard landing to roll forward; while hanging, slide or push down on the joystick to drop
 - Attack: use equipped weapon
 - Block: defend against incoming attacks
 - Bow: aim with the Skirmisher's bow; use Attack to fire
 - Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
-- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
+- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump. Wall-running drains stamina; release Sprint to regenerate it.
 
 ### Keyboard / mouse
 

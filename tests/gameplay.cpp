@@ -16,18 +16,43 @@ int main() {
     assert(game.platforms.size() == 34);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
-    assert(std::string(CityName(4)) == "IMPERIAL CAPITAL");
+    assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
+    assert(std::string(CityName(4)) == "HIGH SPIRE");
     assert(std::string(BossName(0)) == "HARBOR WARDEN");
-    assert(std::string(BossName(4)) == "IMPERIAL REGENT");
+    assert(std::string(BossName(3)) == "IMPERIAL REGENT");
+    assert(std::string(BossName(4)) == "SPIRE SENTINEL");
+    assert(MigrateLegacyCityIndex(0)==0);
+    assert(MigrateLegacyCityIndex(1)==1);
+    assert(MigrateLegacyCityIndex(2)==2);
+    assert(MigrateLegacyCityIndex(3)==4);
+    assert(MigrateLegacyCityIndex(4)==3);
+    assert(MigrateLegacyCityIndex(-1)==-1);
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
+
+    // Enemy models face their target; boss windup/strike poses retain the locked warning direction.
+    Enemy facingEnemy{{2,0.3f,3},100,100,2.5f,0,false,true};
+    Vector3 facing=EnemyFacing(facingEnemy,{5,0.3f,7});
+    assert(near(facing.x,0.6f)&&near(facing.z,0.8f));
+    Enemy facingBoss=facingEnemy;
+    facingBoss.boss=true;
+    facingBoss.phase=BossPhase::Windup;
+    facingBoss.strikeDirection={0,0,4};
+    facing=EnemyFacing(facingBoss,{-10,0.3f,3});
+    assert(near(facing.x,0.0f)&&near(facing.z,1.0f));
+    facingBoss.phase=BossPhase::Recover;
+    facing=EnemyFacing(facingBoss,{-2,0.3f,3});
+    assert(near(facing.x,-1.0f)&&near(facing.z,0.0f));
+    facing=EnemyFacing(facingEnemy,facingEnemy.position);
+    assert(near(facing.x,0.0f)&&near(facing.z,-1.0f));
+
 
     // Each city has its own rooftop route with consistent climb spacing.
     const Vector3 expectedRoutes[5][4]={
         {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},
         {{-4,1.7f,6},{-10,2.45f,13},{-14,3.2f,19},{-18,3.95f,25}},
         {{5,1.7f,3},{12,2.45f,8},{10,3.2f,16},{5,3.95f,24}},
-        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}},
-        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}}
+        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}},
+        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}}
     };
     for(int city=0;city<5;city++) {
         for(int quest=0;quest<4;quest++) {
@@ -60,15 +85,28 @@ int main() {
         {false,true,false},
         {true,false,false},
         {false,false,true},
+        {true,false,true},
+        {false,true,false}
+    };
+    const bool survivalStages[5][3]={
+        {false,false,false},
         {false,true,false},
-        {true,false,true}
+        {false,true,false},
+        {false,false,false},
+        {true,false,false}
     };
     for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
         assert(QuestRequiresHold(city,quest)==holdStages[city][quest]);
+        assert(QuestRequiresSurvival(city,quest)==survivalStages[city][quest]);
+        assert(!(holdStages[city][quest]&&survivalStages[city][quest]));
         if(holdStages[city][quest]) {
             float duration=QuestHoldDuration(city,quest);
             assert(duration>=2.5f&&duration<=4.0f);
         } else assert(near(QuestHoldDuration(city,quest),0.0f));
+        if(survivalStages[city][quest]) {
+            float duration=QuestSurvivalDuration(city,quest);
+            assert(duration>=18.0f&&duration<=22.0f);
+        } else assert(near(QuestSurvivalDuration(city,quest),0.0f));
     }
 
     // Reach objectives complete as soon as the beacon radius is entered.
@@ -96,6 +134,27 @@ int main() {
     assert(UpdateQuestObjective(holdObjective,holdDuration*0.5f+0.01f));
     assert(near(holdObjective.beaconHoldTime,0.0f));
 
+    // Survival objectives progress away from the beacon and finish only after their timer.
+    const int survivalCities[3]={1,2,4};
+    const int survivalQuests[3]={1,1,0};
+    for(int i=0;i<3;i++) {
+        GameState survivalObjective;
+        survivalObjective.city=survivalCities[i];
+        BuildCity(survivalObjective);
+        SetQuestProgress(survivalObjective,survivalQuests[i]);
+        const float duration=QuestSurvivalDuration(survivalObjective.city,survivalObjective.quest);
+        assert(QuestRequiresSurvival(survivalObjective.city,survivalObjective.quest));
+        assert(!QuestRequiresHold(survivalObjective.city,survivalObjective.quest));
+        assert(near(QuestHoldDuration(survivalObjective.city,survivalObjective.quest),0.0f));
+        survivalObjective.player.position={-30,0.3f,30};
+        assert(!UpdateQuestObjective(survivalObjective,duration*0.4f));
+        assert(near(survivalObjective.beaconHoldTime,duration*0.4f));
+        assert(!UpdateQuestObjective(survivalObjective,duration*0.5f));
+        assert(UpdateQuestObjective(survivalObjective,duration*0.1f+0.01f));
+        assert(near(survivalObjective.beaconHoldTime,0.0f));
+    }
+
+
     // Changing the quest or rebuilding the city never carries old capture time forward.
     holdObjective.beaconHoldTime=0.9f;
     SetQuestProgress(holdObjective,2);
@@ -105,8 +164,8 @@ int main() {
     assert(near(holdObjective.beaconHoldTime,0.0f));
 
     // Boss warning countdowns and strike radii use shared combat/render values.
-    const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
-    const float bossRanges[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+    const float bossWindups[5]={0.65f,0.45f,0.9f,0.5f,0.7f};
+    const float bossRanges[5]={4.0f,2.3f,5.5f,4.5f,8.0f};
     for(int variant=0;variant<5;variant++) {
         assert(near(BossWindupDuration(variant),bossWindups[variant]));
         assert(near(BossWindupDuration(variant,true),bossWindups[variant]*0.85f));
@@ -175,6 +234,106 @@ int main() {
     UpdateMovement(game, move, camera, 0.1f);
     assert(game.player.position.z > 0.4f);
 
+    // Skirmisher keeps the fastest base movement speed without sprinting.
+    GameState vanguardMovement;
+    vanguardMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    vanguardMovement.player.position={0,0.3f,0};
+    vanguardMovement.player.playerClass=PlayerClass::Vanguard;
+    GameState skirmisherMovement;
+    skirmisherMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    skirmisherMovement.player.position={0,0.3f,0};
+    skirmisherMovement.player.playerClass=PlayerClass::Skirmisher;
+    UpdateMovement(vanguardMovement,move,camera,0.1f);
+    UpdateMovement(skirmisherMovement,move,camera,0.1f);
+    assert(skirmisherMovement.player.position.z>vanguardMovement.player.position.z+0.1f);
+
+    // Simulate every raised rooftop transfer from each city's spawn roof to its boss gate.
+    for(int city=0;city<5;city++) {
+        for(int segment=0;segment<4;segment++) {
+            GameState routeGame;
+            routeGame.city=city;
+            BuildCity(routeGame);
+            routeGame.player.playerClass=PlayerClass::Skirmisher;
+            routeGame.player.weapon=Weapon::Bow;
+            routeGame.player.stamina=100.0f;
+
+            const Vector3 startCenter=segment==0?Vector3{0,0.3f,0}:QuestTarget(city,segment-1);
+            const Vector3 target=QuestTarget(city,segment);
+            Vector3 direction={target.x-startCenter.x,0,target.z-startCenter.z};
+            const float distance=Vector3Length(direction);
+            assert(distance>0.001f);
+            direction=Vector3Scale(direction,1.0f/distance);
+
+            const float startHalf=segment==0?4.0f:2.5f;
+            const float edgeX=std::fabs(direction.x)>0.001f?startHalf/std::fabs(direction.x):1000.0f;
+            const float edgeZ=std::fabs(direction.z)>0.001f?startHalf/std::fabs(direction.z):1000.0f;
+            const float takeoffDistance=std::min(edgeX,edgeZ)-0.25f;
+            routeGame.player.position={
+                startCenter.x+direction.x*takeoffDistance,
+                startCenter.y,
+                startCenter.z+direction.z*takeoffDistance
+            };
+            routeGame.player.velocity={0,0,0};
+            routeGame.player.grounded=true;
+            routeGame.player.stamina=100.0f;
+
+            if(segment==3) {
+                // Starting the final approach must instantiate this city's actual boss at its gate.
+                SetQuestProgress(routeGame,3);
+                assert(routeGame.bossUnlocked);
+                assert(std::count_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==1);
+                const Enemy& boss=*std::find_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;});
+                assert(boss.variant==city);
+                assert(near(boss.position.x,target.x)&&near(boss.position.y,target.y)&&near(boss.position.z,target.z));
+            }
+
+            // Keep BuildCity's valid grounded spawn state for the opening jump.
+            Camera3D routeCamera=camera;
+
+            const float targetHalf=segment==3?4.0f:2.5f;
+            bool airborne=false;
+            bool landed=false;
+            for(int frame=0;frame<180;frame++) {
+                Vector3 toTarget={target.x-routeGame.player.position.x,0,target.z-routeGame.player.position.z};
+                const float remaining=Vector3Length(toTarget);
+                Controls input{};
+                if(remaining>0.25f) {
+                    const Vector3 desired=Vector3Scale(toTarget,1.0f/remaining);
+                    // The test leaves camera yaw at its default +Z orientation.
+                    input.move.x=desired.x;
+                    input.move.y=desired.z;
+                    input.sprint=true;
+                }
+                // If the jump reaches a ledge, use the game's required jump-to-climb action.
+                input.jump=frame==0||routeGame.player.ledgeGrabbing;
+                UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
+                if(!routeGame.player.grounded) airborne=true;
+                const bool insideTarget=std::fabs(routeGame.player.position.x-target.x)<targetHalf-0.2f &&
+                                        std::fabs(routeGame.player.position.z-target.z)<targetHalf-0.2f;
+                if(airborne&&routeGame.player.grounded&&insideTarget&&
+                   routeGame.player.position.y>=target.y-0.05f) {
+                    landed=true;
+                    break;
+                }
+            }
+            if(segment==3) {
+                assert(routeGame.bossUnlocked);
+                assert(std::count_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==1);
+            }
+            if(!landed) {
+                std::cerr << "Rooftop route transfer failed: city=" << city
+                          << " segment=" << segment
+                          << " player=(" << routeGame.player.position.x << ","
+                          << routeGame.player.position.y << ","
+                          << routeGame.player.position.z << ")" << std::endl;
+                assert(landed);
+            }
+        }
+    }
+
     // A high-speed Skirmisher dash cannot tunnel through a thin wall.
     GameState dashCollision;
     dashCollision.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
@@ -189,6 +348,38 @@ int main() {
     fastDash.skill=true;
     UpdateMovement(dashCollision,fastDash,camera,0.04f);
     assert(dashCollision.player.position.x<0.56f);
+
+    // Wall-running consumes stamina and a wall-jump launches away from the surface.
+    GameState wallRun;
+    wallRun.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    wallRun.platforms.push_back({{0,1.5f,0},{1,3,8},GRAY});
+    wallRun.player.position={0.95f,2.0f,0};
+    wallRun.player.velocity={0,-1.0f,0};
+    wallRun.player.grounded=false;
+    Controls wallRunInput{};
+    wallRunInput.sprint=true;
+    UpdateMovement(wallRun,wallRunInput,camera,0.04f);
+    assert(wallRun.player.wallRunning);
+    assert(wallRun.player.velocity.y>-2.5f);
+    assert(near(wallRun.player.stamina,98.96f));
+    Controls wallJumpInput=wallRunInput;
+    wallJumpInput.jump=true;
+    UpdateMovement(wallRun,wallJumpInput,camera,0.04f);
+    assert(!wallRun.player.wallRunning);
+    assert(wallRun.player.velocity.x>5.0f);
+    assert(wallRun.player.velocity.y>8.5f);
+
+    // Holding sprint cannot regenerate stamina while a wall-run is exhausting it.
+    GameState exhaustedWallRun;
+    exhaustedWallRun.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    exhaustedWallRun.platforms.push_back({{0,1.5f,0},{1,3,8},GRAY});
+    exhaustedWallRun.player.position={0.95f,2.0f,0};
+    exhaustedWallRun.player.velocity={0,-1.0f,0};
+    exhaustedWallRun.player.grounded=false;
+    exhaustedWallRun.player.stamina=0.2f;
+    for(int frame=0;frame<2;frame++) UpdateMovement(exhaustedWallRun,wallRunInput,camera,0.04f);
+    assert(near(exhaustedWallRun.player.stamina,0.0f));
+    assert(!exhaustedWallRun.player.wallRunning);
 
     Controls jump{};
     jump.jump = true;
@@ -656,6 +847,28 @@ int main() {
     UpdatePursuit(game,0.45f);
     assert(near(game.player.health,89.0f));
 
+    // A pursuer must route around a solid rooftop wall instead of stalling at it.
+    GameState pathing;
+    pathing.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    pathing.platforms.push_back({{0,1.5f,0},{0.4f,3.0f,3.0f},GRAY});
+    pathing.player.position={0,0.3f,-6.0f};
+    pathing.player.invulnerable=1000.0f;
+    pathing.enemies.push_back({{0,0.3f,6.0f},40,40,2.4f,0,false,true});
+    const float blockedRouteDistance=Vector3Distance(pathing.player.position,pathing.enemies.front().position);
+    for(int frame=0;frame<240;frame++) UpdatePursuit(pathing,0.05f);
+    const Enemy& routedPursuer=pathing.enemies.front();
+    const float routedDistance=Vector3Distance(pathing.player.position,routedPursuer.position);
+    assert(routedDistance<3.0f);
+    assert(routedDistance<blockedRouteDistance-7.0f);
+    const Platform& rooftopWall=pathing.platforms[1];
+    const bool overlapsX=routedPursuer.position.x+0.42f>rooftopWall.position.x-rooftopWall.size.x*0.5f &&
+                         routedPursuer.position.x-0.42f<rooftopWall.position.x+rooftopWall.size.x*0.5f;
+    const bool overlapsY=routedPursuer.position.y+1.72f>rooftopWall.position.y-rooftopWall.size.y*0.5f+0.05f &&
+                         routedPursuer.position.y<rooftopWall.position.y+rooftopWall.size.y*0.5f-0.05f;
+    const bool overlapsZ=routedPursuer.position.z+0.42f>rooftopWall.position.z-rooftopWall.size.z*0.5f &&
+                         routedPursuer.position.z-0.42f<rooftopWall.position.z+rooftopWall.size.z*0.5f;
+    assert(!(overlapsX&&overlapsY&&overlapsZ));
+
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
     game.player.facing = {0,0,1};
@@ -724,7 +937,7 @@ int main() {
     game.enemies.clear();
     game.player.position={0,0.3f,7.0f};
     Enemy spireWindup{{0,0.3f,0},100,100,2.5f,0,true,true};
-    spireWindup.variant=3;
+    spireWindup.variant=4;
     spireWindup.phase=BossPhase::Hunt;
     game.enemies.push_back(spireWindup);
     UpdatePursuit(game,0.016f);
@@ -780,7 +993,7 @@ int main() {
     game.player.blocking=false;
     game.player.stamina=100;
     Enemy alignedSpire{{0,0.3f,0},100,100,0,0,true,true};
-    alignedSpire.variant=3;
+    alignedSpire.variant=4;
     alignedSpire.phase=BossPhase::Strike;
     alignedSpire.phaseTime=0.23f;
     alignedSpire.strikeDirection={0,0,1};
@@ -795,7 +1008,7 @@ int main() {
     game.player.health=100;
     game.player.invulnerable=0;
     Enemy dodgedSpire{{0,0.3f,0},100,100,0,0,true,true};
-    dodgedSpire.variant=3;
+    dodgedSpire.variant=4;
     dodgedSpire.phase=BossPhase::Strike;
     dodgedSpire.phaseTime=0.23f;
     dodgedSpire.strikeDirection={0,0,1};
@@ -805,9 +1018,37 @@ int main() {
     assert(near(game.player.health,100.0f));
     assert(game.enemies.front().phase==BossPhase::Recover);
 
+    // Telegraph and damage share the same half-width for lane-based boss strikes.
+    assert(near(BossStrikeHalfWidth(0,8.0f),3.04f));
+    assert(near(BossStrikeHalfWidth(1,8.0f),0.9f));
+    assert(near(BossStrikeHalfWidth(4,8.0f),0.9f));
+    assert(near(BossStrikeHalfWidth(2,8.0f),0.0f));
+    const int laneVariants[2]={1,4};
+    for(int variant : laneVariants) {
+        const float expectedDamage=variant==1?30.0f:18.0f;
+        for(int edge=0;edge<2;edge++) {
+            game.platforms.clear();
+            game.enemies.clear();
+            game.player.position={edge==0?0.89f:0.91f,0.3f,2.0f};
+            game.player.health=100;
+            game.player.invulnerable=0;
+            game.player.blocking=false;
+            Enemy laneBoss{{0,0.3f,0},100,100,0,0,true,true};
+            laneBoss.variant=variant;
+            laneBoss.phase=BossPhase::Strike;
+            laneBoss.phaseTime=1.0f;
+            laneBoss.strikeDirection={0,0,1};
+            laneBoss.strikeOrigin=laneBoss.position;
+            game.enemies.push_back(laneBoss);
+            UpdatePursuit(game,0.01f);
+            assert(near(game.player.health,edge==0?100.0f-expectedDamage:100.0f));
+            assert(game.enemies.front().phase==BossPhase::Recover);
+        }
+    }
+
     // Each city boss has a distinct attack pattern, range and damage profile.
-    const float bossDistances[5]={3.5f,2.2f,5.0f,7.0f,4.0f};
-    const float bossDamage[5]={24,30,32,18,28};
+    const float bossDistances[5]={3.5f,2.2f,5.0f,4.0f,7.0f};
+    const float bossDamage[5]={24,30,32,28,18};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
@@ -828,7 +1069,7 @@ int main() {
     }
 
     // Foundry Colossus and Imperial Regent use radial strikes that can be dodged beyond their warning ring.
-    const int radialBossVariants[2]={2,4};
+    const int radialBossVariants[2]={2,3};
     const float radialBossDamage[2]={32.0f,28.0f};
     for(int i=0;i<2;i++) {
         const int variant=radialBossVariants[i];
@@ -860,7 +1101,7 @@ int main() {
     }
 
     // Bosses enter an enrage phase below half health and deal increased strike damage.
-    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,19.8f,30.8f};
+    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,30.8f,19.8f};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
