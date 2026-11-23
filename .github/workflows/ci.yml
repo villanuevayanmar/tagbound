@@ -542,7 +542,17 @@ jobs:
                   throw new Error('Boss visual-review save did not restore the requested city: ' +
                     JSON.stringify({ city, bossSave }));
                 }
-                await bossPage.waitForTimeout(900);
+                await bossPage.keyboard.down('KeyW');
+                try {
+                  await bossPage.waitForFunction(
+                    savedCity => (Module.ccall('GetBossWindupMask', 'number', [], []) & (1 << savedCity)) !== 0,
+                    city,
+                    { timeout: 12000 }
+                  );
+                } finally {
+                  await bossPage.keyboard.up('KeyW');
+                }
+                await bossPage.waitForTimeout(100);
                 await bossPage.screenshot({
                   path: 'visual-review/boss-' + device.name + '-city-' + city + '.png',
                   fullPage: true
