@@ -260,8 +260,19 @@ int main() {
             routeGame.player.grounded=true;
             routeGame.player.stamina=100.0f;
 
-            // BuildCity spawns the player grounded slightly above the roof collision top.
-            // A zero-delta movement update would clear grounded before the jump input.
+            if(segment==3) {
+                // Starting the final approach must instantiate this city's actual boss at its gate.
+                SetQuestProgress(routeGame,3);
+                assert(routeGame.bossUnlocked);
+                assert(std::count_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==1);
+                const Enemy& boss=*std::find_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;});
+                assert(boss.variant==city);
+                assert(near(boss.position.x,target.x)&&near(boss.position.y,target.y)&&near(boss.position.z,target.z));
+            }
+
+            // Keep BuildCity's valid grounded spawn state for the opening jump.
             Camera3D routeCamera=camera;
 
             const float targetHalf=segment==3?4.0f:2.5f;
@@ -289,6 +300,11 @@ int main() {
                     landed=true;
                     break;
                 }
+            }
+            if(segment==3) {
+                assert(routeGame.bossUnlocked);
+                assert(std::count_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==1);
             }
             if(!landed) {
                 std::cerr << "Rooftop route transfer failed: city=" << city
