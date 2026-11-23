@@ -621,12 +621,15 @@ jobs:
                   throw new Error('Boss visual-review save did not restore the requested city: ' +
                     JSON.stringify({ city, bossSave }));
                 }
-                // The final gate floor is one step above the previous checkpoint.
-                // Traverse the last rooftop jump and enter the arena before checking its telegraph.
-                const arenaSideKey = city === 0 || city === 4 ? 'KeyD' :
-                  (city === 1 || city === 2 ? 'KeyA' : null);
+                // Enter the gate floor from the previous rooftop checkpoint.
+                // Imperial/Spire checkpoints need a short lateral alignment before the final jump.
+                const arenaSideKey = city === 2 ? 'KeyA' : (city === 4 ? 'KeyD' : null);
+                if (arenaSideKey) {
+                  await bossPage.keyboard.down(arenaSideKey);
+                  await bossPage.waitForTimeout(250);
+                  await bossPage.keyboard.up(arenaSideKey);
+                }
                 await bossPage.keyboard.down('KeyW');
-                if (arenaSideKey) await bossPage.keyboard.down(arenaSideKey);
                 await bossPage.keyboard.down('Space');
                 try {
                   await bossPage.waitForTimeout(100);
