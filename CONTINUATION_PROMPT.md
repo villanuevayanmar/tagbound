@@ -56,8 +56,16 @@ Commit meaningful work before risky or interruption-prone operations and after v
 - The existing project is still described by its README as an early playable foundation with substantial gameplay, visual, animation, quest, balancing, and physical-device verification work remaining.
 
 ## Immediate continuation at the last checkpoint
-The branch `feat/icon-only-game-controls` was created from `main` to implement the icon-only interface requirement. The branch contains updated `web/index.html`, `web/styles.css`, `web/pwa.js`, `web/sw.js`, matching `dist/` copies, updated CI assertions, updated live-smoke assertions, and a README note. The service-worker cache was bumped from `tagbound-v25` to `tagbound-v26`.
+The icon-only interface work is on branch `feat/icon-only-game-controls` and open pull request [#13](https://github.com/villanuevayanmar/tagbound/pull/13). It updates `web/index.html`, `web/styles.css`, `web/pwa.js`, `web/sw.js`, matching committed `dist/` copies, normal CI assertions, live-smoke assertions, README guidance, and this continuity documentation. The service-worker cache was bumped from `tagbound-v25` to `tagbound-v26`. The pull request also updates `DEVELOPMENT_STATUS.md`.
 
-**Next action:** inspect every changed file on that branch, finish/verify the live-smoke and documentation updates, open or inspect its pull request, and wait for hosted CI results. The icon-only browser checks must verify that visible action and pause buttons contain SVG icons, have accessible labels, and contain no visible text. Update failures rather than bypassing tests. After all relevant checks pass, merge using the repository's normal workflow, verify that Vercel deploys the updated `dist/`, run live production smoke against the new deployment, and update both continuity documents with exact verified commits and run IDs. Then continue the remaining gameplay, visual, animation, performance, and release-readiness work.
+At the latest check, GitHub Actions build/browser smoke run #248 (`45121351189`) was in progress for PR #13. Since documentation commits can retrigger CI, always inspect the newest run for the current PR head SHA rather than assuming #248 is still the final result.
+
+Current production deployment was inspected through Vercel and is **READY**:
+- Deployment ID: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`
+- URL: https://tagbound-3ly5acjad-yanmar.vercel.app
+- Production alias: https://tagbound.vercel.app
+- Runtime bundle commit: `9115f13b4021f9052a95eea66ceaa1000f134978`
+
+**Next action:** inspect PR #13 and its newest Actions run; fix every failed assertion or build step and rerun the checks. The icon-only browser assertions must verify that action and pause controls contain SVG icons, retain accessible labels, and render no visible button text. Preserve the fixed class weapon mapping and Bow visibility rules. Once all required CI checks pass, merge PR #13 using the normal GitHub workflow. Then verify that Vercel automatically deploys the updated committed `dist/` files, inspect the new READY deployment and exact commit, and manually dispatch the live production smoke workflow against that deployment. Do not call the UI change finished or deployed until those steps pass. Update both continuity documents with exact verified commits, run IDs, and deployment details. Then resume the broader remaining gameplay, visual, animation, performance, audio, and release-readiness work.
 
 **Final objective:** finish the agreed TAGBOUND game scope. Keep costs at zero, keep all work cloud-based, preserve the existing project, and never misrepresent unverified work as complete.
