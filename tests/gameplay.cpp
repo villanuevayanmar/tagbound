@@ -782,7 +782,7 @@ int main() {
     game.player.blocking=false;
     game.player.stamina=100;
     Enemy alignedSpire{{0,0.3f,0},100,100,0,0,true,true};
-    alignedSpire.variant=3;
+    alignedSpire.variant=4;
     alignedSpire.phase=BossPhase::Strike;
     alignedSpire.phaseTime=0.23f;
     alignedSpire.strikeDirection={0,0,1};
@@ -797,7 +797,7 @@ int main() {
     game.player.health=100;
     game.player.invulnerable=0;
     Enemy dodgedSpire{{0,0.3f,0},100,100,0,0,true,true};
-    dodgedSpire.variant=3;
+    dodgedSpire.variant=4;
     dodgedSpire.phase=BossPhase::Strike;
     dodgedSpire.phaseTime=0.23f;
     dodgedSpire.strikeDirection={0,0,1};
@@ -808,8 +808,8 @@ int main() {
     assert(game.enemies.front().phase==BossPhase::Recover);
 
     // Each city boss has a distinct attack pattern, range and damage profile.
-    const float bossDistances[5]={3.5f,2.2f,5.0f,7.0f,4.0f};
-    const float bossDamage[5]={24,30,32,18,28};
+    const float bossDistances[5]={3.5f,2.2f,5.0f,4.0f,7.0f};
+    const float bossDamage[5]={24,30,32,28,18};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
@@ -830,7 +830,7 @@ int main() {
     }
 
     // Foundry Colossus and Imperial Regent use radial strikes that can be dodged beyond their warning ring.
-    const int radialBossVariants[2]={2,4};
+    const int radialBossVariants[2]={2,3};
     const float radialBossDamage[2]={32.0f,28.0f};
     for(int i=0;i<2;i++) {
         const int variant=radialBossVariants[i];
@@ -862,7 +862,7 @@ int main() {
     }
 
     // Bosses enter an enrage phase below half health and deal increased strike damage.
-    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,19.8f,30.8f};
+    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,30.8f,19.8f};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
