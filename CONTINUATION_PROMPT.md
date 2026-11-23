@@ -1,0 +1,63 @@
+# TAGBOUND Continuation Prompt
+
+You are the dedicated cloud-development team for **TAGBOUND: The Five Cities**.
+
+Continue the actual existing game until its agreed five-city scope is complete, polished, tested, deployed, and release-ready. Do not stop at a plan, prototype, or merely playable build. Do not ask whether to continue after each task. Work on actionable tasks in the current session, verify them, checkpoint them, and move to the next unfinished requirement.
+
+## Project
+- Repository: https://github.com/villanuevayanmar/tagbound
+- Production: https://tagbound.vercel.app
+- Stack: C++17, raylib 5.5, Emscripten, WebAssembly, WebGL, JavaScript, HTML/CSS, PWA, CMake, GitHub Actions, Vercel.
+- The C++ simulation and renderer use raylib. The browser layer provides the interface, touch controls, PWA installation, caching, and story.
+- Three.js is a reference for studying 3D techniques. Do not replace raylib or add a second renderer without a justified reason.
+
+## Hard constraints
+- The user no longer has a laptop and uses ChatGPT on Android. Never require local commands, terminals, PowerShell, local compilers, Emscripten, CMake, npm, or local tests. Use authorized GitHub, GitHub Actions, hosted Chromium, and Vercel tools.
+- Cost must remain ₱0 / $0. No paid services, APIs, subscriptions, upgrades, billing changes, purchases, or quota bypasses.
+- Preserve repository history, working features, and save behavior. Never force-push or perform destructive production changes.
+- Never claim a test, merge, deployment, or physical-device test happened unless verified.
+- The assistant cannot keep running in the background or detect an internet disconnection after it occurs. Commit and update these continuity documents frequently so the next session can resume from GitHub.
+
+## Non-negotiable game requirements
+- Exactly three classes and fixed weapons: Vanguard → Sword; Skirmisher → Bow; Warden → Shield. No weapon switching. The Bow touch control appears only for Skirmisher.
+- PWA installation is available only on Home and inside the in-game pause menu, never during active gameplay.
+- The in-game pause menu pauses the actual C++ simulation, preserves the run, clears held joystick/touch/look inputs, supports resume, shares the sound preference, and provides installation.
+- Campaign: Harbor, Gilded, Foundry, Imperial, and Spire. Preserve each city's routes, objectives, and boss.
+- Preserve parkour, combat, stamina/health, pursuers, boss telegraphs, progression, ending, local saves, and offline PWA behavior.
+- Mix immediate reach-beacon and timed hold-beacon objectives. Expand variety without breaking existing reset rules.
+
+## Icon-only in-game interface rule
+Visible action controls and the in-game pause interface must use game-themed icons, not written action labels. This includes the vault/climb, slide/drop, equipped-weapon action, guard, bow, escape skill, sprint, and pause controls. Pause-menu sound, install, and resume actions should also be icon-only. Provide accessible `aria-label` text for assistive technology, but do not render those labels as visible button text or hover titles. Remove the word-based touch-help strip. Keep useful story, class, objective, boss, health, and combat-status information when text is necessary to understand the game; the icon-only rule is for controls and pause actions, not a requirement to erase useful game information.
+
+## Session start checklist
+1. Inspect the actual current `main` branch, repository tree, recent commits, pull requests, GitHub Actions, and production deployment.
+2. Read `README.md`, `DEVELOPMENT_STATUS.md`, and this file. Compare documentation with the real source and test evidence.
+3. Inspect source, browser integration, PWA/service worker, CMake, tests, workflows, Vercel config, and generated `dist/` files as relevant.
+4. Identify the exact next unfinished task. Do not repeat work already completed unless fixing a verified regression.
+5. Implement through cloud tools, test, fix failures, checkpoint, and continue.
+
+## Testing and delivery
+Use hosted CI for WebAssembly builds, C++ regressions, desktop/mobile Chromium, touch controls, class loadouts, HUD visibility, pause/resume, audio, save restoration, PWA install placement, service-worker cache, and offline reload. Update the service-worker cache version when changing cached assets. Keep `web/` and the production `dist/` copies synchronized; Vercel serves `dist/`.
+Only deploy after relevant checks pass. Confirm the actual production deployment and run live smoke against that deployment. Physical Android testing remains separate: ask the user to test the ready deployed PWA and report concrete findings; never claim it was tested by the assistant.
+
+## Continuity rules
+Maintain:
+- `DEVELOPMENT_STATUS.md`: verified project state, completed work, tests, current deployment, known issues, remaining work, current phase, exact next task.
+- `CONTINUATION_PROMPT.md`: this ready-to-copy recovery prompt, updated whenever requirements, branch state, tested work, deployment, or next task changes.
+
+Commit meaningful work before risky or interruption-prone operations and after verified milestones. Do not store credentials or secrets in either document. After each substantial session, leave the repository with accurate status and a current next action.
+
+## Baseline known at 2026-11-23
+- Main commit observed before the icon-only controls work: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- Latest generated WebAssembly runtime bundle observed: `9115f13b4021f9052a95eea66ceaa1000f134978`.
+- The latest recorded main CI run #247 and live production smoke #9 passed. The earlier live smoke #8 failed because it ran against the older deployment before the runtime bundle had updated; the later live smoke #9 passed.
+- PRs #1–#12 were observed merged, including the Settings/pause system, HUD rendering, input reset, ambient score, class-specific Bow control, hold-beacon objectives, death-frame attack prevention, all-class campaign progression, boss warning-range alignment, live-smoke automation, stamina HUD fix, and production smoke rerun.
+- Physical Android testing has not been recorded. The user can test the deployed game on Android; no laptop or local commands may be requested.
+- The existing project is still described by its README as an early playable foundation with substantial gameplay, visual, animation, quest, balancing, and physical-device verification work remaining.
+
+## Immediate continuation at the last checkpoint
+The branch `feat/icon-only-game-controls` was created from `main` to implement the icon-only interface requirement. The branch contains updated `web/index.html`, `web/styles.css`, `web/pwa.js`, `web/sw.js`, matching `dist/` copies, updated CI assertions, updated live-smoke assertions, and a README note. The service-worker cache was bumped from `tagbound-v25` to `tagbound-v26`.
+
+**Next action:** inspect every changed file on that branch, finish/verify the live-smoke and documentation updates, open or inspect its pull request, and wait for hosted CI results. The icon-only browser checks must verify that visible action and pause buttons contain SVG icons, have accessible labels, and contain no visible text. Update failures rather than bypassing tests. After all relevant checks pass, merge using the repository's normal workflow, verify that Vercel deploys the updated `dist/`, run live production smoke against the new deployment, and update both continuity documents with exact verified commits and run IDs. Then continue the remaining gameplay, visual, animation, performance, and release-readiness work.
+
+**Final objective:** finish the agreed TAGBOUND game scope. Keep costs at zero, keep all work cloud-based, preserve the existing project, and never misrepresent unverified work as complete.
