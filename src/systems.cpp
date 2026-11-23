@@ -409,15 +409,15 @@ void UpdatePursuit(GameState& g,float dt) {
         if(e.boss) {
             static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
             static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};
-            static const float range[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
             static const float damage[5]={24,30,32,18,28};
             int v=std::clamp(e.variant,0,4);
+            const float attackRange=BossStrikeRange(v);
             bool enraged=e.hp<=e.maxHp*0.5f;
             float strikeDuration=strike[v]*(enraged?0.85f:1.0f);
             float recoverDuration=recover[v]*(enraged?0.85f:1.0f);
             e.phaseTime+=dt;
             if(e.phase==BossPhase::Dormant&&d<20) e.phase=BossPhase::Hunt;
-            else if(e.phase==BossPhase::Hunt&&d<range[v]*1.15f) {
+            else if(e.phase==BossPhase::Hunt&&d<attackRange*1.15f) {
                 Vector3 aim=Vector3Subtract(p.position,e.position); aim.y=0;
                 if(Vector3Length(aim)>0.001f) {
                     e.strikeDirection=Vector3Normalize(aim);
@@ -431,7 +431,7 @@ void UpdatePursuit(GameState& g,float dt) {
                     MoveEnemy(g,e,Vector3Scale(e.strikeDirection,e.speed*3.0f*(enraged?1.15f:1.0f)*dt));
                 d=Distance(e.position,p.position);
                 if(e.phaseTime>strikeDuration) {
-                    bool inRange=d<range[v];
+                    bool inRange=d<attackRange;
                     Vector3 attackOrigin=e.position;
                     if(v==0||v==1||v==3) {
                         attackOrigin=e.strikeOrigin;
@@ -440,9 +440,9 @@ void UpdatePursuit(GameState& g,float dt) {
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);
                         if(v==0) {
                             float halfWidth=std::max(0.0f,forward)*0.38f;
-                            inRange=forward>0.0f&&forward<range[v]&&lateralSquared<=halfWidth*halfWidth;
+                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
                         } else {
-                            inRange=forward>0.0f&&forward<range[v]&&lateralSquared<=0.9f*0.9f;
+                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=0.9f*0.9f;
                         }
                     }
                     if(inRange&&HasLineOfSight(g,attackOrigin,p.position)&&p.invulnerable<=0) {
