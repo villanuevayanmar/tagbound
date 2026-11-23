@@ -919,7 +919,8 @@ int main() {
     assert(near(BossStrikeHalfWidth(1,8.0f),0.9f));
     assert(near(BossStrikeHalfWidth(4,8.0f),0.9f));
     assert(near(BossStrikeHalfWidth(2,8.0f),0.0f));
-    for(int variant : {1,4}) {
+    const int laneVariants[2]={1,4};
+    for(int variant : laneVariants) {
         const float expectedDamage=variant==1?30.0f:18.0f;
         for(int edge=0;edge<2;edge++) {
             game.platforms.clear();

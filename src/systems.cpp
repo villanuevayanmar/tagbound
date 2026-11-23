@@ -450,10 +450,8 @@ void UpdatePursuit(GameState& g,float dt) {
                         Vector3 toPlayer=Vector3Subtract(p.position,attackOrigin); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);
-                        if(v==0||v==1||v==4) {
-                            const float halfWidth=BossStrikeHalfWidth(v,forward);
-                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
-                        }
+                        const float halfWidth=BossStrikeHalfWidth(v,forward);
+                        inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
                     }
                     if(inRange&&HasLineOfSight(g,attackOrigin,p.position)&&p.invulnerable<=0) {
                         float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;
