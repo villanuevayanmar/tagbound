@@ -16,18 +16,22 @@ int main() {
     assert(game.platforms.size() == 34);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
-    assert(std::string(CityName(4)) == "IMPERIAL CAPITAL");
+    assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
+    assert(std::string(CityName(4)) == "HIGH SPIRE");
     assert(std::string(BossName(0)) == "HARBOR WARDEN");
-    assert(std::string(BossName(4)) == "IMPERIAL REGENT");
+    assert(std::string(BossName(3)) == "IMPERIAL REGENT");
+    assert(std::string(BossName(4)) == "SPIRE SENTINEL");
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
+    assert(MigrateLegacyCityIndex(0)==0 && MigrateLegacyCityIndex(2)==2);
+    assert(MigrateLegacyCityIndex(3)==4 && MigrateLegacyCityIndex(4)==3);
 
     // Each city has its own rooftop route with consistent climb spacing.
     const Vector3 expectedRoutes[5][4]={
         {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},
         {{-4,1.7f,6},{-10,2.45f,13},{-14,3.2f,19},{-18,3.95f,25}},
         {{5,1.7f,3},{12,2.45f,8},{10,3.2f,16},{5,3.95f,24}},
-        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}},
-        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}}
+        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}},
+        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}}
     };
     for(int city=0;city<5;city++) {
         for(int quest=0;quest<4;quest++) {
@@ -60,8 +64,8 @@ int main() {
         {false,true,false},
         {true,false,false},
         {false,false,true},
-        {false,true,false},
-        {true,false,true}
+        {true,false,true},
+        {false,true,false}
     };
     for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
         assert(QuestRequiresHold(city,quest)==holdStages[city][quest]);
@@ -105,8 +109,8 @@ int main() {
     assert(near(holdObjective.beaconHoldTime,0.0f));
 
     // Boss warning countdowns and strike radii use shared combat/render values.
-    const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
-    const float bossRanges[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+    const float bossWindups[5]={0.65f,0.45f,0.9f,0.5f,0.7f};
+    const float bossRanges[5]={4.0f,2.3f,5.5f,4.5f,8.0f};
     for(int variant=0;variant<5;variant++) {
         assert(near(BossWindupDuration(variant),bossWindups[variant]));
         assert(near(BossWindupDuration(variant,true),bossWindups[variant]*0.85f));
@@ -724,7 +728,7 @@ int main() {
     game.enemies.clear();
     game.player.position={0,0.3f,7.0f};
     Enemy spireWindup{{0,0.3f,0},100,100,2.5f,0,true,true};
-    spireWindup.variant=3;
+    spireWindup.variant=4;
     spireWindup.phase=BossPhase::Hunt;
     game.enemies.push_back(spireWindup);
     UpdatePursuit(game,0.016f);

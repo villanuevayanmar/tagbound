@@ -230,6 +230,38 @@ jobs:
             }
             await holdContext.close();
 
+            // Legacy v1 saves stored Spire at index 3 and Imperial at index 4.
+            // Reorder them once, preserve quest progress, and stamp the migrated schema.
+            for (const legacy of [
+              { city: 3, unlocked: 3, expectedCity: 4 },
+              { city: 4, unlocked: 4, expectedCity: 3 }
+            ]) {
+              const migrationContext = await browser.newContext();
+              const migrationPage = await migrationContext.newPage();
+              const migrationResponse = await migrationPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              if (!migrationResponse?.ok()) throw new Error('Legacy save migration page did not return HTTP 200.');
+              await migrationPage.evaluate((save) => localStorage.setItem('tagbound-save', JSON.stringify({
+                city: save.city, level: 2, xp: 15, unlocked: save.unlocked,
+                klass: 1, weapon: 3, finished: 0, quest: 1
+              })), legacy);
+              await migrationPage.reload({ waitUntil: 'networkidle' });
+              await migrationPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await migrationPage.locator('#start').click();
+              await migrationPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const migratedSave = await migrationPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (migratedSave?.city !== legacy.expectedCity ||
+                  migratedSave?.unlocked !== legacy.expectedCity ||
+                  migratedSave?.version !== 2 || migratedSave?.quest !== 1 ||
+                  migratedSave?.klass !== 1 || migratedSave?.weapon !== 3) {
+                throw new Error('Legacy city order migration lost progress: ' + JSON.stringify({ legacy, migratedSave }));
+              }
+              await migrationContext.close();
+            }
+
             await page.locator('#sound-toggle').click();
             const muted = await page.evaluate(() => ({
               label: document.querySelector('#sound-toggle').textContent,

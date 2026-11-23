@@ -407,9 +407,9 @@ void UpdatePursuit(GameState& g,float dt) {
             }
         }
         if(e.boss) {
-            static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
-            static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};
-            static const float damage[5]={24,30,32,18,28};
+            static const float strike[5]={0.35f,0.32f,0.38f,0.48f,0.22f};
+            static const float recover[5]={0.8f,0.9f,1.0f,0.65f,0.72f};
+            static const float damage[5]={24,30,32,28,18};
             int v=std::clamp(e.variant,0,4);
             const float attackRange=BossStrikeRange(v);
             bool enraged=e.hp<=e.maxHp*0.5f;
@@ -433,7 +433,7 @@ void UpdatePursuit(GameState& g,float dt) {
                 if(e.phaseTime>strikeDuration) {
                     bool inRange=d<attackRange;
                     Vector3 attackOrigin=e.position;
-                    if(v==0||v==1||v==3) {
+                    if(v==0||v==1||v==4) {
                         attackOrigin=e.strikeOrigin;
                         Vector3 toPlayer=Vector3Subtract(p.position,attackOrigin); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);

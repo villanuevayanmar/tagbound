@@ -2,17 +2,18 @@
 #include <algorithm>
 #include <cmath>
 
-static const char* cityNames[5]={"PORT TOWN","MERCHANT TIER","CLOCKWORK FOUNDRY","HIGH SPIRE","IMPERIAL CAPITAL"};
+static const char* cityNames[5]={"PORT TOWN","MERCHANT TIER","CLOCKWORK FOUNDRY","IMPERIAL CAPITAL","HIGH SPIRE"};
 const char* CityName(int c) { return cityNames[std::clamp(c,0,4)]; }
-static const char* bossNames[5]={"HARBOR WARDEN","GILDED CHARGER","FOUNDRY COLOSSUS","SPIRE SENTINEL","IMPERIAL REGENT"};
+int MigrateLegacyCityIndex(int city) { return city==3?4:(city==4?3:city); }
+static const char* bossNames[5]={"HARBOR WARDEN","GILDED CHARGER","FOUNDRY COLOSSUS","IMPERIAL REGENT","SPIRE SENTINEL"};
 const char* BossName(int c) { return bossNames[std::clamp(c,0,4)]; }
 Vector3 QuestTarget(int city,int quest) {
     static const Vector3 routes[5][4]={
         {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},
         {{-4,1.7f,6},{-10,2.45f,13},{-14,3.2f,19},{-18,3.95f,25}},
         {{5,1.7f,3},{12,2.45f,8},{10,3.2f,16},{5,3.95f,24}},
-        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}},
-        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}}
+        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}},
+        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}}
     };
     return routes[std::clamp(city,0,4)][std::clamp(quest,0,3)];
 }
@@ -28,8 +29,8 @@ bool QuestRequiresHold(int city,int quest) {
         {false,true,false},
         {true,false,false},
         {false,false,true},
-        {false,true,false},
-        {true,false,true}
+        {true,false,true},
+        {false,true,false}
     };
     return city>=0&&city<5&&quest>=0&&quest<3?holds[city][quest]:false;
 }
@@ -38,8 +39,8 @@ float QuestHoldDuration(int city,int quest) {
         {0.0f,2.5f,0.0f},
         {2.75f,0.0f,0.0f},
         {0.0f,0.0f,3.25f},
-        {0.0f,3.5f,0.0f},
-        {3.75f,0.0f,4.0f}
+        {3.75f,0.0f,4.0f},
+        {0.0f,3.5f,0.0f}
     };
     return city>=0&&city<5&&quest>=0&&quest<3?durations[city][quest]:0.0f;
 }
@@ -76,11 +77,11 @@ Vector3 QuestCheckpointFacing(int city,int quest) {
 }
 
 float BossWindupDuration(int variant,bool enraged) {
-    static const float duration[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
+    static const float duration[5]={0.65f,0.45f,0.9f,0.5f,0.7f};
     return duration[std::clamp(variant,0,4)]*(enraged?0.85f:1.0f);
 }
 float BossStrikeRange(int variant) {
-    static const float range[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+    static const float range[5]={4.0f,2.3f,5.5f,4.5f,8.0f};
     return range[std::clamp(variant,0,4)];
 }
 const char* WeaponName(Weapon w) {
@@ -133,7 +134,7 @@ void BuildCity(GameState& g) {
     g.platforms.clear(); g.enemies.clear(); g.projectiles.clear();
     g.quest=0; g.bossUnlocked=false; g.questTime=0; g.beaconHoldTime=0; g.danger=0;
     g.questLimit=110.0f-g.city*7.0f;
-    Color tint[5]={{73,132,135,255},{167,123,75,255},{91,119,132,255},{111,103,151,255},{143,76,69,255}};
+    Color tint[5]={{73,132,135,255},{167,123,75,255},{91,119,132,255},{143,76,69,255},{111,103,151,255}};
     g.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},{44,49,59,255}});
     g.platforms.push_back({{0,0.0f,0},{8,0.5f,8},{106,84,68,255}});
     for(int quest=0;quest<3;quest++) {
