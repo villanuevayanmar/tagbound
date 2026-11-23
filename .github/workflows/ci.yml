@@ -135,6 +135,26 @@ jobs:
             }, { timeout: 45000 });
             await page.screenshot({ path: 'visual-review/desktop-intro.png', fullPage: true });
 
+            const iconOnlyUi = await page.evaluate(() => {
+              const actionButtons = [...document.querySelectorAll('#touch-controls .action')];
+              const iconOnly = button => !!button && !!button.querySelector('svg[aria-hidden="true"]') &&
+                !!button.getAttribute('aria-label') && !button.textContent.trim();
+              const pauseActions = ['#settings-sound', '#settings-install', '#resume']
+                .map(selector => document.querySelector(selector));
+              return {
+                touchHelpRemoved: !document.querySelector('#touch-help'),
+                actionButtonsIconOnly: actionButtons.length === 7 && actionButtons.every(iconOnly),
+                pauseButtonIconOnly: iconOnly(document.querySelector('#settings-open')),
+                pauseActionsIconOnly: pauseActions.every(iconOnly),
+                pauseTitleAccessible: document.querySelector('#settings-title')?.classList.contains('sr-only')
+              };
+            });
+            if (!iconOnlyUi.touchHelpRemoved || !iconOnlyUi.actionButtonsIconOnly ||
+                !iconOnlyUi.pauseButtonIconOnly || !iconOnlyUi.pauseActionsIconOnly ||
+                !iconOnlyUi.pauseTitleAccessible) {
+              throw new Error('Icon-only game controls are incomplete: ' + JSON.stringify(iconOnlyUi));
+            }
+
             const runtime = await page.evaluate(() => ({
               canvas: !!document.querySelector('#canvas'),
               wasm: typeof WebAssembly === 'object',
