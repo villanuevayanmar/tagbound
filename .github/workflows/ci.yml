@@ -484,6 +484,53 @@ jobs:
               throw new Error('Desktop stamina value is clipped/covered by its bar: ' +
                 JSON.stringify({ staminaDigitPixels, staminaOverlapGreenPixels }));
             }
+
+            // Capture every real boss-gate scene at desktop and mobile landscape sizes.
+            // The saved quest-3 state causes StartGame to reconstruct the city-specific boss.
+            for (const device of [
+              { name: 'desktop', viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false },
+              { name: 'mobile', viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true }
+            ]) {
+              for (let city = 0; city < 5; city++) {
+                const bossContext = await browser.newContext({
+                  viewport: device.viewport, deviceScaleFactor: 1,
+                  isMobile: device.isMobile, hasTouch: device.hasTouch
+                });
+                const bossPage = await bossContext.newPage();
+                const bossResponse = await bossPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+                if (!bossResponse?.ok()) throw new Error('Boss visual-review page did not return HTTP 200.');
+                await bossPage.evaluate((savedCity) => localStorage.setItem('tagbound-save', JSON.stringify({
+                  schemaVersion: 1, city: savedCity, level: 1, xp: 0, unlocked: savedCity,
+                  klass: 0, weapon: 0, finished: 0, quest: 3
+                })), city);
+                await bossPage.reload({ waitUntil: 'networkidle' });
+                await bossPage.waitForFunction(
+                  () => document.querySelector('#loading')?.classList.contains('hidden'),
+                  null,
+                  { timeout: 45000 }
+                );
+                await bossPage.locator('#start').click();
+                await bossPage.waitForFunction(
+                  () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                    Module.ccall('GetQuestProgress', 'number', [], []) === 3 &&
+                    Module.ccall('GetActiveBossCount', 'number', [], []) === 1,
+                  null,
+                  { timeout: 10000 }
+                );
+                const bossSave = await bossPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+                if (bossSave?.city !== city || bossSave?.quest !== 3) {
+                  throw new Error('Boss visual-review save did not restore the requested city: ' +
+                    JSON.stringify({ city, bossSave }));
+                }
+                await bossPage.waitForTimeout(900);
+                await bossPage.screenshot({
+                  path: 'visual-review/boss-' + device.name + '-city-' + city + '.png',
+                  fullPage: true
+                });
+                await bossContext.close();
+              }
+            }
+
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
               save.finished = 1;
