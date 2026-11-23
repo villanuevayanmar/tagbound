@@ -179,3 +179,15 @@ The latest generated WebAssembly bundle is deployed. The live production Chromiu
 1. Inspect the latest PR #14 head and matching GitHub Actions run after the legacy-save migration commit. Read logs and fix any failures without weakening assertions.
 2. Verify PR #13 and PR #14 remain open and compare overlapping `.github/workflows/ci.yml` changes before any later merge planning.
 3. Continue the next verified gameplay, campaign, visual, performance, or audio gap on a development branch. Do not merge or deploy while the user-reported Vercel limit is active or without explicit authorization.
+
+
+### Survival-pursuit objectives — PR #14 development branch
+
+- Added a third objective type alongside immediate reach and timed hold: survive an active pursuit away from the beacon for 18–22 seconds.
+- Gilded (quest 2), Foundry (quest 2), and Spire (quest 1) use survival encounters; other quest patterns retain their reach/hold behavior.
+- Survival objectives do not draw a beacon marker or objective compass. The HUD names the survival task and shows remaining time plus active tagger count.
+- Survival timers advance independent of player position and reset on defeat, quest change, or city rebuild. Hold-beacon radius/reset rules are unchanged.
+- Added C++ tests for each survival duration, out-of-radius completion, type exclusivity, and existing defeat-reset behavior. Added hosted Chromium checks for the exported objective state for all three selected stages.
+- Legacy save migration commit `a8d16889816f6681f2163646497f3fa236dd7a3c` passed CI run #272 (`45133035082`): WebAssembly compile, C++ gameplay tests, PWA validation, and browser smoke all succeeded.
+- Survival feature commit `e498d73408385aaf71c5055c57c25bae676275a9` contains implementation and C++ regressions; browser workflow assertions are being added in the following commit and need a new exact-head CI run.
+- No PR merge or Vercel deployment was performed; the user's deployment hold remains active.

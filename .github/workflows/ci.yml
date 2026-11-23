@@ -230,6 +230,43 @@ jobs:
             }
             await holdContext.close();
 
+            // Survival objectives advance away from the beacon and expose their own timer.
+            for (const objective of [
+              { city: 1, quest: 1, duration: 18 },
+              { city: 2, quest: 1, duration: 20 },
+              { city: 4, quest: 0, duration: 22 }
+            ]) {
+              const survivalContext = await browser.newContext();
+              const survivalPage = await survivalContext.newPage();
+              const survivalResponse = await survivalPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              if (!survivalResponse?.ok()) throw new Error('Survival-objective test page did not return HTTP 200.');
+              await survivalPage.evaluate((saved) => localStorage.setItem('tagbound-save', JSON.stringify({
+                schemaVersion: 1, city: saved.city, level: 1, xp: 0, unlocked: saved.city,
+                klass: 0, weapon: 0, finished: 0, quest: saved.quest
+              })), objective);
+              await survivalPage.reload({ waitUntil: 'networkidle' });
+              await survivalPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await survivalPage.locator('#start').click();
+              await survivalPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const state = await survivalPage.evaluate(() => ({
+                quest: Module.ccall('GetQuestProgress', 'number', [], []),
+                survival: Module.ccall('IsCurrentQuestSurvivalObjective', 'number', [], []),
+                survivalDuration: Module.ccall('GetCurrentQuestSurvivalDuration', 'number', [], []),
+                hold: Module.ccall('IsCurrentQuestHoldObjective', 'number', [], []),
+                holdDuration: Module.ccall('GetCurrentQuestHoldDuration', 'number', [], [])
+              }));
+              if (state.quest !== objective.quest || state.survival !== 1 ||
+                  Math.abs(state.survivalDuration - objective.duration) > 0.01 ||
+                  state.hold !== 0 || state.holdDuration !== 0) {
+                throw new Error('Survival objective did not restore correctly: ' + JSON.stringify({ objective, state }));
+              }
+              await survivalContext.close();
+            }
+
             // Legacy saves used stage 3 = High Spire and stage 4 = Imperial Capital.
             // Re-map the city identities once, then persist schemaVersion 1 so reloads do not swap them again.
             for (const savedStage of [3, 4]) {
