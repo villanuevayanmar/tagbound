@@ -325,6 +325,8 @@ int main() {
     assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),PI/2.0f))<0.05f);
 
     // A manual swipe overrides automatic follow briefly while preserving camera-relative input.
+    cameraFollow.player.position={0,0.3f,0};
+    cameraFollow.player.facing={0,0,1};
     ResetCamera(cameraFollow.player,followCamera);
     Controls manualStrafe{};
     manualStrafe.move.x=1.0f;
