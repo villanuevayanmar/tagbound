@@ -138,6 +138,8 @@ During a run, tap SETTINGS in the top HUD row to pause the game. The Settings sc
 
 ## Controls
 
+Touch action controls and the in-game pause menu use game-themed icons only. Their accessible labels are available to assistive technology; the descriptions below explain what each icon does.
+
 ### Touch
 
 - Left joystick: move
