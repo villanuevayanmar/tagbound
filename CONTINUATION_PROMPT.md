@@ -197,17 +197,26 @@ Review the renderer for proven redundant per-frame geometry/draw work and any co
 
 ## Latest verified render checkpoint — floor/grid de-duplication (2026-11-23)
 
-- PR #14 exact code/test SHA: `5f941dc18113c5fd037e2ff56d93bfdad3989ca9`.
+- PR #14 exact code/test SHA: `a3e7e66b8c16712171b5abaf808d7faf98f01efe`.
 - Exact Actions run #304 (`45151623835`) passed: WebAssembly build, C++ gameplay regressions, PWA validation, Chromium desktop/mobile smoke, service-worker cache and offline reload. The PR publishing job was skipped.
 - Renderer no longer draws the 120×120 ground collision slab as a cube/wireframe on every frame. It still exists in `GameState` for collision; its visual surface is provided by one ground plane at height 0.0. Ground grid was moved slightly above the plane so it is visible rather than occluded inside the slab.
 - Inspected generated desktop and mobile screenshots from run #304: the ground grid is visible, and player/rooftop heights remain aligned.
 - No gameplay collision or movement behavior changed. Removed two redundant world-floor drawing calls plus the slab geometry; no actual FPS/frame-time measurement has been performed on Android.
 
 ## Current repo/deployment constraints
-- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; PR #14 remains open/draft/unmerged at `5f941dc18113c5fd037e2ff56d93bfdad3989ca9`.
+- PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; PR #14 remains open/draft/unmerged at `a3e7e66b8c16712171b5abaf808d7faf98f01efe`.
 - Production remains READY on main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`. No PR merge, deployment, or `dist/` change was made.
 - Vercel deployment hold remains active; deployment still requires explicit authorization later. Keep code edits away from `dist/`.
-- Integration cache mismatch remains: PR #13 uses `tagbound-v27`, PR #14 CI expects `tagbound-v25`. Reconcile when preparing a combined PR without dropping existing tests.
+- Cache version is aligned at `tagbound-v27` across `web/index.html`, `web/sw.js`, and PR #14 CI. Keep PR #13 separate and unmerged.
+
+### Latest verified checkpoint — 2026-11-23
+- PR #14 head: `a3e7e66b8c16712171b5abaf808d7faf98f01efe`.
+- CI run #310: SUCCESS on that exact commit. C++ gameplay tests, Emscripten build, PWA validation, Chromium desktop/mobile browser smoke, pause/audio/touch reset, save restoration, and offline reload passed.
+- Run #310 artifact `tagbound-visual-review` was retrieved and all ten boss windup screenshots were individually inspected at full resolution. All five boss warnings are visible on desktop and mobile; no render change was justified.
+- Icon-only touch and pause controls are implemented with accessible labels; Bow is visible only for Skirmisher. The CI test checks the accessible icon-button state and saved sound preference.
+- Cache version is aligned at `tagbound-v27`. No `dist/` changes, merges, or deployments occurred.
+- Run #309 had an obsolete visible-text assertion for the Settings sound icon; this was corrected, and run #310 passed.
+- Physical Android FPS/touch testing remains unverified.
 
 ### Next exact task
-Review actual desktop/mobile screenshots for player class equipment and the five boss silhouettes/strike warnings. Confirm they remain visually distinguishable at mobile scale and against the floor grid. Add only targeted render adjustments when the screenshot shows a concrete visibility problem. No speculative model/geometry additions or dependency changes; physical Android performance remains unverified.
+Continue auditing the agreed gameplay/PWA scope for concrete uncovered edge cases. Do not add speculative features. Keep the zero-cost constraint, preserve existing save/progression behavior, and do not merge or deploy without explicit authorization.
