@@ -210,7 +210,7 @@ Review the renderer for proven redundant per-frame geometry/draw work and any co
 - Cache version is aligned at `tagbound-v27` across `web/index.html`, `web/sw.js`, and PR #14 CI. Keep PR #13 separate and unmerged.
 
 ### Latest verified checkpoint — 2026-11-23
-- PR #14 head: `a3e7e66b8c16712171b5abaf808d7faf98f01efe`.
+- Latest verified gameplay/source code head: `a3e7e66b8c16712171b5abaf808d7faf98f01efe` (run #310 SUCCESS). Documentation-only follow-up head `616b0c5bc12be063fe4712bded81f9c2c2549662` passed run #311 SUCCESS.
 - CI run #310: SUCCESS on that exact commit. C++ gameplay tests, Emscripten build, PWA validation, Chromium desktop/mobile browser smoke, pause/audio/touch reset, save restoration, and offline reload passed.
 - Run #310 artifact `tagbound-visual-review` was retrieved and all ten boss windup screenshots were individually inspected at full resolution. All five boss warnings are visible on desktop and mobile; no render change was justified.
 - Icon-only touch and pause controls are implemented with accessible labels; Bow is visible only for Skirmisher. The CI test checks the accessible icon-button state and saved sound preference.
@@ -220,3 +220,10 @@ Review the renderer for proven redundant per-frame geometry/draw work and any co
 
 ### Next exact task
 Continue auditing the agreed gameplay/PWA scope for concrete uncovered edge cases. Do not add speculative features. Keep the zero-cost constraint, preserve existing save/progression behavior, and do not merge or deploy without explicit authorization.
+
+
+## Remaining-work clarification — 2026-11-23
+
+- The README's current playable-scope statement and `DEVELOPMENT_STATUS.md` remaining-work section now reflect the implemented five-city campaign: reach, hold and survival objectives are all present; the next work is evidence-based balance/polish, not adding unrequested objective types.
+- Production still serves main runtime `9115f13b4021f9052a95eea66ceaa1000f134978`; the current PR #14 code is not deployed. Do not ask for Android testing of this branch until the user authorizes a deployment after the reported Vercel hold.
+- Physical Android frame-time, touch and audio behavior remain unverified. Hosted Chromium mobile tests do not establish Android performance.
