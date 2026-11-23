@@ -267,6 +267,7 @@ int main() {
             const float targetHalf=segment==3?4.0f:2.5f;
             bool airborne=false;
             bool landed=false;
+            std::string routeTrace;
             for(int frame=0;frame<180;frame++) {
                 Vector3 toTarget={target.x-routeGame.player.position.x,0,target.z-routeGame.player.position.z};
                 const float remaining=Vector3Length(toTarget);
@@ -280,6 +281,14 @@ int main() {
                 }
                 input.jump=frame==0;
                 UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
+                if(city==3&&segment==0&&frame<30) {
+                    routeTrace += std::to_string(frame)+": "+std::to_string(routeGame.player.position.x)+","+
+                        std::to_string(routeGame.player.position.y)+","+
+                        std::to_string(routeGame.player.position.z)+" vy="+
+                        std::to_string(routeGame.player.velocity.y)+" grounded="+
+                        std::to_string(routeGame.player.grounded)+" stamina="+
+                        std::to_string(routeGame.player.stamina)+"\\n";
+                }
                 if(!routeGame.player.grounded) airborne=true;
                 const bool insideTarget=std::fabs(routeGame.player.position.x-target.x)<targetHalf-0.2f &&
                                         std::fabs(routeGame.player.position.z-target.z)<targetHalf-0.2f;
@@ -295,6 +304,7 @@ int main() {
                           << " player=(" << routeGame.player.position.x << ","
                           << routeGame.player.position.y << ","
                           << routeGame.player.position.z << ")" << std::endl;
+                if(city==3&&segment==0) std::cerr << routeTrace;
                 assert(landed);
             }
         }
