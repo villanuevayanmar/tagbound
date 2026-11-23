@@ -37,15 +37,15 @@ static bool SegmentSphere(Vector3 from,Vector3 to,Vector3 center,float radius,fl
     hitTime=t;
     return true;
 }
-static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime) {
+static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime,float clearance=0.12f) {
     Vector3 low=Vector3Subtract(p.position,Vector3Scale(p.size,0.5f));
     Vector3 high=Vector3Add(p.position,Vector3Scale(p.size,0.5f));
     Vector3 delta=Vector3Subtract(to,from);
     float enter=0.0f,exit=1.0f;
     const float start[3]={from.x,from.y,from.z};
     const float step[3]={delta.x,delta.y,delta.z};
-    const float minimum[3]={low.x-0.12f,low.y-0.12f,low.z-0.12f};
-    const float maximum[3]={high.x+0.12f,high.y+0.12f,high.z+0.12f};
+    const float minimum[3]={low.x-clearance,low.y-clearance,low.z-clearance};
+    const float maximum[3]={high.x+clearance,high.y+clearance,high.z+clearance};
     for(int axis=0;axis<3;axis++) {
         if(std::abs(step[axis])<0.000001f) {
             if(start[axis]<minimum[axis]||start[axis]>maximum[axis]) return false;
@@ -62,31 +62,32 @@ static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hit
     hitTime=enter;
     return true;
 }
-static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to) {
+static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to,float clearance=0.12f) {
     from.y+=1.0f;
     to.y+=1.0f;
     for(const auto& platform:g.platforms) {
         float hitTime=0.0f;
-        if(SegmentPlatform(from,to,platform,hitTime)) return false;
+        if(SegmentPlatform(from,to,platform,hitTime,clearance)) return false;
     }
     return true;
 }
 
 static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target,Vector3& waypoint) {
+    const float bodyRadius=e.boss?0.62f:0.42f;
     Vector3 from=e.position; from.y+=1.0f;
     Vector3 to=target; to.y+=1.0f;
     const Platform* blocker=nullptr;
     float nearest=1.0f;
     for(const auto& platform:g.platforms) {
         float hit=0.0f;
-        if(SegmentPlatform(from,to,platform,hit)&&hit<nearest) {
+        if(SegmentPlatform(from,to,platform,hit,bodyRadius)&&hit<nearest) {
             nearest=hit;
             blocker=&platform;
         }
     }
     if(!blocker) return false;
 
-    float clearance=(e.boss?0.62f:0.42f)+0.72f;
+    float clearance=bodyRadius+0.72f;
     float minX=blocker->position.x-blocker->size.x*0.5f-clearance;
     float maxX=blocker->position.x+blocker->size.x*0.5f+clearance;
     float minZ=blocker->position.z-blocker->size.z*0.5f-clearance;
@@ -98,10 +99,10 @@ static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target
     float best=1000000.0f;
     bool found=false;
     for(Vector3 corner:corners) {
-        if(!HasLineOfSight(g,e.position,corner)) continue;
+        if(!HasLineOfSight(g,e.position,corner,bodyRadius)) continue;
         Vector3 cornerRay=corner; cornerRay.y+=1.0f;
         float blockedByCurrent=0.0f;
-        if(SegmentPlatform(cornerRay,to,*blocker,blockedByCurrent)) continue;
+        if(SegmentPlatform(cornerRay,to,*blocker,blockedByCurrent,bodyRadius)) continue;
         float route=Distance(e.position,corner)+Distance(corner,target);
         if(route<best) { best=route; waypoint=corner; found=true; }
     }
@@ -386,7 +387,8 @@ void UpdatePursuit(GameState& g,float dt) {
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f&&(!e.boss||e.phase==BossPhase::Dormant||e.phase==BossPhase::Hunt)) {
                 Vector3 destination=p.position,waypoint{};
-                if(!HasLineOfSight(g,e.position,p.position)&&FindPursuitWaypoint(g,e,p.position,waypoint))
+                const float bodyRadius=e.boss?0.62f:0.42f;
+                if(!HasLineOfSight(g,e.position,p.position,bodyRadius)&&FindPursuitWaypoint(g,e,p.position,waypoint))
                     destination=waypoint;
                 Vector3 route=Vector3Subtract(destination,e.position); route.y=0;
                 if(Vector3Length(route)>0.001f)
