@@ -424,12 +424,36 @@ jobs:
               throw new Error('Settings screen or install placement failed: ' + JSON.stringify(settingsVisible));
             }
             await page.locator('#settings-sound').click();
-            if (await page.locator('#sound-toggle').textContent() !== 'SOUND: OFF' ||
-                await page.locator('#settings-sound').textContent() !== 'SOUND: OFF' ||
-                await page.evaluate(() => localStorage.getItem('tagbound-sound')) !== 'off') {
-              throw new Error('Settings sound toggle did not synchronize with Home.');
+            const settingsMuted = await page.evaluate(() => {
+              const button = document.querySelector('#settings-sound');
+              return {
+                homeText: document.querySelector('#sound-toggle').textContent,
+                label: button.getAttribute('aria-label'),
+                pressed: button.getAttribute('aria-pressed'),
+                muted: button.classList.contains('muted'),
+                saved: localStorage.getItem('tagbound-sound')
+              };
+            });
+            if (settingsMuted.homeText !== 'SOUND: OFF' || settingsMuted.label !== 'Enable sound' ||
+                settingsMuted.pressed !== 'false' || !settingsMuted.muted || settingsMuted.saved !== 'off') {
+              throw new Error('Icon-only Settings sound toggle did not synchronize with Home: ' +
+                JSON.stringify(settingsMuted));
             }
             await page.locator('#settings-sound').click();
+            const settingsUnmuted = await page.evaluate(() => {
+              const button = document.querySelector('#settings-sound');
+              return {
+                label: button.getAttribute('aria-label'),
+                pressed: button.getAttribute('aria-pressed'),
+                muted: button.classList.contains('muted'),
+                saved: localStorage.getItem('tagbound-sound')
+              };
+            });
+            if (settingsUnmuted.label !== 'Mute sound' || settingsUnmuted.pressed !== 'true' ||
+                settingsUnmuted.muted || settingsUnmuted.saved !== 'on') {
+              throw new Error('Icon-only Settings sound toggle did not restore its accessible state: ' +
+                JSON.stringify(settingsUnmuted));
+            }
             if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
               throw new Error('Ambient score resumed while Settings was still open.');
             }
