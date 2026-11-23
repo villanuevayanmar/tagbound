@@ -134,7 +134,7 @@ The first visit must download the game assets. The service worker caches the HTM
 
 ## Settings and pause
 
-During a run, tap SETTINGS in the top HUD row to pause the game. The Settings screen shares the saved sound preference with Home and exposes INSTALL ON PHONE only while the Settings screen is open. RESUME returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. The install action is not shown during active gameplay.
+During a run, tap the pause icon in the top HUD row to open Settings. The sound and install actions, and the Resume action, use icons with accessible labels. The saved sound preference is shared with Home. The install action appears only while Settings is open. Resume returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay.
 
 ## Controls
 
@@ -142,6 +142,7 @@ During a run, tap SETTINGS in the top HUD row to pause the game. The Settings sc
 
 - Left joystick: move
 - Right side of the screen: swipe to look
+- Gameplay actions are icon-only and have accessible labels; the Bow icon appears only for Skirmisher
 - Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
 - Slide: short speed boost while grounded; hold it through a hard landing to roll forward; while hanging, slide or push down on the joystick to drop
 - Attack: use equipped weapon
