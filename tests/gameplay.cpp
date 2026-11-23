@@ -232,6 +232,38 @@ int main() {
     UpdateMovement(dashCollision,fastDash,camera,0.04f);
     assert(dashCollision.player.position.x<0.56f);
 
+    // Wall-running consumes stamina and a wall-jump launches away from the surface.
+    GameState wallRun;
+    wallRun.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    wallRun.platforms.push_back({{0,1.5f,0},{1,3,8},GRAY});
+    wallRun.player.position={0.95f,2.0f,0};
+    wallRun.player.velocity={0,-1.0f,0};
+    wallRun.player.grounded=false;
+    Controls wallRunInput{};
+    wallRunInput.sprint=true;
+    UpdateMovement(wallRun,wallRunInput,camera,0.04f);
+    assert(wallRun.player.wallRunning);
+    assert(wallRun.player.velocity.y>-2.5f);
+    assert(near(wallRun.player.stamina,98.96f));
+    Controls wallJumpInput=wallRunInput;
+    wallJumpInput.jump=true;
+    UpdateMovement(wallRun,wallJumpInput,camera,0.04f);
+    assert(!wallRun.player.wallRunning);
+    assert(wallRun.player.velocity.x>5.0f);
+    assert(wallRun.player.velocity.y>8.5f);
+
+    // Holding sprint cannot regenerate stamina while a wall-run is exhausting it.
+    GameState exhaustedWallRun;
+    exhaustedWallRun.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    exhaustedWallRun.platforms.push_back({{0,1.5f,0},{1,3,8},GRAY});
+    exhaustedWallRun.player.position={0.95f,2.0f,0};
+    exhaustedWallRun.player.velocity={0,-1.0f,0};
+    exhaustedWallRun.player.grounded=false;
+    exhaustedWallRun.player.stamina=0.2f;
+    for(int frame=0;frame<2;frame++) UpdateMovement(exhaustedWallRun,wallRunInput,camera,0.04f);
+    assert(near(exhaustedWallRun.player.stamina,0.0f));
+    assert(!exhaustedWallRun.player.wallRunning);
+
     Controls jump{};
     jump.jump = true;
     UpdateMovement(game, jump, camera, 0.01f);
