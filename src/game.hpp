@@ -20,6 +20,8 @@ struct Enemy {
     Vector3 strikeDirection{};
     Vector3 strikeOrigin{};
     float attackWindup=0;
+    Vector3 pursuitWaypoint{};
+    bool hasPursuitWaypoint=false;
 };
 struct Player {
     Vector3 position{0,1,0}, velocity{0,0,0}, facing{0,0,1};
