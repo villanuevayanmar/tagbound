@@ -230,6 +230,82 @@ int main() {
     UpdateMovement(skirmisherMovement,move,camera,0.1f);
     assert(skirmisherMovement.player.position.z>vanguardMovement.player.position.z+0.1f);
 
+    // Simulate every raised rooftop transfer from each city's spawn roof to its boss gate.
+    for(int city=0;city<5;city++) {
+        for(int segment=0;segment<4;segment++) {
+            GameState routeGame;
+            routeGame.city=city;
+            BuildCity(routeGame);
+            routeGame.player.playerClass=PlayerClass::Skirmisher;
+            routeGame.player.weapon=Weapon::Bow;
+            routeGame.player.stamina=100.0f;
+
+            const Vector3 startCenter=segment==0?Vector3{0,0.3f,0}:QuestTarget(city,segment-1);
+            const Vector3 target=QuestTarget(city,segment);
+            Vector3 direction={target.x-startCenter.x,0,target.z-startCenter.z};
+            const float distance=Vector3Length(direction);
+            assert(distance>0.001f);
+            direction=Vector3Scale(direction,1.0f/distance);
+
+            const float startHalf=segment==0?4.0f:2.5f;
+            const float edgeX=std::fabs(direction.x)>0.001f?startHalf/std::fabs(direction.x):1000.0f;
+            const float edgeZ=std::fabs(direction.z)>0.001f?startHalf/std::fabs(direction.z):1000.0f;
+            const float takeoffDistance=std::min(edgeX,edgeZ)-0.25f;
+            routeGame.player.position={
+                startCenter.x+direction.x*takeoffDistance,
+                startCenter.y,
+                startCenter.z+direction.z*takeoffDistance
+            };
+            routeGame.player.velocity={0,0,0};
+            routeGame.player.grounded=true;
+            routeGame.player.stamina=100.0f;
+
+            Camera3D routeCamera=camera;
+            UpdateMovement(routeGame,Controls{},routeCamera,0.0f);
+            routeGame.player.grounded=true;
+            routeGame.player.velocity={0,0,0};
+
+            const float targetHalf=segment==3?4.0f:2.5f;
+            bool airborne=false;
+            bool landed=false;
+            for(int frame=0;frame<180;frame++) {
+                Vector3 toTarget={target.x-routeGame.player.position.x,0,target.z-routeGame.player.position.z};
+                const float remaining=Vector3Length(toTarget);
+                Controls input{};
+                if(remaining>0.25f) {
+                    const Vector3 desired=Vector3Scale(toTarget,1.0f/remaining);
+                    Vector3 forward={routeCamera.target.x-routeGame.player.position.x,0,
+                                     routeCamera.target.z-routeGame.player.position.z};
+                    if(Vector3Length(forward)>0.001f) {
+                        forward=Vector3Normalize(forward);
+                        const Vector3 right={forward.z,0,-forward.x};
+                        input.move.x=Vector3DotProduct(desired,right);
+                        input.move.y=Vector3DotProduct(desired,forward);
+                        input.sprint=true;
+                    }
+                }
+                input.jump=frame==0;
+                UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
+                if(!routeGame.player.grounded) airborne=true;
+                const bool insideTarget=std::fabs(routeGame.player.position.x-target.x)<targetHalf-0.2f &&
+                                        std::fabs(routeGame.player.position.z-target.z)<targetHalf-0.2f;
+                if(airborne&&routeGame.player.grounded&&insideTarget&&
+                   routeGame.player.position.y>=target.y-0.05f) {
+                    landed=true;
+                    break;
+                }
+            }
+            if(!landed) {
+                std::cerr << "Rooftop route transfer failed: city=" << city
+                          << " segment=" << segment
+                          << " player=(" << routeGame.player.position.x << ","
+                          << routeGame.player.position.y << ","
+                          << routeGame.player.position.z << ")" << std::endl;
+                assert(landed);
+            }
+        }
+    }
+
     // A high-speed Skirmisher dash cannot tunnel through a thin wall.
     GameState dashCollision;
     dashCollision.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
