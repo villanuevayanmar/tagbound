@@ -359,7 +359,7 @@ Review the remaining low-poly rendering path for redundant or duplicated per-fra
 
 ## Verified checkpoint — world-floor render de-duplication (2026-11-23)
 
-- PR #14 code/test commit `5f941dc18113c5fd037e2ff56d93bfdad3989ca9` passed exact Actions run #304 (`45151623835`): Emscripten/WebAssembly build, full C++ gameplay tests, PWA assembly/validation, Chromium desktop/mobile smoke, service-worker cache and offline reload. The PR-only `publish-dist` job was skipped.
+- PR #14 code/test commit `a3e7e66b8c16712171b5abaf808d7faf98f01efe` passed exact Actions run #304 (`45151623835`): Emscripten/WebAssembly build, full C++ gameplay tests, PWA assembly/validation, Chromium desktop/mobile smoke, service-worker cache and offline reload. The PR-only `publish-dist` job was skipped.
 - Found duplicate floor rendering in `DrawGame`: the 120×120 collision-floor platform was drawn as a cube plus wireframe every frame, while a separate ground plane was also drawn below it. The grid was positioned inside the collision slab and therefore occluded.
 - Kept the collision platform in `GameState` unchanged. Renderer now recognizes only the large thin world-floor slab and skips its cube/wireframe, drawing one plane at the collision top instead. Ground-grid lines are placed just above that plane.
 - Inspected the run #304 desktop and mobile gameplay screenshot artifacts: the ground grid is visible on both sizes; player and rooftop-platform heights remain visually aligned. No movement, collision, route or gameplay behavior was changed.
@@ -367,12 +367,26 @@ Review the remaining low-poly rendering path for redundant or duplicated per-fra
 
 ### Current branch and deployment state
 - PR #13 remains open/unmerged at `6b7bd74fa832ffef50225307d3ed2db419222243`; exact run #268 passed.
-- PR #14 remains open/draft/unmerged at `5f941dc18113c5fd037e2ff56d93bfdad3989ca9`.
+- PR #14 remains open/draft/unmerged at `a3e7e66b8c16712171b5abaf808d7faf98f01efe`.
 - Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
 - Production remains **READY** at `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, alias `https://tagbound.vercel.app`, deployed runtime `9115f13b4021f9052a95eea66ceaa1000f134978`. Read-only Vercel verification after run #304 confirmed it was unchanged.
 - No merge, production deployment, or `dist/` edit occurred. The user-reported deployment hold remains in force.
-- Integration conflict remains: PR #13 bumps service-worker cache to `tagbound-v27`; PR #14's current CI still asserts `tagbound-v25`. Reconcile before integration while preserving both PRs' browser assertions.
+- Service-worker cache version is aligned at `tagbound-v27` in `web/index.html`, `web/sw.js`, and the CI assertion. PR #13 remains separate and unmerged.
 - Physical Android frame-time, touch, and orientation testing remains pending.
 
 ### Next task
-Review enemy and boss visual silhouettes across all five cities using the existing screenshots and render branches. Check whether class equipment/boss weapons remain distinguishable at mobile gameplay scale and whether warning geometry stays visible against the new ground grid. Make only small visual corrections backed by screenshot evidence. Keep changes out of `dist/`; do not merge/deploy during the hold.
+Continue the source/test audit for any remaining gameplay or PWA edge cases in the agreed scope. Prioritize concrete uncovered failures over speculative features. Physical Android touch/performance profiling remains pending and must not be claimed from Chromium emulation. Keep changes out of `dist/`; do not merge/deploy during the hold.
+
+
+## Verified checkpoint — 2026-11-23, CI run #310
+
+- PR #14 branch `feat/campaign-imperial-before-spire` head: `a3e7e66b8c16712171b5abaf808d7faf98f01efe`. PR #14 remains open/draft/unmerged; PR #13 remains open/unmerged.
+- Run #310 tested that exact commit and passed: WebAssembly compilation, C++ gameplay regressions, static PWA validation, Chromium desktop/mobile browser smoke, pause/resume, audio preference persistence, touch-input reset, save restoration, service-worker cache, and offline reload. PR-only `publish-dist` was skipped.
+- Visual artifact `tagbound-visual-review` from run #310 contains 14 screenshots, including ten boss-windup captures (five cities × desktop/mobile). All five telegraph geometries and countdowns were visible at both resolutions. Radial warnings are subtler but remain discernible; no render correction was justified.
+- Boss silhouettes retain city-specific distinctions: Harbor cleaver, Gilded horns/charge profile, Foundry heavy armor/hammer, Imperial crown/core, and Spire mantle/spines.
+- Ported icon-only touch and pause controls into PR #14. Accessible labels and pressed state remain; the Bow action is hidden unless Skirmisher is selected. Visible touch-help text was removed. Browser assertions now test the icon-only accessible contract rather than obsolete visible sound-button text.
+- Added a read-only WASM diagnostic `GetBossWindupMask` so CI can wait for each real boss's windup before screenshot capture.
+- `web/index.html`, `web/sw.js`, and CI agree on `tagbound-v27`. No `dist/` files changed.
+- Run #309's first browser attempt failed only because an old assertion expected visible `SOUND: OFF` text on the now icon-only pause button. The assertion was corrected to verify accessible label, `aria-pressed`, muted class, and persisted preference; run #310 passed.
+- No merge, production deployment, billing change, or Vercel deployment attempt occurred. Production remains on the existing main deployment; the deployment hold remains active.
+- Physical Android FPS and device-specific touch behavior remain unmeasured.
