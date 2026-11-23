@@ -173,8 +173,22 @@ function resetTouchInput(){
  knob.style.transform='translate(0,0)';
  send();
 }
-window.addEventListener('blur',resetTouchInput);
-document.addEventListener('visibilitychange',resetTouchInput);
+function resumeBackgroundMusic(){
+ if(document.hidden||!settings.classList.contains('hidden')||
+    !intro.classList.contains('hidden')||!ending.classList.contains('hidden'))return;
+ window.TagboundAudio?.resumeMusic?.();
+}
+function pauseForBackground(){
+ resetTouchInput();
+ window.TagboundAudio?.pauseMusic?.();
+}
+window.addEventListener('blur',pauseForBackground);
+window.addEventListener('focus',resumeBackgroundMusic);
+document.addEventListener('visibilitychange',()=>{
+ resetTouchInput();
+ if(document.hidden)window.TagboundAudio?.pauseMusic?.();
+ else resumeBackgroundMusic();
+});
 function openSettings(){
  resetTouchInput();
  window.TagboundAudio?.pauseMusic?.();
