@@ -490,3 +490,38 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 1. Run exact-head CI after these documentation/control-description updates, then stack PR #16 on PR #15 and verify both PR diffs/mergeability.
 2. Continue P1 movement and parkour grounding: acceleration/deceleration, turn response, sprint/air control, jump and landing consistency, ledge/vault/climb transitions and collision/visual alignment. Add deterministic tests before tuning.
 3. Keep investigating flicker with evidence and obtain physical Android observations only after an authorized release. Continue toward the remaining approved scope (medieval-fantasy city layout, floor/zone encounters, separate stamina/mana, stat/skill milestones, fog of war, guaranteed boss keys and performance-based loot) in testable increments.
+
+
+## Verified checkpoint — 2026-11-24: movement response and stacked PR verification
+
+### Exact branch / PR state
+- Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`; production has not been changed.
+- PR #14: `feat/campaign-imperial-before-spire` at `814d2e86c0c7cb5afc7b794e0d26d054eed87222`, based on `main`; exact-head run #317 (`45185250016`) passed.
+- PR #15: `fix/boss-arena-floor-bounds` at `c92136f54d38df42aa239342dc803e784182ac73`, based on PR #14; exact-head run #323 (`45274447641`) passed.
+- PR #16: `fix/camera-facing-follow` at `9a83d69b2862b1329467952e4cafa020e25d75fd`, based on PR #15. GitHub compare confirms 13 commits ahead and zero behind. All three PRs remain open drafts; none is merged.
+
+### Movement response implementation — PR #16
+- Added transient horizontal locomotion velocity to `Player`, separate from the existing physics velocity used for vertical motion and impulses.
+- Ground acceleration is 34 units/s² and ground braking is 28 units/s². Air steering acceleration is 16 units/s² and air braking is 3.5 units/s², retaining more horizontal momentum while airborne.
+- Existing class top speeds and input direction calculations are retained. Dash uses a faster 100 units/s² acceleration while active so the existing 2.7× burst remains reachable inside its 0.24-second window.
+- Horizontal collision stops the locomotion and impulse components on the blocked axis. City rebuild, ledge/climb transitions and death/checkpoint reset the transient movement velocity; it is not persisted as save data.
+- Added deterministic tests for the initial movement ramp, normal top speed, release braking, weak air steering, the dash burst and the Vanguard/Skirmisher speed distinction.
+- The first new CI attempt exposed a test-fixture issue: its synthetic floor top was at Y=0 while the player spawn feet are at Y=0.3, leaving the test player airborne. Fixtures were corrected to use the actual spawn-floor height; the production movement code was not changed to accommodate the bad fixture.
+
+### Exact-head verification
+- Run #334 (`45329538797`) passed on exact source head `9a83d69b2862b1329467952e4cafa020e25d75fd`.
+- Build job passed: C++ gameplay regressions, Emscripten/WebAssembly compilation, static PWA assembly and validation.
+- Browser-smoke job passed: Chromium runtime, desktop/mobile-landscape behavior, save restoration, offline cache and forced WebGL context-loss/recovery checks.
+- The `tagbound-visual-review` artifact was uploaded and inspected: desktop/mobile gameplay and all five boss-gate scenes rendered. The browser test confirmed boss containment during the captures.
+- PR-only `publish-dist` was skipped. No generated files were committed to `dist/`.
+
+### Unresolved issues and release state
+- Intermittent black flickering remains unresolved. Source audit still finds one `BeginDrawing/EndDrawing` pair and one `BeginMode3D/EndMode3D` pass per frame, with no repeated per-frame model/texture allocation identified. WebGL context-loss recovery is a tested resilience path, not proof of the flicker cause.
+- Chromium sampling and screenshots do not replace physical Android testing. Device GPU/browser behavior, real touch feel and sustained frame pacing remain unverified.
+- Production alias `https://tagbound.vercel.app` remains on the older READY runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. No merge, production deployment, Vercel upgrade, billing change or quota workaround was performed. Cost remains ₱0/$0.
+
+### Next exact task
+1. Continue the black-frame investigation with a repeatable multi-frame canvas check in hosted Chromium; distinguish a fully black framebuffer from normal dark scene content and preserve existing visual assertions. Do not call this an Android fix.
+2. Continue movement foundation regressions for jump/landing, grounding and rooftop transitions, then review ledge/vault/climb collision and enemy navigation.
+3. After the foundation is stable, implement the master specification's remaining systems incrementally: separate stamina/mana, stat choice on every level, skill-choice/upgrade milestones, vertical city/floor progression, enemy archetypes, fog-of-war discovery, guaranteed boss keys and performance-banded equipment rewards. Keep save migration, deterministic tests and mobile UI coverage in scope.
+
