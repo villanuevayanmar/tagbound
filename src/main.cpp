@@ -14,6 +14,14 @@ EM_JS(int, loadSaveVersion, (), {
 EM_JS(int, loadLocal, (int field), {
   try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
 });
+EM_JS(void, saveExploration, (int city,const char* data), {
+  try { localStorage.setItem("tagbound-exploration-v1-"+city,UTF8ToString(data)); } catch(e) {}
+});
+EM_JS(void, loadExploration, (int city,char* output,int capacity), {
+  if(capacity<=0) return;
+  try { stringToUTF8(localStorage.getItem("tagbound-exploration-v1-"+city)||"",output,capacity); }
+  catch(e) { HEAPU8[output]=0; }
+});
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
 EM_JS(void, initGameAudio, (), { try { window.TagboundAudio?.init?.(); } catch (e) {} });
@@ -24,6 +32,8 @@ EM_JS(int, isSettingsOpen, (), { return document.getElementById("settings")?.cla
 static void saveLocal(int,int,int,int,int,int,int,int) {}
 static int loadSaveVersion() { return 0; }
 static int loadLocal(int) { return -1; }
+static void saveExploration(int,const char*) {}
+static void loadExploration(int,char*,int) {}
 static void hideIntro() {}
 static void showEnding() {}
 static void initGameAudio() {}
@@ -35,11 +45,22 @@ static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
 static float touchX=0,touchY=0,lookX=0,lookY=0,attackCooldown=0,saveCooldown=0;
-static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
+static bool skillWasDown=false,jumpWasDown=false,mapWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
     saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0,game.quest);
+}
+static void SaveExploration() {
+    std::array<char,ExplorationMapCells+1> encoded{};
+    for(int i=0;i<ExplorationMapCells;i++) encoded[i]=game.explored[i]?'1':'0';
+    saveExploration(game.city,encoded.data());
+}
+static void LoadExploration() {
+    std::array<char,ExplorationMapCells+1> encoded{};
+    game.explored.fill(0);
+    loadExploration(game.city,encoded.data(),(int)encoded.size());
+    for(int i=0;i<ExplorationMapCells&&encoded[i];i++) game.explored[i]=encoded[i]=='1'?1:0;
 }
 extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
@@ -65,13 +86,16 @@ KEEP void StartGame() {
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
     game.player.weapon=ClassWeapon(game.player.playerClass);
-    game.started=true; game.finished=finished>0; BuildCity(game);
+    game.started=true; game.finished=finished>0; game.mapOpen=false; BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
     else {
         SetQuestProgress(game,quest<0?0:quest);
         game.player.position=QuestCheckpoint(game.city,game.quest);
         game.player.facing=QuestCheckpointFacing(game.city,game.quest);
     }
+    LoadExploration();
+    UpdateExploration(game,game.player.position);
+    SaveExploration();
     ResetCamera(game.player,camera);
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
@@ -90,6 +114,13 @@ KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,ga
 KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
 KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
 KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
+KEEP int IsMapOpen() { return game.mapOpen?1:0; }
+KEEP int GetExploredCount() {
+    return (int)std::count(game.explored.begin(),game.explored.end(),(unsigned char)1);
+}
+KEEP int GetExploredCell(int index) {
+    return index>=0&&index<ExplorationMapCells?game.explored[index]:0;
+}
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
 }
@@ -104,7 +135,7 @@ KEEP int IsBossArenaContained() {
 KEEP void ResetProgress() {
     game.city=0; game.unlockedCity=0; game.quest=0; game.bossUnlocked=false;
     game.player.level=1; game.player.xp=0;
-    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; savedCity=0; Save();
+    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; game.mapOpen=false; savedCity=0; Save();
 }
 }
 
@@ -122,6 +153,9 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
+    bool mapDown=IsKeyDown(KEY_M)||(touchButtons&256);
+    c.toggleMap=mapDown&&!mapWasDown;
+    mapWasDown=mapDown;
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         Vector2 d=GetMouseDelta(); c.lookX+=d.x*0.7f; c.lookY+=d.y*0.7f;
@@ -153,6 +187,8 @@ static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
+        if(controls.toggleMap) game.mapOpen=!game.mapOpen;
+        if(!game.mapOpen) {
         game.player.blocking=controls.block;
         float previousY=game.player.position.y;
         bool wasDashing=game.player.dashTime>0;
@@ -162,6 +198,7 @@ static void Frame() {
         int previousTaggerWindups=TaggerWindupCount();
         if(controls.attack) playGameAudio(game.player.weapon==Weapon::Bow?1:0);
         UpdateMovement(game,controls,camera,dt);
+        if(UpdateExploration(game,game.player.position)) SaveExploration();
         if(controls.jump&&game.player.position.y>previousY+0.01f) playGameAudio(3);
         if(!wasDashing&&game.player.dashTime>0) playGameAudio(2);
         float staminaBeforeCombat=game.player.stamina;
@@ -172,7 +209,13 @@ static void Frame() {
         if(game.player.stamina<staminaBeforeCombat-0.01f) playGameAudio(8);
         if(game.player.health<previousHealth) playGameAudio(4);
         if(game.defeated>previousDefeated) playGameAudio(6);
-        if(game.city!=savedCity) { savedCity=game.city; Save(); }
+        if(game.city!=savedCity) {
+            savedCity=game.city;
+            LoadExploration();
+            UpdateExploration(game,game.player.position);
+            SaveExploration();
+            Save();
+        }
         game.questTime+=dt;
         if(game.quest<3) {
             if(UpdateQuestObjective(game,dt)) {
@@ -198,6 +241,7 @@ static void Frame() {
         saveCooldown+=dt;
         if(saveCooldown>4.0f) { Save(); saveCooldown=0; }
         if(game.finished) { Save(); showEnding(); }
+        }
     }
     BeginDrawing();
     DrawGame(game,camera);
