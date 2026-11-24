@@ -88,6 +88,7 @@ static int isSettingsOpen() { return 0; }
 #endif
 
 static void SyncMapControls();
+static void SyncProgressionUI();
 static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
@@ -119,26 +120,41 @@ extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
 KEEP void StartGame() {
     game.player.playerClass=(PlayerClass)selectedClass;
-    game.player.health=ClassMaxHealth(game.player.playerClass);
-    game.player.stamina=ClassMaxStamina(game.player.playerClass);
     game.player.weapon=ClassWeapon(game.player.playerClass);
     int saveVersion=loadSaveVersion();
-    int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4), finished=loadLocal(6), quest=loadLocal(7);
+    int c=loadLocal(0), l=loadLocal(1), x=loadLocal(2), u=loadLocal(3), cl=loadLocal(4);
+    int finished=loadLocal(6), quest=loadLocal(7), mana=loadLocal(8);
+    int vitality=loadLocal(9), endurance=loadLocal(10), focus=loadLocal(11);
+    int power=loadLocal(12), precision=loadLocal(13), pending=loadLocal(14);
     if(c>=0) {
         if(saveVersion<1) {
             c=MigrateLegacyCityIndex(c);
             u=MigrateLegacyCityIndex(u);
         }
-        game.city=std::clamp(c,0,4); game.unlockedCity=std::clamp(u,0,4);
-        game.player.level=std::max(1,l); game.player.xp=std::max(0,x);
-        if(!classChosen) {
-            game.player.playerClass=(PlayerClass)std::clamp(cl,0,2);
-            game.player.health=ClassMaxHealth(game.player.playerClass);
-            game.player.stamina=ClassMaxStamina(game.player.playerClass);
+        game.city=std::clamp(c,0,4);
+        game.unlockedCity=std::clamp(u,0,4);
+        game.player.level=std::max(1,l);
+        game.player.xp=std::max(0,x);
+        if(!classChosen) game.player.playerClass=(PlayerClass)std::clamp(cl,0,2);
+        game.player.vitality=std::clamp(vitality,0,MaxStatRank);
+        game.player.endurance=std::clamp(endurance,0,MaxStatRank);
+        game.player.focus=std::clamp(focus,0,MaxStatRank);
+        game.player.power=std::clamp(power,0,MaxStatRank);
+        game.player.precision=std::clamp(precision,0,MaxStatRank);
+        const int earnedStats=game.player.vitality+game.player.endurance+
+            game.player.focus+game.player.power+game.player.precision;
+        game.player.pendingStatChoices=std::clamp(pending<0?0:pending,0,99);
+        if(saveVersion<2) {
+            game.player.pendingStatChoices=std::max(game.player.pendingStatChoices,
+                std::max(0,game.player.level-1-earnedStats));
         }
-        game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
+        game.player.escapeSkill=game.player.level>=3;
+        game.player.combatSkill=game.player.level>=5;
     }
     game.player.weapon=ClassWeapon(game.player.playerClass);
+    game.player.health=PlayerMaxHealth(game.player);
+    game.player.stamina=PlayerMaxStamina(game.player);
+    game.player.mana=mana>=0?std::clamp((float)mana,0.0f,PlayerMaxMana(game.player)):PlayerMaxMana(game.player);
     game.started=true; game.finished=finished>0; game.mapOpen=false; BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
     else {
@@ -150,6 +166,7 @@ KEEP void StartGame() {
     UpdateExploration(game,game.player.position);
     SaveExploration();
     SyncMapControls();
+    SyncProgressionUI();
     ResetCamera(game.player,camera);
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
@@ -192,6 +209,14 @@ KEEP int GetExploredCell(int index) {
     if(index<0||index>=ExplorationMapCells) return 0;
     return game.explored[game.mapFloor*ExplorationMapCells+index];
 }
+KEEP int GetPendingStatChoices() { return game.player.pendingStatChoices; }
+KEEP void ChooseStat(int stat) {
+    if(!game.started||isSettingsOpen()||stat<0||stat>4) return;
+    if(ChooseStatUpgrade(game,(StatUpgrade)stat)) {
+        Save();
+        SyncProgressionUI();
+    }
+}
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
 }
@@ -206,7 +231,14 @@ KEEP int IsBossArenaContained() {
 KEEP void ResetProgress() {
     game.city=0; game.unlockedCity=0; game.quest=0; game.bossUnlocked=false;
     game.player.level=1; game.player.xp=0;
-    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; game.mapOpen=false; SyncMapControls(); savedCity=0; Save();
+    game.player.vitality=game.player.endurance=game.player.focus=0;
+    game.player.power=game.player.precision=game.player.pendingStatChoices=0;
+    game.player.health=PlayerMaxHealth(game.player);
+    game.player.stamina=PlayerMaxStamina(game.player);
+    game.player.mana=PlayerMaxMana(game.player);
+    game.player.escapeSkill=0; game.player.combatSkill=0;
+    game.finished=false; game.mapOpen=false;
+    SyncMapControls(); SyncProgressionUI(); savedCity=0; Save();
 }
 }
 
@@ -214,6 +246,11 @@ static void SyncMapControls() {
     setMapControlsState(game.mapOpen?1:0,game.mapFloor,
         CanChangeExplorationFloor(game,-1)?1:0,
         CanChangeExplorationFloor(game,1)?1:0);
+}
+
+static void SyncProgressionUI() {
+    const Player& p=game.player;
+    setProgressionChoiceState(p.pendingStatChoices,p.vitality,p.endurance,p.focus,p.power,p.precision);
 }
 
 static Controls ReadControls() {
