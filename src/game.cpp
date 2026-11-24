@@ -283,6 +283,7 @@ bool FindReinforcementSpawn(const GameState& g,Vector3 origin,Vector3& spawn) {
 }
 void BuildCity(GameState& g) {
     g.platforms.clear(); g.enemies.clear(); g.projectiles.clear();
+    g.skillEffects.clear(); g.skillTargeting=false;
     g.currentFloor=0; g.mapFloor=0; g.mapOpen=false;
     g.quest=0; g.bossUnlocked=false; g.questTime=0; g.beaconHoldTime=0; g.danger=0;
     g.questLimit=110.0f-g.city*7.0f;
