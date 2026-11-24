@@ -132,6 +132,44 @@ const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name
 document.querySelectorAll('[data-stat-choice]').forEach(button=>{
  button.addEventListener('click',()=>call('ChooseStat',Number(button.dataset.statChoice)));
 });
+document.querySelectorAll('.skill-choice').forEach(button=>{
+ button.addEventListener('click',()=>{
+  if(button.disabled||!button.dataset.skillId)return;
+  call('ChooseSkill',Number(button.dataset.skillId),Number(button.dataset.upgrade));
+ });
+});
+[0,1].forEach(slot=>{
+ document.getElementById('skill-slot-'+slot)?.addEventListener('click',()=>call('EquipSkillSlot',slot));
+});
+document.querySelector('.action.technique')?.addEventListener('click',()=>call('UseClassSkill'));
+
+const skillTarget=document.getElementById('skill-target');
+let skillTargetPointer=null;
+function updateSkillTarget(event){
+ call('SetClassSkillTargetScreen',event.clientX,event.clientY);
+}
+skillTarget?.addEventListener('pointerdown',event=>{
+ if(event.target.closest('button'))return;
+ event.preventDefault();
+ skillTargetPointer=event.pointerId;
+ skillTarget.setPointerCapture(event.pointerId);
+ updateSkillTarget(event);
+});
+skillTarget?.addEventListener('pointermove',event=>{
+ if(skillTargetPointer===event.pointerId)updateSkillTarget(event);
+});
+function releaseSkillTarget(event){
+ if(skillTargetPointer!==event.pointerId)return;
+ updateSkillTarget(event);
+ skillTargetPointer=null;
+}
+skillTarget?.addEventListener('pointerup',releaseSkillTarget);
+skillTarget?.addEventListener('pointercancel',releaseSkillTarget);
+document.getElementById('skill-target-confirm')?.addEventListener('click',()=>call('ConfirmSkillTarget'));
+document.getElementById('skill-target-cancel')?.addEventListener('click',()=>call('CancelSkillTarget'));
+document.querySelectorAll('[data-stat-choice]').forEach(button=>{
+ button.addEventListener('click',()=>call('ChooseStat',Number(button.dataset.statChoice)));
+});
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 const classCards=[...document.querySelectorAll('.class-card')];
 const bowAction=document.querySelector('.action[data-bit="16"]');
@@ -215,6 +253,10 @@ document.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&!settings.classList.contains('hidden')) {
   closeSettings();
   return;
+ }
+ if(Module?.ccall&&Module.ccall('IsSkillTargeting','number',[],[])===1) {
+  if(event.key==='Enter') { event.preventDefault(); call('ConfirmSkillTarget'); return; }
+  if(event.key==='Escape') { event.preventDefault(); call('CancelSkillTarget'); return; }
  }
  if(event.key.toLowerCase()==='m'&&!event.repeat&&intro.classList.contains('hidden')) {
   event.preventDefault();
