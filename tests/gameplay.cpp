@@ -1636,6 +1636,26 @@ int main() {
     closedSpawn.platforms.push_back({{0,3.0f,0},{120,6.0f,120},GRAY});
     assert(!FindReinforcementSpawn(closedSpawn,{0,0.3f,0},spawn));
 
+    // Exploration reveals only nearby 5-unit cells and reports changes for persistence.
+    GameState exploration;
+    BuildCity(exploration);
+    assert(ExplorationCellForPosition({-50,0.3f,-36})==0);
+    assert(ExplorationCellForPosition({50,0.3f,44})==ExplorationMapCells-1);
+    assert(std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1)==0);
+    const Vector3 firstExplore{0,0.3f,0};
+    assert(UpdateExploration(exploration,firstExplore));
+    const int firstCell=ExplorationCellForPosition(firstExplore);
+    assert(exploration.explored[firstCell]==1);
+    const int firstCount=(int)std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1);
+    assert(firstCount>1&&firstCount<ExplorationMapCells);
+    assert(exploration.explored[0]==0);
+    assert(!UpdateExploration(exploration,firstExplore));
+    const Vector3 secondExplore{20,0.3f,20};
+    assert(UpdateExploration(exploration,secondExplore));
+    assert(exploration.explored[ExplorationCellForPosition(secondExplore)]==1);
+    assert(std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1)>firstCount);
+    assert(exploration.explored[0]==0);
+
     std::cout << "PASS: city setup, mixed beacon objectives, hold resets, XP/skills, movement, combat, and boss progression.\\n";
     return 0;
 }
