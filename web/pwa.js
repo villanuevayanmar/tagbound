@@ -252,6 +252,11 @@ document.addEventListener('keydown',event=>{
   closeSettings();
   return;
  }
+ if(event.key.toLowerCase()==='q'&&!event.repeat&&intro.classList.contains('hidden')) {
+  event.preventDefault();
+  call('UseClassSkill');
+  return;
+ }
  if(Module?.ccall&&Module.ccall('IsSkillTargeting','number',[],[])===1) {
   if(event.key==='Enter') { event.preventDefault(); call('ConfirmSkillTarget'); return; }
   if(event.key==='Escape') { event.preventDefault(); call('CancelSkillTarget'); return; }
