@@ -388,3 +388,10 @@ Next:
 2. Fix any compile, gameplay, browser, UI, or persistence failures without removing assertions.
 3. Verify the artifact contains the new web UI/service-worker and WASM with map feature.
 4. Continue with the next substantial incomplete gameplay feature: separate Energy/Mana and actual multi-skill progression, based on the specification once located or reconstructed from project documents. Do not invent a design that conflicts with the master spec.
+
+ 
+## Boss arena enclosure update (2026-11-24)
+
+- Each city now builds three 2.8-unit-high collision-bearing stone walls around its 8×8 raised boss deck. The south entrance remains open and aligned with the rooftop route.
+- Boss arena half-extents are derived from the inner wall faces; boss body radius is accounted for by the existing clamp used during pursuit, knockback and the Gilded Charger strike.
+- C++ tests verify wall geometry, boss containment and the open approach. This code still requires exact-head CI and later physical Android review; do not claim the user's original boss issue is proven fixed until tested in the new preview/device.
