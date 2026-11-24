@@ -22,6 +22,9 @@ EM_JS(void, loadExploration, (int city,char* output,int capacity), {
   try { stringToUTF8(localStorage.getItem("tagbound-exploration-v1-"+city)||"",output,capacity); }
   catch(e) { HEAPU8[output]=0; }
 });
+EM_JS(void, setMapControlsHidden, (int open), {
+  document.getElementById("touch-controls")?.classList.toggle("map-open",!!open);
+});
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
 EM_JS(void, initGameAudio, (), { try { window.TagboundAudio?.init?.(); } catch (e) {} });
@@ -34,6 +37,7 @@ static int loadSaveVersion() { return 0; }
 static int loadLocal(int) { return -1; }
 static void saveExploration(int,const char*) {}
 static void loadExploration(int,char*,int) {}
+static void setMapControlsHidden(int) {}
 static void hideIntro() {}
 static void showEnding() {}
 static void initGameAudio() {}
@@ -86,7 +90,7 @@ KEEP void StartGame() {
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
     game.player.weapon=ClassWeapon(game.player.playerClass);
-    game.started=true; game.finished=finished>0; game.mapOpen=false; BuildCity(game);
+    game.started=true; game.finished=finished>0; game.mapOpen=false; setMapControlsHidden(0); BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
     else {
         SetQuestProgress(game,quest<0?0:quest);
@@ -135,7 +139,7 @@ KEEP int IsBossArenaContained() {
 KEEP void ResetProgress() {
     game.city=0; game.unlockedCity=0; game.quest=0; game.bossUnlocked=false;
     game.player.level=1; game.player.xp=0;
-    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; game.mapOpen=false; savedCity=0; Save();
+    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; game.mapOpen=false; setMapControlsHidden(0); savedCity=0; Save();
 }
 }
 
@@ -187,7 +191,10 @@ static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
-        if(controls.toggleMap) game.mapOpen=!game.mapOpen;
+        if(controls.toggleMap) {
+            game.mapOpen=!game.mapOpen;
+            setMapControlsHidden(game.mapOpen?1:0);
+        }
         if(!game.mapOpen) {
         game.player.blocking=controls.block;
         float previousY=game.player.position.y;
