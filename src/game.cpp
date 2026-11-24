@@ -113,6 +113,12 @@ int ExplorationFloorForPosition(float height) {
     }
     return nearest;
 }
+const char* ExplorationFloorName(int floor) {
+    static const char* names[ExplorationMapFloors]={
+        "GROUND","ROOFTOP 1","ROOFTOP 2","ROOFTOP 3","BOSS DECK"
+    };
+    return names[std::clamp(floor,0,ExplorationMapFloors-1)];
+}
 bool UpdateExploration(GameState& g,Vector3 position) {
     if(!g.player.grounded) return false;
     constexpr float revealRadius=7.5f;
