@@ -306,7 +306,8 @@ int main() {
         const Vector3 westStop=moveFrom({-42.0f,0.3f,4.0f},{-1,0,0},{0,1});
         const Vector3 eastStop=moveFrom({42.0f,0.3f,4.0f},{1,0,0},{0,1});
         const Vector3 southStop=moveFrom({0,0.3f,-29.0f},{0,0,-1},{0,1});
-        const Vector3 northStop=moveFrom({gateX+8.0f,0.3f,36.0f},{0,0,1},{0,1});
+        const float northWallTestX=gateX>=0.0f?-34.0f:34.0f;
+        const Vector3 northStop=moveFrom({northWallTestX,0.3f,36.0f},{0,0,1},{0,1});
         const Vector3 gatePassage=moveFrom({gateX,0.3f,36.0f},{0,0,1},{0,1});
         assert(westStop.x>-43.0f&&westStop.x<-42.0f);
         assert(eastStop.x>42.0f&&eastStop.x<43.0f);
