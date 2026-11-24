@@ -310,7 +310,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     const float currentDeltaZ=targetMoveVelocity.y-p.moveVelocity.y;
     const float deltaLength=std::sqrt(currentDeltaX*currentDeltaX+currentDeltaZ*currentDeltaZ);
     const float rate=targetSpeed>0.05f
-        ? (p.grounded?34.0f:16.0f)
+        ? (p.dashTime>0.0f?100.0f:(p.grounded?34.0f:16.0f))
         : (p.grounded?28.0f:3.5f);
     const float maxChange=rate*dt;
     if(deltaLength<=maxChange) p.moveVelocity=targetMoveVelocity;
