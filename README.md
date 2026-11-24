@@ -16,7 +16,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Pursuit pressure, health, stamina and class-exclusive weapons: Vanguard sword, Skirmisher bow and Warden shield.
 - Warden's shield reduces the stamina cost of blocking both pursuer and boss strikes.
 - Vanguard's sword deals a heavier melee strike; Skirmisher retains the fastest base movement speed; Warden uses less stamina while guarding.
-- Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss.
+- Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss. The raised boss deck has three collision-bearing stone walls and an open south entrance aligned with the final rooftop route.
 - Three varied objectives per city combine immediate reach beacons, timed hold captures, and selected survival encounters where the player must outlast the pursuit away from the beacon. Leaving a hold beacon or dying resets capture progress; dying also resets survival progress. Pursuers remain active during either timed objective. Each city then ends with a unique boss and its own strike pattern, attack range, visual design and telegraphed warning zone: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
 - Shared beacon and boss-gate coordinates drive gameplay triggers, 3D markers and the live HUD distance readout.
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
