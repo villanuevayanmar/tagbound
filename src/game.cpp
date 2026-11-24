@@ -258,6 +258,7 @@ bool FindReinforcementSpawn(const GameState& g,Vector3 origin,Vector3& spawn) {
 }
 void BuildCity(GameState& g) {
     g.platforms.clear(); g.enemies.clear(); g.projectiles.clear();
+    g.currentFloor=0; g.mapFloor=0; g.mapOpen=false;
     g.quest=0; g.bossUnlocked=false; g.questTime=0; g.beaconHoldTime=0; g.danger=0;
     g.questLimit=110.0f-g.city*7.0f;
     Color tint[5]={{73,132,135,255},{167,123,75,255},{91,119,132,255},{143,76,69,255},{111,103,151,255}};
