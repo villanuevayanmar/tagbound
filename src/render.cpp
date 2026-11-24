@@ -572,10 +572,12 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         const int mapWidth=std::min(340,w-32);
         const int mapHeight=std::min(296,h-24);
         const int panelX=(w-mapWidth)/2,panelY=(h-mapHeight)/2;
+        const int floorOffset=g.mapFloor*ExplorationMapCells;
         DrawRectangle(0,0,w,h,Fade(BLACK,0.78f));
         DrawRectangle(panelX,panelY,mapWidth,mapHeight,Color{20,27,35,248});
         DrawRectangleLines(panelX,panelY,mapWidth,mapHeight,Color{177,140,92,230});
-        DrawText(TextFormat("%s  /  EXPLORED MAP",CityName(g.city)),panelX+12,panelY+9,14,GOLD);
+        DrawText(TextFormat("%s  /  %s",CityName(g.city),ExplorationFloorName(g.mapFloor)),
+                 panelX+12,panelY+9,14,GOLD);
         const int mapX=panelX+12,mapY=panelY+34;
         const int mapW=mapWidth-24,mapH=mapHeight-58;
         const float cellW=(float)mapW/ExplorationMapColumns;
@@ -583,7 +585,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         DrawRectangle(mapX,mapY,mapW,mapH,Color{8,13,19,255});
         for(int row=0;row<ExplorationMapRows;row++) {
             for(int column=0;column<ExplorationMapColumns;column++) {
-                const int index=row*ExplorationMapColumns+column;
+                const int index=floorOffset+row*ExplorationMapColumns+column;
                 if(!g.explored[index]) continue;
                 const int x=mapX+(int)std::floor(column*cellW);
                 const int y=mapY+(int)std::floor(row*cellH);
@@ -595,7 +597,9 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         }
         for(const Platform& platform:g.platforms) {
             const bool worldFloor=platform.size.x>=100.0f&&platform.size.z>=100.0f&&platform.size.y<=1.0f;
-            if(worldFloor) continue;
+            if(worldFloor|| (platform.size.x<1.1f&&platform.size.z<1.1f)) continue;
+            const float platformTop=platform.position.y+platform.size.y*0.5f;
+            if(platform.size.y<8.0f&&ExplorationFloorForPosition(platformTop)!=g.mapFloor) continue;
             const float left=platform.position.x-platform.size.x*0.5f;
             const float right=platform.position.x+platform.size.x*0.5f;
             const float top=platform.position.z-platform.size.z*0.5f;
@@ -604,7 +608,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                 const float cellTop=-36.0f+row*5.0f,cellBottom=cellTop+5.0f;
                 if(bottom<=cellTop||top>=cellBottom) continue;
                 for(int column=0;column<ExplorationMapColumns;column++) {
-                    const int index=row*ExplorationMapColumns+column;
+                    const int index=floorOffset+row*ExplorationMapColumns+column;
                     if(!g.explored[index]) continue;
                     const float cellLeft=-50.0f+column*5.0f,cellRight=cellLeft+5.0f;
                     if(right<=cellLeft||left>=cellRight) continue;
@@ -621,22 +625,24 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
             }
         }
         DrawRectangleLines(mapX,mapY,mapW,mapH,Color{135,151,151,180});
-        const int objectiveCell=ExplorationCellForPosition(QuestTarget(g.city,g.quest));
-        if(g.explored[objectiveCell]) {
-            Vector3 target=QuestTarget(g.city,g.quest);
+        const Vector3 target=QuestTarget(g.city,g.quest);
+        const int objectiveCell=floorOffset+ExplorationCellForPosition(target);
+        if(ExplorationFloorForPosition(target.y)==g.mapFloor&&g.explored[objectiveCell]) {
             const float markerX=mapX+(target.x+50.0f)/100.0f*mapW;
             const float markerY=mapY+(target.z+36.0f)/80.0f*mapH;
             DrawCircle((int)markerX,(int)markerY,4.0f,GOLD);
         }
-        const float playerX=mapX+(g.player.position.x+50.0f)/100.0f*mapW;
-        const float playerY=mapY+(g.player.position.z+36.0f)/80.0f*mapH;
-        DrawCircle((int)playerX,(int)playerY,5.0f,WHITE);
-        Vector3 facing=g.player.facing;
-        facing.y=0;
-        if(Vector3Length(facing)>0.001f) {
-            facing=Vector3Normalize(facing);
-            DrawLineEx({playerX,playerY},
-                       {playerX+facing.x*11.0f,playerY+facing.z*11.0f},2.0f,GOLD);
+        if(g.currentFloor==g.mapFloor) {
+            const float playerX=mapX+(g.player.position.x+50.0f)/100.0f*mapW;
+            const float playerY=mapY+(g.player.position.z+36.0f)/80.0f*mapH;
+            DrawCircle((int)playerX,(int)playerY,5.0f,WHITE);
+            Vector3 facing=g.player.facing;
+            facing.y=0;
+            if(Vector3Length(facing)>0.001f) {
+                facing=Vector3Normalize(facing);
+                DrawLineEx({playerX,playerY},
+                           {playerX+facing.x*11.0f,playerY+facing.z*11.0f},2.0f,GOLD);
+            }
         }
         DrawText("WHITE: YOU    GOLD: OBJECTIVE    M / MAP: CLOSE",
                  panelX+12,panelY+mapHeight-18,9,Color{210,205,190,255});
