@@ -91,6 +91,7 @@ float QuestSurvivalDuration(int city,int quest);
 bool UpdateQuestObjective(GameState& game,float dt);
 int ExplorationCellForPosition(Vector3 position);
 int ExplorationFloorForPosition(float height);
+const char* ExplorationFloorName(int floor);
 bool UpdateExploration(GameState& game,Vector3 position);
 bool CanChangeExplorationFloor(const GameState& game,int direction);
 bool ChangeExplorationFloor(GameState& game,int direction);
