@@ -845,6 +845,35 @@ jobs:
             if (mobileSavedLoadout?.klass !== 1 || mobileSavedLoadout?.weapon !== 3) {
               throw new Error('Mobile Skirmisher save did not retain its Bow loadout: ' + JSON.stringify(mobileSavedLoadout));
             }
+
+            // Earlier single-layer city maps migrate to the ground layer without changing the campaign save.
+            const legacyMapContext = await browser.newContext();
+            const legacyMapPage = await legacyMapContext.newPage();
+            const legacyMapResponse = await legacyMapPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!legacyMapResponse?.ok()) throw new Error('Legacy exploration migration page did not return HTTP 200.');
+            const legacyMap = '0'.repeat(150) + '1' + '0'.repeat(169);
+            const legacyCampaign = {
+              schemaVersion: 1, city: 0, level: 2, xp: 15, unlocked: 0,
+              klass: 0, weapon: 0, finished: 0, quest: 0
+            };
+            await legacyMapPage.evaluate(({ map, save }) => {
+              localStorage.setItem('tagbound-exploration-v1-0', map);
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            }, { map: legacyMap, save: legacyCampaign });
+            await legacyMapPage.locator('#start').click();
+            await legacyMapPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const migratedMap = await legacyMapPage.evaluate(() => ({
+              map: localStorage.getItem('tagbound-exploration-v2-0'),
+              legacy: localStorage.getItem('tagbound-exploration-v1-0'),
+              campaign: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!migratedMap.map || migratedMap.map.length !== 1600 ||
+                migratedMap.map[150] !== '1' || migratedMap.legacy !== legacyMap ||
+                migratedMap.campaign?.schemaVersion !== 1 || migratedMap.campaign?.level !== 2 ||
+                migratedMap.campaign?.xp !== 15 || migratedMap.campaign?.city !== 0) {
+              throw new Error('Legacy map migration changed or lost existing progress: ' + JSON.stringify(migratedMap));
+            }
+            await legacyMapContext.close();
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
               const h = innerHeight <= 440 ? 96 : innerHeight - 78;
