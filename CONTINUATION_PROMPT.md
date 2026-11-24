@@ -282,3 +282,42 @@ Restore PR #15's base to PR #14 after the full current-head CI. Then continue th
 
 ### Next task
 After the documentation/control README update passes exact-head CI, stack PR #16 on PR #15 and check the clean stacked diff. Continue with movement acceleration/deceleration, air control, jump/landing and parkour grounding/collision; preserve existing routes and add deterministic regressions. Keep physical Android limitations and the still-unconfirmed black flicker cause explicit.
+
+
+## Latest continuation checkpoint — 2026-11-24
+
+Continue from the current repository; do not restart or create a replacement project.
+
+### Live branch structure
+- Main: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- PR #14 / `feat/campaign-imperial-before-spire`: head `814d2e86c0c7cb5afc7b794e0d26d054eed87222`, base `main`; exact-head run #317 (`45185250016`) passed.
+- PR #15 / `fix/boss-arena-floor-bounds`: head `c92136f54d38df42aa239342dc803e784182ac73`, base PR #14; exact-head run #323 (`45274447641`) passed.
+- PR #16 / `fix/camera-facing-follow`: head `9a83d69b2862b1329467952e4cafa020e25d75fd`, base PR #15; compare is 13 commits ahead, zero behind. All PRs remain open drafts, not merged.
+- Do not flatten the stack, force-push, merge, edit `dist/` or deploy without explicit authorization.
+
+### Latest implementation on PR #16
+- Camera follow, manual-look override, camera reset and camera-relative traversal regressions remain in place.
+- Added transient `Player::moveVelocity` for horizontal player locomotion, separate from physics impulses/vertical velocity.
+- Ground acceleration/braking: 34 / 28 units/s². Air steering/braking: 16 / 3.5 units/s². Existing class top-speed targets are preserved.
+- While dash is active, acceleration is 100 units/s² so the existing 2.7× burst can be reached during its 0.24-second window.
+- Wall collision cancels the corresponding locomotion and impulse axis. City rebuild, ledge/climb transitions and death/checkpoint reset the transient movement velocity. It is intentionally not serialized.
+- Added regressions for acceleration ramp, top speed, release braking, weaker air steering, dash burst and the class speed distinction.
+
+### Exact test evidence
+- GitHub Actions run #334 (`45329538797`) passed on code/test head `9a83d69b2862b1329467952e4cafa020e25d75fd`.
+- Build: C++ gameplay regression suite, Emscripten/WebAssembly, PWA assembly/validation passed.
+- Browser smoke: desktop and mobile-landscape Chromium, gameplay start/input, save migration/restoration, offline cache, all five boss-arena visual captures, and forced WebGL context-loss/save-flush/reload recovery passed.
+- Visual artifact `tagbound-visual-review` was uploaded and inspected. PR-only `publish-dist` was skipped.
+- Earlier run #332 failed only the class-speed assertion because its synthetic platform had a top surface at Y=0 while the player spawn surface is Y=0.3; test fixtures were corrected. The corrected exact head is run #334 and passed.
+
+### Still unresolved
+- Intermittent black flickering has no confirmed root cause. The source audit found one frame drawing pair and one 3D pass per frame, with no repeated per-frame model/texture allocations identified. WebGL context-loss recovery is resilience, not a proven flicker fix.
+- Physical Android GPU/browser, touch-feel and sustained performance testing has not been performed. Chromium is not a substitute.
+- Production alias still points to older READY runtime SHA `9115f13b4021f9052a95eea66ceaa1000f134978`; no deployment or merge was performed. Maintain ₱0/$0 and do not work around quotas.
+
+### Next work order
+1. Investigate black-frame flicker with a repeatable multi-frame canvas check in hosted Chromium. Check for an actually black framebuffer rather than treating a dark scene as failure; preserve current screenshot/visual assertions. Report this as browser evidence only, not Android validation.
+2. Add focused deterministic tests for jump/landing, grounding and rooftop transitions; then review ledge/vault/climb collision and enemy navigation.
+3. Once the movement/rendering foundation is stable, use the master specification to implement the remaining systems in focused increments: separate stamina and mana, a stat choice at each level, skill-vs-upgrade choices at milestones, fortified vertical city/floor progression, enemy archetypes, fog-of-war exploration, guaranteed boss keys and performance-banded equipment loot.
+4. Keep `DEVELOPMENT_STATUS.md` and this file synchronized with exact PR heads, bases and GitHub Actions run IDs. Check exact tested SHA; a started run is not a passing run.
+
