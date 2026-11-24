@@ -52,9 +52,14 @@ EM_JS(void, setMapControlsState, (int open,int floor,int canPrevious,int canNext
 EM_JS(void, setProgressionChoiceState, (int pending,int vitality,int endurance,int focus,int power,int precision), {
   const panel=document.getElementById("level-up");
   const open=pending>0;
+  const settings=document.getElementById("settings");
+  const intro=document.getElementById("intro");
+  const ending=document.getElementById("ending");
+  const gameReady=intro?.classList.contains("hidden")&&ending?.classList.contains("hidden");
+  const settingsVisible=!settings?.classList.contains("hidden");
   panel?.classList.toggle("hidden",!open);
-  document.getElementById("touch-controls")?.classList.toggle("hidden",open);
-  document.getElementById("settings-open")?.classList.toggle("hidden",open);
+  document.getElementById("touch-controls")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
+  document.getElementById("settings-open")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
   const count=document.getElementById("level-up-count");
   if(count) count.textContent="STAT CHOICES REMAINING: "+pending;
   const ranks=[vitality,endurance,focus,power,precision];
