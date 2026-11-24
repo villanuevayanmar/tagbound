@@ -535,5 +535,15 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 - Exact workflow run #335 (`45330722930`) passed on workflow/source tree head `e5da108ec84281c2e08eb1bff3dca4244b7055d5`. Build/gameplay tests, WebAssembly, PWA validation and Chromium browser-smoke all passed; `publish-dist` was skipped. The browser log explicitly reports 12/12 desktop and 12/12 mobile-landscape samples passed with a minimum non-black pixel ratio of `1.0000` on both.
 - PR #16 is restored to base `fix/boss-arena-floor-bounds`, still open/draft; PR #14 → PR #15 → PR #16 remains the intended stack. No merge, deployment or `dist/` change was made.
 - The 14-image visual-review artifact (`14892037925`) was inspected. Desktop/mobile gameplay and five boss-arena scenes rendered. The canvas sampling did not detect a black frame, but this is a short Chromium sample window and does not prove the intermittent report is fixed.
-- Added a test-only raised-rooftop landing regression in `tests/gameplay.cpp` at commit `1753b20e0ac2c6e796ddfbbd58601fdaaa6e476c`: falling onto a platform with top height Y=2.3 must snap and remain at Y=2.3, with vertical velocity reset and landing recovery started. This commit was made after run #335 and still needs exact-head CI.
+- Added a test-only raised-rooftop landing regression in `tests/gameplay.cpp` at commit `1753b20e0ac2c6e796ddfbbd58601fdaaa6e476c`: falling onto a platform with top height Y=2.3 must snap and remain at Y=2.3, with vertical velocity reset and landing recovery started. It was included in run #336.
+
+
+
+## Exact-head verification in progress — 2026-11-24
+
+- Run #336 (`45332306488`) was triggered on PR #16 branch head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. It includes the raised-rooftop landing test and the canvas-frame diagnostic.
+- Build job `138236093166` completed successfully: Emscripten/WebAssembly compilation, C++ gameplay regression tests (including the raised platform snap/hold case), PWA assembly and PWA validation passed.
+- Browser-smoke job `138236454555` is still in progress at `Serve and test browser runtime and offline cache`. Do not claim run #336 fully passed until browser-smoke and artifact upload complete. The PR-only `publish-dist` job must remain skipped.
+- The workflow was started while PR #16 temporarily targeted `main` to satisfy the repository's existing PR trigger filter, then PR #16 was immediately restored to base `fix/boss-arena-floor-bounds`. It remains open/draft; PR #14 → PR #15 → PR #16 remains intact.
+- Current application source/test head under verification is `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. Any later branch movement is documentation-only and must not be confused with the tested SHA.
 
