@@ -164,7 +164,7 @@ jobs:
                 .map(selector => document.querySelector(selector));
               return {
                 touchHelpRemoved: !document.querySelector('#touch-help'),
-                actionButtonsIconOnly: actionButtons.length === 7 && actionButtons.every(iconOnly),
+                actionButtonsIconOnly: actionButtons.length === 8 && actionButtons.every(iconOnly),
                 pauseButtonIconOnly: iconOnly(document.querySelector('#settings-open')),
                 pauseActionsIconOnly: pauseActions.every(iconOnly),
                 pauseTitleAccessible: document.querySelector('#settings-title')?.classList.contains('sr-only')
