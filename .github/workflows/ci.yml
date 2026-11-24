@@ -904,10 +904,32 @@ jobs:
             }
             await statPage.locator('[data-stat-choice="0"]').click();
             await statPage.waitForFunction(() => document.querySelector('#level-up')?.classList.contains('hidden'));
+            await statPage.waitForFunction(() => !document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            const skillChoices = await statPage.evaluate(() => ({
+              pending: Module.ccall('GetPendingSkillChoices','number',[],[]),
+              options: [...document.querySelectorAll('.skill-choice')].filter(button => !button.hidden && !button.disabled)
+                .map(button => ({ title: button.querySelector('[data-skill-title]')?.textContent, id: button.dataset.skillId }))
+            }));
+            if (skillChoices.pending !== 1 || skillChoices.options.length !== 2 ||
+                !skillChoices.options[0].title?.includes('CLEAVING ARC')) {
+              throw new Error('Class skill milestone did not offer unlock choices: ' + JSON.stringify(skillChoices));
+            }
+            await statPage.locator('#skill-option-0').click();
+            await statPage.waitForFunction(() => document.querySelector('#skill-choice')?.classList.contains('hidden'));
             const afterChoice = await statPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
-            if (afterChoice?.schemaVersion !== 2 || afterChoice?.vitality !== 1 ||
-                afterChoice?.pendingStatChoices !== 0 || afterChoice?.level !== 3) {
-              throw new Error('Stat choice did not persist exactly once: ' + JSON.stringify(afterChoice));
+            if (afterChoice?.schemaVersion !== 3 || afterChoice?.vitality !== 1 ||
+                afterChoice?.pendingStatChoices !== 0 || afterChoice?.pendingSkillChoices !== 0 ||
+                afterChoice?.skill0 !== 1 || afterChoice?.rank0 !== 1 || afterChoice?.level !== 3) {
+              throw new Error('Stat and skill choices did not persist exactly once: ' + JSON.stringify(afterChoice));
+            }
+            await statPage.locator('#settings-open').click();
+            await statPage.locator('#skill-slot-0').click();
+            const equippedChoice = await statPage.evaluate(() => ({
+              active: JSON.parse(localStorage.getItem('tagbound-save') || 'null')?.activeSkillSlot,
+              label: document.querySelector('#skill-slot-0-name')?.textContent
+            }));
+            if (equippedChoice.active !== 0 || !equippedChoice.label?.includes('CLEAVING ARC')) {
+              throw new Error('Settings skill loadout did not retain the equipped technique: ' + JSON.stringify(equippedChoice));
             }
             await statContext.close();
 
