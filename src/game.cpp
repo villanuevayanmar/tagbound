@@ -224,6 +224,9 @@ void BuildCity(GameState& g) {
         float a=i*0.2244f+g.city*0.08f, r=38.0f+(i%3)*1.0f;
         float h=4.0f+(i*3%7)*1.45f+g.city*0.55f;
         Vector3 p={std::cos(a)*r,h*0.5f,std::sin(a)*r-3.0f};
+        // Keep the approach behind the gate clear; move only obstructing skyline
+        // pieces beyond the playable perimeter instead of dropping city geometry.
+        if(p.z>30.0f&&std::abs(p.x-gate.x)<7.5f) p.z=46.0f;
         g.platforms.push_back({p,{4.5f,h,4.5f},Color{(unsigned char)std::min(235,(int)tint[g.city].r+(i%3)*8),(unsigned char)std::min(235,(int)tint[g.city].g+(i%4)*6),(unsigned char)std::min(235,(int)tint[g.city].b+(i%2)*9),255}});
     }
     // Fortify each city with a continuous stone perimeter. The north gate opening
