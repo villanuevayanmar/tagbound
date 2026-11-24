@@ -49,6 +49,20 @@
 <button id="settings-open" class="game-settings hidden" type="button" aria-label="Pause menu" aria-expanded="false">
 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 8.25a3.75 3.75 0 1 0 0 7.5 3.75 3.75 0 0 0 0-7.5Z"/><path d="m19.1 14.8 1.3.8-1.4 2.5-1.5-.6a7.6 7.6 0 0 1-1.4.8l-.2 1.7h-2.8l-.3-1.7a7.6 7.6 0 0 1-1.4-.8l-1.5.6-1.4-2.5 1.3-.8a7.2 7.2 0 0 1 0-1.6l-1.3-.8 1.4-2.5 1.5.6c.4-.3.9-.6 1.4-.8l.3-1.7h2.8l.2 1.7c.5.2 1 .5 1.4.8l1.5-.6 1.4 2.5-1.3.8a7.2 7.2 0 0 1 0 1.6Z"/></svg>
 </button>
+<section id="level-up" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="level-up-title">
+<div class="panel level-up-panel">
+<p class="eyebrow">CHARACTER DEVELOPMENT</p>
+<h1 id="level-up-title">CHOOSE A STAT</h1>
+<p class="story-copy">Choose one permanent improvement for this level. Your choice is saved with your character.</p>
+<p id="level-up-count" class="level-up-count">STAT CHOICES REMAINING: 1</p>
+<div class="stat-choice-grid">
+<button class="stat-choice" type="button" data-stat-choice="0"><strong>VITALITY</strong><small>+8 maximum health</small><span data-stat-rank>RANK 0/10</span></button>
+<button class="stat-choice" type="button" data-stat-choice="1"><strong>ENDURANCE</strong><small>+8 maximum stamina</small><span data-stat-rank>RANK 0/10</span></button>
+<button class="stat-choice" type="button" data-stat-choice="2"><strong>FOCUS</strong><small>+12 maximum mana</small><span data-stat-rank>RANK 0/10</span></button>
+<button class="stat-choice" type="button" data-stat-choice="3"><strong>POWER</strong><small>+4% melee damage</small><span data-stat-rank>RANK 0/10</span></button>
+<button class="stat-choice" type="button" data-stat-choice="4"><strong>PRECISION</strong><small>+4% bow damage</small><span data-stat-rank>RANK 0/10</span></button>
+</div>
+</div></section>
 <section id="ending" class="overlay hidden"><div class="panel"><p class="eyebrow">THE LAST GATE</p><h1>THE CITIES ARE FREE</h1><p class="story-copy">The final warden has fallen. The chase is over — for now.</p><button id="restart" class="primary">PLAY AGAIN</button></div></section>
 <div id="rotate" class="rotate hidden"><span>↻</span><strong>ROTATE YOUR DEVICE</strong><small>TAGBOUND is designed for landscape play.</small></div>
 <div id="touch-controls">
