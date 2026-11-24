@@ -387,10 +387,11 @@ KEEP void EquipSkillSlot(int slot) {
     if(EquipSkill(game,slot)) { Save(); SyncSkillUI(); }
 }
 KEEP void UseClassSkill() {
-    if(!game.started||game.mapOpen||isSettingsOpen()||game.player.pendingStatChoices>0||
-       game.player.pendingSkillChoices>0) return;
+    if(!game.started||game.mapOpen||game.skillTargeting||isSettingsOpen()||
+       game.player.pendingStatChoices>0||game.player.pendingSkillChoices>0) return;
     if(ActivateClassSkill(game)) {
         if(!game.skillTargeting) Save();
+        SyncSkillUI();
         SyncSkillTargetUI();
     }
 }
@@ -406,7 +407,7 @@ KEEP int SetClassSkillTargetScreen(float x,float y) {
     return valid;
 }
 KEEP void ConfirmSkillTarget() {
-    if(ConfirmClassSkillTarget(game)) { Save(); SyncSkillTargetUI(); }
+    if(ConfirmClassSkillTarget(game)) { Save(); SyncSkillUI(); SyncSkillTargetUI(); }
 }
 KEEP void CancelSkillTarget() {
     CancelClassSkillTarget(game); SyncSkillTargetUI();
