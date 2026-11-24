@@ -407,3 +407,14 @@ Next:
 - Service-worker cache version: `tagbound-v29`.
 - Added C++ tests for height mapping, airborne reveal prevention, isolated floor state, and floor selection. CI browser checks verify the UI, mobile tap behavior, 1,600-cell save format, and reload persistence.
 - This latest implementation and the boss-arena walls are not yet verified by exact-head CI; never inherit the earlier run #347 result as proof of the new code.
+
+ 
+## Character resources and stat progression update — 2026-11-24
+
+- Player now has separate Health, Stamina, and Mana. Class Mana bases are Vanguard 70, Skirmisher 90, Warden 80. Mana regenerates at 3.5/sec. Stamina continues to fund sprint, dash, vault/climb and block.
+- Each level-up adds exactly one pending stat choice; movement/combat simulation pauses until it is selected.
+- Bounded stats (rank 0–10): Vitality +8 max HP, Endurance +8 max Stamina, Focus +12 max Mana, Power +4% melee damage, Precision +4% bow damage. Capped choices remain unspent; one successful selection consumes one pending choice.
+- Save schema is now v2, storing Mana, stat ranks and pending choices. Schema v1 saves preserve campaign progress and receive pending choices for previously completed levels not already represented by stat ranks.
+- C++ tests cover derived resource limits, actual melee/bow damage scaling, caps, and Mana regeneration. Browser CI now tests one saved level-up selection and v1 migration.
+- Service-worker cache is `tagbound-v30`.
+- Mana is not yet consumed by active class skills in this checkpoint. The next gameplay batch must add the class skill selection at level milestones and connect each activated skill to Mana cost/cooldown, including the specified Skirmisher Arrow Rain targeting interaction.
