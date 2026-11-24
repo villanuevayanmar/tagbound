@@ -776,6 +776,9 @@ bool SetClassSkillTarget(GameState& g,Vector3 target) {
     g.skillTarget=target;
     return true;
 }
+bool IsClassSkillTargetValid(const GameState& g) {
+    return g.skillTargeting&&SkillTargetValid(g,g.skillTarget);
+}
 
 bool ActivateClassSkill(GameState& g) {
     Player& p=g.player;
