@@ -940,6 +940,35 @@ int main() {
     assert(game.enemies.front().hitTime>0.1f);
     assert(game.enemies.front().stunTime>0.1f);
 
+    // Power and Precision affect the actual melee and bow hit damage.
+    GameState poweredAttack;
+    BuildCity(poweredAttack);
+    poweredAttack.enemies.clear();
+    poweredAttack.player.position={0,0.3f,0};
+    poweredAttack.player.facing={0,0,1};
+    poweredAttack.player.weapon=Weapon::Sword;
+    poweredAttack.player.power=5;
+    poweredAttack.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+    Controls poweredHit{};
+    poweredHit.attack=true;
+    UpdateCombat(poweredAttack,poweredHit,0.016f);
+    assert(near(poweredAttack.enemies.front().hp,64.0f));
+
+    GameState preciseAttack;
+    BuildCity(preciseAttack);
+    preciseAttack.enemies.clear();
+    preciseAttack.player.position={0,0.3f,0};
+    preciseAttack.player.facing={0,0,1};
+    preciseAttack.player.weapon=Weapon::Bow;
+    preciseAttack.player.precision=5;
+    preciseAttack.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+    Controls preciseShot{};
+    preciseShot.attack=true;
+    UpdateCombat(preciseAttack,preciseShot,0.016f);
+    preciseShot.attack=false;
+    UpdateCombat(preciseAttack,preciseShot,0.05f);
+    assert(near(preciseAttack.enemies.front().hp,46.0f));
+
     // Fast arrows hit the first target along their path and cannot pass through cover.
     game.projectiles.clear();
     game.enemies.clear();
