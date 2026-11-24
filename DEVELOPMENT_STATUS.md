@@ -1,6 +1,6 @@
 # TAGBOUND Development Status
 
-Last updated: 2026-11-23
+Last updated: 2026-11-24
 
 ## Boss arena enclosure checkpoint — 2026-11-24
 
@@ -9,15 +9,16 @@ Last updated: 2026-11-23
 - Updated C++ regression expectations and added geometry checks for the west/east/north arena walls and open approach.
 - This addresses the visual lack of enclosure as well as the existing movement/knockback/charge clamp. Physical Android verification is still required.
 
-## Active development checkpoint — explored-area map
+## Active development checkpoint — floor-aware exploration map
 
-- Development branch: `development/complete-game`, based on the cumulative camera/boss/campaign branch. Production remains unchanged.
-- Added a 20 × 16 exploration grid covering the city play bounds. Each cell represents 5 × 5 world units.
-- The player reveals nearby cells while moving. The map draws discovered platform/building footprints only inside revealed cells, shows the player direction, and only shows the active objective after its cell has been explored.
-- Added an icon-only touch map toggle and the M keyboard shortcut. Opening the map pauses simulation; on touch screens only the map-close control remains interactive.
-- Each city's 320-cell reveal string is stored under its own `tagbound-exploration-v1-<city>` localStorage key. Existing `tagbound-save` campaign data is not rewritten or migrated for this feature.
-- Added C++ boundary/reveal tests, browser keyboard/touch/persistence checks, and bumped the service-worker cache to `tagbound-v28`.
-- Status at this checkpoint: implementation is committed on the development branch; exact-head CI verification is pending. Do not describe it as tested until Actions completes.
+- Development branch: `development/complete-game`; PR #17 remains draft and unmerged. Production and `main` remain unchanged.
+- The map uses a 20 × 16 grid per floor, with 5 × 5 world-unit cells and five elevation layers corresponding to the current ground, three objective rooftop platforms, and boss deck.
+- Only grounded movement reveals the current elevation. Airborne motion cannot reveal an upper floor. Each city's layers are saved independently in `tagbound-exploration-v2-<city>` (1,600 cells per city).
+- Legacy `tagbound-exploration-v1-<city>` data is read as the ground layer on first load; the existing `tagbound-save` campaign record remains separate and unchanged.
+- Previous/next floor controls and keyboard `[` / `]` navigate only to floors that already contain discovered cells. The map shows the player only on their current floor and gates the objective marker by both floor and explored cell.
+- The service-worker cache is now `tagbound-v29`. C++ tests cover floor heights, no airborne reveal, separate floor discovery, and discovered-floor navigation. Browser tests cover UI state, mobile touch control, the 1,600-cell format, and reload persistence.
+- The floor-aware implementation and the boss-arena wall additions require a fresh exact-head CI run. The earlier single-layer map passed run #347, but that does not verify these subsequent changes.
+- Physical Android testing remains outstanding; the original black-flicker root cause is still unconfirmed.
 
 ## Project state
 
