@@ -121,6 +121,27 @@ jobs:
           const context = await browser.newContext();
           const page = await context.newPage();
           const errors = [];
+          const assertCanvasFramesVisible = async (targetPage, label) => {
+            const canvas = targetPage.locator('#canvas');
+            let minimumVisibleRatio = 1;
+            for (let sample = 0; sample < 12; sample++) {
+              const frame = PNG.sync.read(await canvas.screenshot({ animations: 'disabled' }));
+              let visiblePixels = 0;
+              for (let offset = 0; offset < frame.data.length; offset += 4) {
+                if (frame.data[offset] > 12 || frame.data[offset + 1] > 12 ||
+                    frame.data[offset + 2] > 12) visiblePixels++;
+              }
+              const visibleRatio = visiblePixels / (frame.width * frame.height);
+              minimumVisibleRatio = Math.min(minimumVisibleRatio, visibleRatio);
+              if (visibleRatio < 0.97) {
+                throw new Error(label + ' canvas frame was unexpectedly black: ' +
+                  JSON.stringify({ sample, visibleRatio, minimumVisibleRatio }));
+              }
+              await targetPage.waitForTimeout(80);
+            }
+            console.log('PASS: ' + label + ' canvas remained visible across 12 samples; minimum non-black pixel ratio ' +
+              minimumVisibleRatio.toFixed(4));
+          };
           page.on('pageerror', error => errors.push(error.message));
           page.on('console', message => {
             if (message.type() === 'error') errors.push(message.text());
@@ -552,6 +573,7 @@ jobs:
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
+            await assertCanvasFramesVisible(page, 'Desktop gameplay');
             const gameplayImage = await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
             const gameplayPng = PNG.sync.read(gameplayImage);
             let healthTextPixels = 0;
@@ -832,6 +854,7 @@ jobs:
             }
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobilePage.waitForTimeout(1500);
+            await assertCanvasFramesVisible(mobilePage, 'Mobile-landscape gameplay');
             await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
             const mobileGameplayImage = await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
             const mobileStaminaRegion = PNG.sync.read(mobileGameplayImage);
