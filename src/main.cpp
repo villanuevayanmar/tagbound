@@ -495,7 +495,7 @@ static void Frame() {
         if(game.skillTargeting) {
             controls.move={0,0}; controls.jump=false; controls.slide=false; controls.sprint=false;
             controls.attack=false; controls.block=false; controls.aim=false; controls.skill=false;
-            controls.technique=false; controls.lookX=controls.lookY=0;
+            controls.lookX=controls.lookY=0;
         }
         UpdateMovement(game,controls,camera,dt);
         RegenerateMana(game.player,dt);
