@@ -75,6 +75,81 @@ EM_JS(void, setProgressionChoiceState, (int pending,int vitality,int endurance,i
     if(value) value.textContent="RANK "+rank+"/10";
   });
 });
+
+EM_JS(void, setSkillChoiceState, (int pending,int pendingStats,int playerClass,int option0,int option1,
+                                  int skill0,int rank0,int skill1,int rank1), {
+  const panel=document.getElementById("skill-choice");
+  const open=pending>0&&pendingStats===0;
+  const settings=document.getElementById("settings");
+  const gameReady=document.getElementById("intro")?.classList.contains("hidden")&&
+    document.getElementById("ending")?.classList.contains("hidden");
+  const settingsVisible=!settings?.classList.contains("hidden");
+  panel?.classList.toggle("hidden",!open);
+  document.getElementById("touch-controls")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
+  document.getElementById("settings-open")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
+  const names=["","CLEAVING ARC","BREAKER STRIKE","ARROW RAIN","PIERCING SHOT","SHIELD BASH","AEGIS GUARD"];
+  const descriptions=["","Frontal sword sweep that can strike several nearby foes.","Committed heavy strike that staggers and hits hard.",
+    "Mark a visible area, then rain three waves of arrows into it.","Piercing arrow that can hit several enemies in a line.",
+    "Close-range shield impact that knocks an enemy back.","Reduce incoming damage for a short defensive window."];
+  const slots=[{id:skill0,rank:rank0},{id:skill1,rank:rank1}];
+  const options=[];
+  for(const id of [option0,option1]) {
+    const owned=slots.findIndex(slot=>slot.id===id);
+    if(owned>=0) {
+      if(slots[owned].rank<3) options.push({id,upgrade:1,title:"UPGRADE "+names[id],
+        detail:"Rank "+slots[owned].rank+" → "+(slots[owned].rank+1)+": "+descriptions[id]});
+    } else if(slots.some(slot=>slot.id===0)) {
+      options.push({id,upgrade:0,title:"UNLOCK "+names[id],detail:descriptions[id]});
+    }
+  }
+  const count=document.getElementById("skill-choice-count");
+  if(count) count.textContent="SKILL MILESTONE — CHOOSE ONE ("+pending+" REMAINING)";
+  for(let index=0;index<2;index++) {
+    const button=document.getElementById("skill-option-"+index);
+    if(!button) continue;
+    const option=options[index];
+    button.classList.toggle("hidden",!option);
+    button.disabled=!option;
+    if(option) {
+      button.dataset.skillId=String(option.id);
+      button.dataset.upgrade=String(option.upgrade);
+      button.querySelector("[data-skill-title]").textContent=option.title;
+      button.querySelector("[data-skill-detail]").textContent=option.detail;
+    }
+  }
+});
+EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int activeSlot), {
+  const names=["NO SKILL","CLEAVING ARC","BREAKER STRIKE","ARROW RAIN","PIERCING SHOT","SHIELD BASH","AEGIS GUARD"];
+  for(let slot=0;slot<2;slot++) {
+    const button=document.getElementById("skill-slot-"+slot);
+    const label=document.getElementById("skill-slot-"+slot+"-name");
+    const skill=slot===0?skill0:skill1,rank=slot===0?rank0:rank1;
+    if(button) {
+      button.disabled=skill===0;
+      button.classList.toggle("selected",activeSlot===slot&&skill!==0);
+      button.setAttribute("aria-label",skill===0?"Empty skill slot "+(slot+1):"Equip "+names[skill]+" in skill slot "+(slot+1));
+    }
+    if(label) label.textContent=skill===0?"EMPTY":names[skill]+" · R"+rank;
+  }
+  const name=skill0&&activeSlot===0?names[skill0]:skill1&&activeSlot===1?names[skill1]:"NO SKILL";
+  const technique=document.querySelector(".action.technique");
+  if(technique) technique.setAttribute("aria-label",name==="NO SKILL"?"No equipped technique":"Use "+name);
+});
+EM_JS(void, setSkillTargetState, (int active,int valid), {
+  const panel=document.getElementById("skill-target");
+  panel?.classList.toggle("hidden",!active);
+  const controls=document.getElementById("touch-controls");
+  controls?.classList.toggle("skill-targeting",!!active);
+  const settings=document.getElementById("settings-open");
+  if(settings) settings.classList.toggle("hidden",!!active||
+    !document.getElementById("intro")?.classList.contains("hidden")||
+    !document.getElementById("ending")?.classList.contains("hidden"));
+  const confirm=document.getElementById("skill-target-confirm");
+  if(confirm) confirm.disabled=!valid;
+  const label=document.getElementById("skill-target-status");
+  if(label) label.textContent=valid?"TARGET VALID":"MOVE THE MARKER TO A CLEAR AREA";
+});
+
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
 EM_JS(void, initGameAudio, (), { try { window.TagboundAudio?.init?.(); } catch (e) {} });
