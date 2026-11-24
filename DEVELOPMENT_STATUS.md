@@ -2,6 +2,13 @@
 
 Last updated: 2026-11-23
 
+## Boss arena enclosure checkpoint — 2026-11-24
+
+- Added three raised collision-bearing stone walls around each city's final boss deck, leaving the south entrance open for the rooftop approach.
+- The simulated boss center bounds now align with the inner faces of the visible walls (3.4-unit arena half-extents minus the boss body radius).
+- Updated C++ regression expectations and added geometry checks for the west/east/north arena walls and open approach.
+- This addresses the visual lack of enclosure as well as the existing movement/knockback/charge clamp. Physical Android verification is still required.
+
 ## Active development checkpoint — explored-area map
 
 - Development branch: `development/complete-game`, based on the cumulative camera/boss/campaign branch. Production remains unchanged.
