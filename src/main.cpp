@@ -24,6 +24,7 @@ EM_JS(void, loadExploration, (int city,char* output,int capacity), {
 });
 EM_JS(void, setMapControlsHidden, (int open), {
   document.getElementById("touch-controls")?.classList.toggle("map-open",!!open);
+  document.querySelector(".action.map")?.setAttribute("aria-label",open?"Close explored map":"Open explored map");
 });
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
@@ -162,7 +163,7 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
-    bool mapDown=IsKeyDown(KEY_M)||(touchButtons&256);
+    bool mapDown=IsKeyDown(KEY_M);
     c.toggleMap=mapDown&&!mapWasDown;
     mapWasDown=mapDown;
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
