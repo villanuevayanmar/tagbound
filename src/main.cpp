@@ -50,7 +50,7 @@ static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
 static float touchX=0,touchY=0,lookX=0,lookY=0,attackCooldown=0,saveCooldown=0;
-static bool skillWasDown=false,jumpWasDown=false,mapWasDown=false,classChosen=false;
+static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
@@ -163,9 +163,6 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
-    bool mapDown=IsKeyDown(KEY_M);
-    c.toggleMap=mapDown&&!mapWasDown;
-    mapWasDown=mapDown;
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         Vector2 d=GetMouseDelta(); c.lookX+=d.x*0.7f; c.lookY+=d.y*0.7f;
@@ -197,10 +194,6 @@ static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
-        if(controls.toggleMap) {
-            game.mapOpen=!game.mapOpen;
-            setMapControlsHidden(game.mapOpen?1:0);
-        }
         if(!game.mapOpen) {
         game.player.blocking=controls.block;
         float previousY=game.player.position.y;
