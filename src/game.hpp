@@ -51,7 +51,7 @@ constexpr int ExplorationMapCells=ExplorationMapColumns*ExplorationMapRows;
 struct Controls {
     Vector2 move{0,0};
     float lookX=0, lookY=0;
-    bool jump=false, slide=false, sprint=false, attack=false, block=false, aim=false, skill=false, toggleMap=false;
+    bool jump=false, slide=false, sprint=false, attack=false, block=false, aim=false, skill=false;
 };
 struct GameState {
     Player player;
