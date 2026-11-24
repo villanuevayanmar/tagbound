@@ -57,7 +57,6 @@ static void playGameAudio(int) {}
 static int isSettingsOpen() { return 0; }
 #endif
 
-static void SyncMapControls();
 static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
@@ -106,7 +105,7 @@ KEEP void StartGame() {
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
     game.player.weapon=ClassWeapon(game.player.playerClass);
-    game.started=true; game.finished=finished>0; game.mapOpen=false; SyncMapControls(); BuildCity(game);
+    game.started=true; game.finished=finished>0; game.mapOpen=false; BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
     else {
         SetQuestProgress(game,quest<0?0:quest);
@@ -116,6 +115,7 @@ KEEP void StartGame() {
     LoadExploration();
     UpdateExploration(game,game.player.position);
     SaveExploration();
+    SyncMapControls();
     ResetCamera(game.player,camera);
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
@@ -134,11 +134,6 @@ KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,ga
 KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
 KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
 KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
-static void SyncMapControls() {
-    setMapControlsState(game.mapOpen?1:0,game.mapFloor,
-        CanChangeExplorationFloor(game,-1)?1:0,
-        CanChangeExplorationFloor(game,1)?1:0);
-}
 KEEP void ToggleMap() {
     if(!game.started||game.finished||isSettingsOpen()) return;
     game.mapOpen=!game.mapOpen;
@@ -177,8 +172,14 @@ KEEP int IsBossArenaContained() {
 KEEP void ResetProgress() {
     game.city=0; game.unlockedCity=0; game.quest=0; game.bossUnlocked=false;
     game.player.level=1; game.player.xp=0;
-    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; game.mapOpen=false; setMapControlsHidden(0); savedCity=0; Save();
+    game.player.escapeSkill=0; game.player.combatSkill=0; game.finished=false; game.mapOpen=false; SyncMapControls(); savedCity=0; Save();
 }
+}
+
+static void SyncMapControls() {
+    setMapControlsState(game.mapOpen?1:0,game.mapFloor,
+        CanChangeExplorationFloor(game,-1)?1:0,
+        CanChangeExplorationFloor(game,1)?1:0);
 }
 
 static Controls ReadControls() {
