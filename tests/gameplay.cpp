@@ -301,6 +301,7 @@ int main() {
 
     BuildCity(game);
     Camera3D camera{};
+    ResetCamera(game.player,camera);
     Controls move{};
     move.move.y = 1.0f;
     for(int frame=0;frame<12;frame++) UpdateMovement(game,move,camera,1.0f/60.0f);
@@ -395,8 +396,13 @@ int main() {
     skirmisherMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
     skirmisherMovement.player.position={0,0.3f,0};
     skirmisherMovement.player.playerClass=PlayerClass::Skirmisher;
-    UpdateMovement(vanguardMovement,move,camera,0.1f);
-    UpdateMovement(skirmisherMovement,move,camera,0.1f);
+    Camera3D vanguardCamera{},skirmisherCamera{};
+    ResetCamera(vanguardMovement.player,vanguardCamera);
+    ResetCamera(skirmisherMovement.player,skirmisherCamera);
+    for(int frame=0;frame<20;frame++) {
+        UpdateMovement(vanguardMovement,move,vanguardCamera,1.0f/60.0f);
+        UpdateMovement(skirmisherMovement,move,skirmisherCamera,1.0f/60.0f);
+    }
     assert(skirmisherMovement.player.position.z>vanguardMovement.player.position.z+0.1f);
 
     // Simulate every raised rooftop transfer from each city's spawn roof to its boss gate.
