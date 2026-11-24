@@ -2,6 +2,15 @@
 
 Last updated: 2026-11-24
 
+## Class skill system implementation checkpoint — 2026-11-24
+
+- Added two class-bound skills per class: Vanguard (Cleaving Arc, Breaker Strike), Skirmisher (Arrow Rain, Piercing Shot), and Warden (Shield Bash, Aegis Guard).
+- Level 3 and level 5 each award one class-skill choice. Each choice offers a new skill in a free slot or an upgrade to an owned skill; skill rank is capped at 3. One of two owned slots is equipped as the active technique through Settings.
+- Techniques use Mana and cooldowns. Arrow Rain uses a validated target marker, same-floor/range/line-of-sight/boss-arena checks, a warning delay, then three separated area waves. The target can be moved during aiming; the target is confirmed or cancelled; enemies can leave the area between waves. Aegis Guard reduces incoming pursuer and boss damage during its active window.
+- Added class-skill milestone/loadout/target state to campaign save schema v3. Earlier saves receive unclaimed level 3/5 skill choices during one-time migration. Exploration data remains separate.
+- Added C++ coverage for class mapping, milestone awards, unlock/upgrade, equip slots, Arrow Rain targeting/waves, invalid target rejection, and Aegis defensive window. CI browser checks now cover skill selection, saved loadout and Arrow Rain Mana/target behavior.
+- Exact-head CI verification for the complete skill integration is pending. Do not reuse the previous map/stat CI runs as proof of this newer code.
+
 ## Character resources and stat progression checkpoint — 2026-11-24
 
 - Added a separate Mana resource with class bases (Vanguard 70, Skirmisher 90, Warden 80) and slow 3.5-per-second regeneration. Stamina remains the physical traversal/guarding resource.
