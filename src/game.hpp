@@ -8,10 +8,19 @@ enum class Weapon { Sword, Axe, Shield, Bow, Spear };
 enum class PlayerClass { Vanguard, Skirmisher, Warden };
 enum class BossPhase { Dormant, Hunt, Windup, Strike, Recover, Defeated };
 enum class StatUpgrade { Vitality, Endurance, Focus, Power, Precision };
+enum class ClassSkill : int {
+    None, CleavingArc, BreakerStrike, ArrowRain, PiercingShot, ShieldBash, AegisGuard
+};
 constexpr int MaxStatRank=10;
 
 struct Platform { Vector3 position; Vector3 size; Color color; };
 struct Projectile { Vector3 position; Vector3 velocity; float life; };
+struct SkillEffect {
+    ClassSkill skill=ClassSkill::None;
+    Vector3 position{};
+    float radius=0.0f, damage=0.0f, delay=0.0f, waveTimer=0.0f;
+    int wavesRemaining=0;
+};
 struct BossArena {
     Vector3 center{};
     Vector2 halfExtents{};
@@ -40,7 +49,11 @@ struct Player {
     bool landingRoll=false;
     bool wallRunning=false, vaulting=false, ledgeGrabbing=false, climbing=false;
     Vector3 ledgeNormal{}, ledgeHangPosition{}, ledgeTargetPosition{};
-    int level=1, xp=0, vitality=0, endurance=0, focus=0, power=0, precision=0, pendingStatChoices=0;
+    int level=1, xp=0, vitality=0, endurance=0, focus=0, power=0, precision=0;
+    int pendingStatChoices=0, pendingSkillChoices=0, skillMilestoneMask=0;
+    std::array<int,2> skills{{0,0}}, skillRanks{{0,0}};
+    int activeSkillSlot=0;
+    float techniqueCooldown=0, aegisTime=0;
     PlayerClass playerClass=PlayerClass::Vanguard;
     Weapon weapon=Weapon::Sword;
     bool grounded=true, blocking=false, bowAiming=false;
@@ -55,14 +68,17 @@ constexpr int ExplorationMapTotalCells=ExplorationMapCells*ExplorationMapFloors;
 struct Controls {
     Vector2 move{0,0};
     float lookX=0, lookY=0;
-    bool jump=false, slide=false, sprint=false, attack=false, block=false, aim=false, skill=false;
+    bool jump=false, slide=false, sprint=false, attack=false, block=false, aim=false, skill=false, technique=false;
 };
 struct GameState {
     Player player;
     std::vector<Platform> platforms;
     std::vector<Enemy> enemies;
     std::vector<Projectile> projectiles;
+    std::vector<struct SkillEffect> skillEffects;
     BossArena bossArena;
+    bool skillTargeting=false;
+    Vector3 skillTarget{};
     std::array<unsigned char,ExplorationMapTotalCells> explored{};
     int currentFloor=0, mapFloor=0;
     bool mapOpen=false;
@@ -112,6 +128,15 @@ float PlayerMaxMana(const Player& player);
 float PlayerMeleeDamageMultiplier(const Player& player);
 float PlayerRangedDamageMultiplier(const Player& player);
 bool ChooseStatUpgrade(GameState& game,StatUpgrade stat);
+ClassSkill ClassSkillOption(PlayerClass playerClass,int option);
+const char* ClassSkillName(ClassSkill skill);
+bool ChooseSkillOption(GameState& game,int skillId,bool upgrade);
+bool EquipSkill(GameState& game,int slot);
+bool ActivateClassSkill(GameState& game);
+bool SetClassSkillTarget(GameState& game,Vector3 target);
+bool ConfirmClassSkillTarget(GameState& game);
+void CancelClassSkillTarget(GameState& game);
+void UpdateClassSkills(GameState& game,float dt);
 void RegenerateMana(Player& player,float dt);
 bool FindReinforcementSpawn(const GameState& game,Vector3 origin,Vector3& spawn);
 inline float ClassMaxStamina(PlayerClass playerClass) {
