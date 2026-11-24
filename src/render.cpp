@@ -547,7 +547,7 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     DrawText(TextFormat("TAG DANGER   %d%%",(int)g.danger),w-233,44,15,g.danger>70?RED:ORANGE);
     DrawRectangle(w-233,67,205,8,DARKGRAY);
     DrawRectangle(w-233,67,(int)(205*g.danger/100),8,ORANGE);
-    int objectiveHudY=h<=440?96:h-78;
+    int objectiveHudY=h<=440?116:h-78;
     DrawRectangle(12,objectiveHudY,390,65,Fade(BLACK,0.7f));
     DrawText(TextFormat("%s  |  %s",CityName(g.city),WeaponName(g.player.weapon)),24,objectiveHudY+9,16,GOLD);
     const bool holdObjective=g.quest<3&&QuestRequiresHold(g.city,g.quest);
