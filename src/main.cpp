@@ -118,7 +118,7 @@ EM_JS(void, setSkillChoiceState, (int pending,int pendingStats,int playerClass,i
     }
   }
 });
-EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int activeSlot), {
+EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int activeSlot,int playerClass), {
   const names=["NO SKILL","CLEAVING ARC","BREAKER STRIKE","ARROW RAIN","PIERCING SHOT","SHIELD BASH","AEGIS GUARD"];
   for(let slot=0;slot<2;slot++) {
     const button=document.getElementById("skill-slot-"+slot);
@@ -164,8 +164,8 @@ static void saveExploration(int,const char*) {}
 static void loadExploration(int,char*,int) {}
 static void setMapControlsState(int,int,int,int) {}
 static void setProgressionChoiceState(int,int,int,int,int,int) {}
-static void setSkillChoiceState(int,int,int,int,int,int,int,int) {}
-static void setSkillLoadoutState(int,int,int,int,int,int) {}
+static void setSkillChoiceState(int,int,int,int,int,int,int,int,int) {}
+static void setSkillLoadoutState(int,int,int,int,int) {}
 static void setSkillTargetState(int,int) {}
 static void hideIntro() {}
 static void showEnding() {}
@@ -344,6 +344,7 @@ KEEP void ChooseStat(int stat) {
     }
 }
 KEEP int GetPendingSkillChoices() { return game.player.pendingSkillChoices; }
+KEEP int IsSkillTargeting() { return game.skillTargeting?1:0; }
 KEEP int GetSkillOption(int option) { return (int)ClassSkillOption(game.player.playerClass,option); }
 KEEP int GetSkillSlot(int slot) { return slot>=0&&slot<2?game.player.skills[slot]:0; }
 KEEP int GetSkillSlotRank(int slot) { return slot>=0&&slot<2?game.player.skillRanks[slot]:0; }
