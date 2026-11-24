@@ -22,7 +22,8 @@ EM_JS(void, loadExploration, (int city,char* output,int capacity), {
   try {
     const current=localStorage.getItem("tagbound-exploration-v2-"+city);
     const legacy=localStorage.getItem("tagbound-exploration-v1-"+city);
-    stringToUTF8(current||legacy||"",output,capacity);
+    const source=current&&current.length===1600?current:(legacy&&legacy.length===320?legacy:"");
+    stringToUTF8(source,output,capacity);
   } catch(e) { HEAPU8[output]=0; }
 });
 EM_JS(void, setMapControlsState, (int open,int floor,int canPrevious,int canNext), {
