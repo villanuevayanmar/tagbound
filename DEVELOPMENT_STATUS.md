@@ -2,6 +2,16 @@
 
 Last updated: 2026-11-23
 
+## Active development checkpoint — explored-area map
+
+- Development branch: `development/complete-game`, based on the cumulative camera/boss/campaign branch. Production remains unchanged.
+- Added a 20 × 16 exploration grid covering the city play bounds. Each cell represents 5 × 5 world units.
+- The player reveals nearby cells while moving. The map draws discovered platform/building footprints only inside revealed cells, shows the player direction, and only shows the active objective after its cell has been explored.
+- Added an icon-only touch map toggle and the M keyboard shortcut. Opening the map pauses simulation; on touch screens only the map-close control remains interactive.
+- Each city's 320-cell reveal string is stored under its own `tagbound-exploration-v1-<city>` localStorage key. Existing `tagbound-save` campaign data is not rewritten or migrated for this feature.
+- Added C++ boundary/reveal tests, browser keyboard/touch/persistence checks, and bumped the service-worker cache to `tagbound-v28`.
+- Status at this checkpoint: implementation is committed on the development branch; exact-head CI verification is pending. Do not describe it as tested until Actions completes.
+
 ## Project state
 
 **Playable production build available — continued development in progress.**
