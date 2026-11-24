@@ -1705,7 +1705,8 @@ int main() {
     assert(ChangeExplorationFloor(exploration,1));
     assert(exploration.mapFloor==1);
     assert(!ChangeExplorationFloor(exploration,1));
-    assert(!UpdateExploration(exploration,{20,0.3f,20}) || exploration.currentFloor==1);
+    assert(UpdateExploration(exploration,{20,1.7f,20}));
+    assert(exploration.currentFloor==1&&exploration.mapFloor==1);
     assert(exploration.explored[ExplorationMapCells+
         ExplorationCellForPosition({20,1.7f,20})]!=0);
 
