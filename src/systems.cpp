@@ -716,6 +716,28 @@ const char* ClassSkillName(ClassSkill skill) {
         default: return "NO SKILL";
     }
 }
+float ClassSkillManaCost(ClassSkill skill) {
+    switch(skill) {
+        case ClassSkill::CleavingArc: return 24.0f;
+        case ClassSkill::BreakerStrike: return 30.0f;
+        case ClassSkill::ArrowRain: return 38.0f;
+        case ClassSkill::PiercingShot: return 28.0f;
+        case ClassSkill::ShieldBash: return 22.0f;
+        case ClassSkill::AegisGuard: return 30.0f;
+        default: return 0.0f;
+    }
+}
+float ClassSkillBaseCooldown(ClassSkill skill) {
+    switch(skill) {
+        case ClassSkill::CleavingArc: return 5.0f;
+        case ClassSkill::BreakerStrike: return 7.0f;
+        case ClassSkill::ArrowRain: return 8.0f;
+        case ClassSkill::PiercingShot: return 5.5f;
+        case ClassSkill::ShieldBash: return 5.0f;
+        case ClassSkill::AegisGuard: return 10.0f;
+        default: return 0.0f;
+    }
+}
 
 static int FindSkillSlot(const Player& p,ClassSkill skill) {
     for(int slot=0;slot<2;slot++) if(p.skills[slot]==(int)skill) return slot;
@@ -788,7 +810,7 @@ bool ActivateClassSkill(GameState& g) {
     const int rank=std::clamp(p.skillRanks[p.activeSkillSlot],1,3);
     if(skill==ClassSkill::None) return false;
     if(skill==ClassSkill::ArrowRain) {
-        if(p.mana<38.0f) return false;
+        if(p.mana<ClassSkillManaCost(skill)) return false;
         Vector3 facing=p.facing; facing.y=0;
         if(Vector3Length(facing)<0.001f) facing={0,0,1};
         facing=Vector3Normalize(facing);
@@ -798,15 +820,9 @@ bool ActivateClassSkill(GameState& g) {
         g.skillTarget.y=p.position.y;
         return true;
     }
-    float manaCost=0.0f,cooldown=0.0f;
-    switch(skill) {
-        case ClassSkill::CleavingArc: manaCost=24.0f; cooldown=5.0f; break;
-        case ClassSkill::BreakerStrike: manaCost=30.0f; cooldown=7.0f; break;
-        case ClassSkill::PiercingShot: manaCost=28.0f; cooldown=5.5f; break;
-        case ClassSkill::ShieldBash: manaCost=22.0f; cooldown=5.0f; break;
-        case ClassSkill::AegisGuard: manaCost=30.0f; cooldown=10.0f; break;
-        default: return false;
-    }
+    const float manaCost=ClassSkillManaCost(skill);
+    const float cooldown=ClassSkillBaseCooldown(skill);
+    if(manaCost<=0.0f||cooldown<=0.0f) return false;
     if(p.mana<manaCost) return false;
     p.mana-=manaCost;
     p.techniqueCooldown=cooldown*std::max(0.75f,1.0f-0.08f*(rank-1));
@@ -899,11 +915,11 @@ bool ActivateClassSkill(GameState& g) {
 }
 
 bool ConfirmClassSkillTarget(GameState& g) {
-    if(!g.skillTargeting||!SkillTargetValid(g,g.skillTarget)||g.player.mana<38.0f||
+    if(!g.skillTargeting||!SkillTargetValid(g,g.skillTarget)||g.player.mana<ClassSkillManaCost(ClassSkill::ArrowRain)||
        g.player.techniqueCooldown>0.0f) return false;
     const int rank=std::clamp(g.player.skillRanks[g.player.activeSkillSlot],1,3);
-    g.player.mana-=38.0f;
-    g.player.techniqueCooldown=8.0f*std::max(0.75f,1.0f-0.08f*(rank-1));
+    g.player.mana-=ClassSkillManaCost(ClassSkill::ArrowRain);
+    g.player.techniqueCooldown=ClassSkillBaseCooldown(ClassSkill::ArrowRain)*std::max(0.75f,1.0f-0.08f*(rank-1));
     g.skillEffects.push_back({ClassSkill::ArrowRain,g.skillTarget,3.5f+0.25f*(rank-1),
                               14.0f+2.0f*(rank-1),0.95f,0.25f,3});
     g.skillTargeting=false;
