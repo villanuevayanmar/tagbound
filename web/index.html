@@ -42,6 +42,23 @@
 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="6.5" y="2" width="11" height="20" rx="2"/><path d="M12 7v7m-3-3 3 3 3-3M10 18h4"/></svg>
 </button>
 </div>
+<div class="skill-loadout">
+<p class="skill-loadout-heading">EQUIPPED TECHNIQUE</p>
+<div class="skill-loadout-slots">
+<div class="skill-loadout-slot">
+<button id="skill-slot-0" class="skill-slot-button" type="button" aria-label="Equip skill slot one" disabled>
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 12h6l-1 10 11-13h-7z"/></svg>
+</button>
+<span id="skill-slot-0-name">EMPTY</span>
+</div>
+<div class="skill-loadout-slot">
+<button id="skill-slot-1" class="skill-slot-button" type="button" aria-label="Equip skill slot two" disabled>
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 12h6l-1 10 11-13h-7z"/></svg>
+</button>
+<span id="skill-slot-1-name">EMPTY</span>
+</div>
+</div>
+</div>
 <button id="resume" class="primary resume-icon" type="button" aria-label="Resume game">
 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 10 7-10 7z"/></svg>
 </button>
@@ -63,6 +80,21 @@
 <button class="stat-choice" type="button" data-stat-choice="4"><strong>PRECISION</strong><small>+4% bow damage</small><span data-stat-rank>RANK 0/10</span></button>
 </div>
 </div></section>
+<section id="skill-choice" class="overlay hidden" role="dialog" aria-modal="true" aria-labelledby="skill-choice-title">
+<div class="panel skill-choice-panel">
+<p class="eyebrow">CLASS TECHNIQUE</p>
+<h1 id="skill-choice-title">CHOOSE A SKILL</h1>
+<p class="story-copy">Unlock a new class skill or improve one already equipped. Your choice is permanent.</p>
+<p id="skill-choice-count" class="level-up-count">SKILL MILESTONE — CHOOSE ONE</p>
+<div class="skill-choice-grid">
+<button id="skill-option-0" class="skill-choice" type="button">
+<strong data-skill-title>UNLOCK SKILL</strong><small data-skill-detail>Skill description</small>
+</button>
+<button id="skill-option-1" class="skill-choice" type="button">
+<strong data-skill-title>UPGRADE SKILL</strong><small data-skill-detail>Skill description</small>
+</button>
+</div>
+</div></section>
 <section id="ending" class="overlay hidden"><div class="panel"><p class="eyebrow">THE LAST GATE</p><h1>THE CITIES ARE FREE</h1><p class="story-copy">The final warden has fallen. The chase is over — for now.</p><button id="restart" class="primary">PLAY AGAIN</button></div></section>
 <div id="rotate" class="rotate hidden"><span>↻</span><strong>ROTATE YOUR DEVICE</strong><small>TAGBOUND is designed for landscape play.</small></div>
 <div id="touch-controls">
@@ -75,6 +107,7 @@
 <button data-bit="16" class="action bow" type="button" hidden aria-label="Aim with bow"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M18 3c-8 4-8 14 0 18M18 3v18M3 12h15m-4-4 4 4-4 4"/></svg></button>
 <button data-bit="32" class="action skill" type="button" aria-label="Use escape skill"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m13 2-8 11h6l-1 9 9-12h-6z"/></svg></button>
 <button data-bit="64" class="action sprint" type="button" aria-label="Run faster"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="15.5" cy="4" r="2"/><path d="m13 8-3 4 4 2 2 4m-6-6 4-2 4 2 3-1M10 12l-5 1m9 6-3 3m7-4 2 3"/></svg></button>
+<button data-bit="128" class="action technique" type="button" aria-label="Use equipped technique"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2 14.2 8.1 21 10l-5.5 3.6L16 21l-4-4.4L8 21l.5-7.4L3 10l6.8-1.9z"/></svg></button>
 <button class="action map" type="button" aria-label="Open explored map"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15m6-12v15"/></svg></button>
 </div></div>
 <div id="map-floor-controls" class="map-floor-controls hidden" aria-label="Explored floors">
@@ -86,6 +119,21 @@
 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 18 6-6-6-6"/></svg>
 </button>
 </div>
+<section id="skill-target" class="skill-target-overlay hidden" aria-label="Arrow Rain targeting">
+<div class="skill-target-top">
+<strong>ARROW RAIN</strong>
+<span>DRAG TO AIM · CONFIRM OR CANCEL</span>
+</div>
+<div id="skill-target-status" class="skill-target-status">MOVE THE MARKER TO A CLEAR AREA</div>
+<div class="skill-target-actions">
+<button id="skill-target-cancel" type="button" aria-label="Cancel Arrow Rain">
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 6 12 12M18 6 6 18"/></svg>
+</button>
+<button id="skill-target-confirm" type="button" aria-label="Confirm Arrow Rain target" disabled>
+<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 12 5 5L20 6"/></svg>
+</button>
+</div>
+</section>
 <div id="loading" class="loading">LOADING THE FIVE CITIES…</div>
 </main>
 <script>
