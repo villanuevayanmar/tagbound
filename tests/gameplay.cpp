@@ -391,6 +391,53 @@ int main() {
     assert(game.player.level >= 5);
     assert(game.player.combatSkill == 1);
 
+    // Every level grants one bounded stat choice and the choice is consumed exactly once.
+    GameState statBuild;
+    BuildCity(statBuild);
+    statBuild.player.playerClass=PlayerClass::Vanguard;
+    statBuild.player.health=PlayerMaxHealth(statBuild.player);
+    statBuild.player.stamina=PlayerMaxStamina(statBuild.player);
+    statBuild.player.mana=PlayerMaxMana(statBuild.player);
+    assert(near(PlayerMaxHealth(statBuild.player),125.0f));
+    assert(near(PlayerMaxStamina(statBuild.player),95.0f));
+    assert(near(PlayerMaxMana(statBuild.player),70.0f));
+    UpdateProgression(statBuild,100);
+    assert(statBuild.player.level==2);
+    assert(statBuild.player.pendingStatChoices==1);
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Vitality));
+    assert(statBuild.player.vitality==1);
+    assert(statBuild.player.pendingStatChoices==0);
+    assert(near(PlayerMaxHealth(statBuild.player),133.0f));
+    assert(near(statBuild.player.health,133.0f));
+    assert(!ChooseStatUpgrade(statBuild,StatUpgrade::Vitality));
+
+    statBuild.player.pendingStatChoices=4;
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Endurance));
+    assert(near(PlayerMaxStamina(statBuild.player),103.0f));
+    assert(near(statBuild.player.stamina,103.0f));
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Focus));
+    assert(near(PlayerMaxMana(statBuild.player),82.0f));
+    assert(near(statBuild.player.mana,82.0f));
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Power));
+    assert(near(PlayerMeleeDamageMultiplier(statBuild.player),1.04f));
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Precision));
+    assert(near(PlayerRangedDamageMultiplier(statBuild.player),1.04f));
+    assert(statBuild.player.pendingStatChoices==0);
+
+    // Stat caps prevent spending a level-up choice without consuming it.
+    statBuild.player.vitality=MaxStatRank;
+    statBuild.player.pendingStatChoices=1;
+    assert(!ChooseStatUpgrade(statBuild,StatUpgrade::Vitality));
+    assert(statBuild.player.pendingStatChoices==1);
+
+    // Mana regenerates separately and never exceeds its current maximum.
+    statBuild.player.mana=0.0f;
+    RegenerateMana(statBuild.player,0.1f);
+    assert(near(statBuild.player.mana,0.35f));
+    statBuild.player.mana=PlayerMaxMana(statBuild.player)-0.1f;
+    RegenerateMana(statBuild.player,0.1f);
+    assert(near(statBuild.player.mana,PlayerMaxMana(statBuild.player)));
+
     BuildCity(game);
     Camera3D camera{};
     ResetCamera(game.player,camera);
