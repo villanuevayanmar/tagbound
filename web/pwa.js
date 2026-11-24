@@ -209,7 +209,14 @@ function closeSettings(){
 settingsOpenButton.addEventListener('click',openSettings);
 resumeButton.addEventListener('click',closeSettings);
 document.addEventListener('keydown',event=>{
- if(event.key==='Escape'&&!settings.classList.contains('hidden'))closeSettings();
+ if(event.key==='Escape'&&!settings.classList.contains('hidden')) {
+  closeSettings();
+  return;
+ }
+ if(event.key.toLowerCase()==='m'&&!event.repeat&&intro.classList.contains('hidden')) {
+  event.preventDefault();
+  call('ToggleMap');
+ }
 });
 window.TagboundSettings={isOpen:()=>!settings.classList.contains('hidden')};
 document.getElementById('start').addEventListener('click',()=>{
