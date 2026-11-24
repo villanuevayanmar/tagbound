@@ -386,6 +386,33 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         DrawSphere(Vector3Add(marker,{0,1.2f,0}),0.5f,g.quest<3?objectiveColor:MAROON);
     }
 
+    if(g.skillTargeting) {
+        Vector3 marker=Vector3Add(g.skillTarget,{0,0.06f,0});
+        DrawCylinder(marker,3.7f,3.7f,0.08f,32,Fade(ORANGE,0.24f));
+        DrawCylinderWires(marker,3.7f,3.7f,0.08f,32,Color{255,190,92,255});
+        DrawLine3D(Vector3Add(g.player.position,{0,0.25f,0}),
+                   Vector3Add(g.skillTarget,{0,0.1f,0}),Color{255,213,130,220});
+    }
+    const float skillVisualTime=(float)GetTime();
+    for(const SkillEffect& effect:g.skillEffects) {
+        const Color warning=effect.delay>0.0f?Color{255,161,73,255}:Color{255,205,107,255};
+        Vector3 ring=Vector3Add(effect.position,{0,0.045f,0});
+        DrawCylinder(ring,effect.radius,effect.radius,0.08f,28,Fade(warning,effect.delay>0.0f?0.18f:0.22f));
+        DrawCylinderWires(ring,effect.radius,effect.radius,0.08f,28,Fade(warning,0.85f));
+        if(effect.delay<=0.0f) {
+            for(int arrow=0;arrow<8;arrow++) {
+                const float angle=arrow*0.785398163f+skillVisualTime*0.55f;
+                const float radius=effect.radius*0.72f;
+                const float x=effect.position.x+std::cos(angle)*radius;
+                const float z=effect.position.z+std::sin(angle)*radius;
+                const float fall=std::fmod(skillVisualTime*5.5f+arrow*0.31f,2.3f);
+                Vector3 tip{x,effect.position.y+2.5f-fall,z};
+                Vector3 bottom{x,effect.position.y+0.25f,z};
+                DrawCylinderEx(tip,bottom,0.035f,0.012f,5,GOLD);
+            }
+        }
+    }
+
     const Player& player=g.player;
     static float animationClock=0.0f;
     static Vector3 previousPosition=player.position;
@@ -503,6 +530,14 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     if(g.player.escapeSkill) DrawText(g.player.dashCooldown<=0?"DASH READY":TextFormat("DASH %.1fs",g.player.dashCooldown),24,79,10,GOLD);
     else DrawText("DASH UNLOCKS AT LVL 3",24,79,10,GRAY);
     if(g.player.wallRunning) DrawText("WALL RUN",180,79,10,ORANGE);
+    const ClassSkill equippedSkill=(ClassSkill)g.player.skills[std::clamp(g.player.activeSkillSlot,0,1)];
+    if(equippedSkill==ClassSkill::None)
+        DrawText("TECHNIQUE: CHOOSE AT LVL 3",24,96,9,GRAY);
+    else if(g.player.techniqueCooldown>0.0f)
+        DrawText(TextFormat("%s  %.1fs",ClassSkillName(equippedSkill),g.player.techniqueCooldown),24,96,9,ORANGE);
+    else
+        DrawText(TextFormat("%s  READY",ClassSkillName(equippedSkill)),24,96,9,GOLD);
+    if(g.player.aegisTime>0.0f) DrawText(TextFormat("AEGIS %.1fs",g.player.aegisTime),185,96,9,Color{133,197,235,255});
     if(!g.finished&&!survivalObjective) {
         Vector3 toward=Vector3Subtract(objectiveTarget,g.player.position);
         toward.y=0;
