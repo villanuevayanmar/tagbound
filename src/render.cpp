@@ -490,16 +490,19 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     EndMode3D();
 
     int w=GetScreenWidth(),h=GetScreenHeight();
-    DrawRectangle(12,12,250,75,Fade(BLACK,0.65f));
-    DrawText(TextFormat("HEALTH  %d",(int)g.player.health),24,20,16,WHITE);
-    DrawRectangle(24,42,215,9,DARKGRAY);
-    DrawRectangle(24,42,(int)(215*std::clamp(g.player.health/ClassMaxHealth(g.player.playerClass),0.0f,1.0f)),9,RED);
-    DrawText(TextFormat("STAMINA  %d",(int)g.player.stamina),24,56,14,WHITE);
-    DrawRectangle(128,60,111,7,DARKGRAY);
-    DrawRectangle(128,60,(int)(111*std::clamp(g.player.stamina/ClassMaxStamina(g.player.playerClass),0.0f,1.0f)),7,GREEN);
-    if(g.player.escapeSkill) DrawText(g.player.dashCooldown<=0?"DASH READY":TextFormat("DASH %.1fs",g.player.dashCooldown),24,73,10,GOLD);
-    else DrawText("DASH UNLOCKS AT LVL 3",24,73,10,GRAY);
-    if(g.player.wallRunning) DrawText("WALL RUN",180,73,10,ORANGE);
+    DrawRectangle(12,12,270,98,Fade(BLACK,0.65f));
+    DrawText(TextFormat("HEALTH  %d",(int)g.player.health),24,19,14,WHITE);
+    DrawRectangle(128,23,131,7,DARKGRAY);
+    DrawRectangle(128,23,(int)(131*std::clamp(g.player.health/PlayerMaxHealth(g.player),0.0f,1.0f)),7,RED);
+    DrawText(TextFormat("STAMINA  %d",(int)g.player.stamina),24,39,13,WHITE);
+    DrawRectangle(128,43,131,7,DARKGRAY);
+    DrawRectangle(128,43,(int)(131*std::clamp(g.player.stamina/PlayerMaxStamina(g.player),0.0f,1.0f)),7,GREEN);
+    DrawText(TextFormat("MANA  %d",(int)g.player.mana),24,58,13,WHITE);
+    DrawRectangle(128,62,131,7,DARKGRAY);
+    DrawRectangle(128,62,(int)(131*std::clamp(g.player.mana/PlayerMaxMana(g.player),0.0f,1.0f)),7,Color{89,137,218,255});
+    if(g.player.escapeSkill) DrawText(g.player.dashCooldown<=0?"DASH READY":TextFormat("DASH %.1fs",g.player.dashCooldown),24,79,10,GOLD);
+    else DrawText("DASH UNLOCKS AT LVL 3",24,79,10,GRAY);
+    if(g.player.wallRunning) DrawText("WALL RUN",180,79,10,ORANGE);
     if(!g.finished&&!survivalObjective) {
         Vector3 toward=Vector3Subtract(objectiveTarget,g.player.position);
         toward.y=0;
