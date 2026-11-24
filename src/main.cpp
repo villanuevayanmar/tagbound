@@ -118,7 +118,7 @@ EM_JS(void, setSkillChoiceState, (int pending,int pendingStats,int playerClass,i
     }
   }
 });
-EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int activeSlot,int playerClass), {
+EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int activeSlot,int playerClass,int mana,int cooldownTenths), {
   const names=["NO SKILL","CLEAVING ARC","BREAKER STRIKE","ARROW RAIN","PIERCING SHOT","SHIELD BASH","AEGIS GUARD"];
   for(let slot=0;slot<2;slot++) {
     const button=document.getElementById("skill-slot-"+slot);
@@ -131,9 +131,34 @@ EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int
     }
     if(label) label.textContent=skill===0?"EMPTY":names[skill]+" · R"+rank;
   }
-  const name=skill0&&activeSlot===0?names[skill0]:skill1&&activeSlot===1?names[skill1]:"NO SKILL";
+  const skill=activeSlot===0?skill0:skill1;
+  const rank=activeSlot===0?rank0:rank1;
+  const name=names[skill]||"NO SKILL";
+  const costs=[0,24,30,38,28,22,30];
+  const icons=[
+    "",
+    '<path d="M4 20 19 5M13 5h6v6M7 4l13 13M4 7l4-4"/>',
+    '<path d="M12 2v13m-5-5 5 5 5-5M4 20h16"/>',
+    '<path d="M18 3c-8 4-8 14 0 18M18 3v18M3 12h15m-4-4 4 4-4 4"/>',
+    '<path d="M3 12h15m-5-5 5 5-5 5M18 3 6 21"/>',
+    '<path d="M12 2.5 20 5.5v5.2c0 4.7-3.1 8.1-8 10.8-4.9-2.7-8-6.1-8-10.8V5.5z"/><path d="M4 12h16"/>',
+    '<path d="M12 2.5 20 5.5v5.2c0 4.7-3.1 8.1-8 10.8-4.9-2.7-8-6.1-8-10.8V5.5z"/><path d="m8 12 2.5 2.5L16 9"/>'
+  ];
   const technique=document.querySelector(".action.technique");
-  if(technique) technique.setAttribute("aria-label",name==="NO SKILL"?"No equipped technique":"Use "+name);
+  const cost=costs[skill]||0;
+  const cooldown=cooldownTenths/10;
+  if(technique) {
+    const ready=skill!==0&&mana>=cost&&cooldown<=0;
+    technique.disabled=skill===0||!ready;
+    technique.dataset.cost=cost?cost+"M":"";
+    technique.dataset.cooldown=cooldown>0?cooldown.toFixed(1)+"s":"";
+    technique.classList.toggle("no-mana",skill!==0&&mana<cost&&cooldown<=0);
+    technique.classList.toggle("cooling",cooldown>0);
+    technique.setAttribute("aria-label",skill===0?"No equipped technique":
+      "Use "+name+" rank "+rank+", costs "+cost+" Mana, "+(cooldown>0?"cooldown "+cooldown.toFixed(1)+" seconds":mana<cost?"not enough Mana":"ready"));
+    const svg=technique.querySelector("svg");
+    if(svg&&skill>0) svg.innerHTML=icons[skill];
+  }
 });
 EM_JS(void, setSkillTargetState, (int active,int valid), {
   const panel=document.getElementById("skill-target");
@@ -165,7 +190,7 @@ static void loadExploration(int,char*,int) {}
 static void setMapControlsState(int,int,int,int) {}
 static void setProgressionChoiceState(int,int,int,int,int,int) {}
 static void setSkillChoiceState(int,int,int,int,int,int,int,int,int) {}
-static void setSkillLoadoutState(int,int,int,int,int,int) {}
+static void setSkillLoadoutState(int,int,int,int,int,int,int,int) {}
 static void setSkillTargetState(int,int) {}
 static void hideIntro() {}
 static void showEnding() {}
@@ -431,7 +456,7 @@ static void SyncSkillUI() {
         (int)ClassSkillOption(p.playerClass,0),(int)ClassSkillOption(p.playerClass,1),
         p.skills[0],p.skillRanks[0],p.skills[1],p.skillRanks[1]);
     setSkillLoadoutState(p.skills[0],p.skillRanks[0],p.skills[1],p.skillRanks[1],p.activeSkillSlot,
-        (int)p.playerClass);
+        (int)p.playerClass,(int)std::lround(p.mana),(int)std::lround(p.techniqueCooldown*10.0f));
 }
 static void SyncSkillTargetUI() {
     setSkillTargetState(game.skillTargeting?1:0,IsClassSkillTargetValid(game)?1:0);
