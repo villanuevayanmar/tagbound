@@ -15,16 +15,27 @@ EM_JS(int, loadLocal, (int field), {
   try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
 });
 EM_JS(void, saveExploration, (int city,const char* data), {
-  try { localStorage.setItem("tagbound-exploration-v1-"+city,UTF8ToString(data)); } catch(e) {}
+  try { localStorage.setItem("tagbound-exploration-v2-"+city,UTF8ToString(data)); } catch(e) {}
 });
 EM_JS(void, loadExploration, (int city,char* output,int capacity), {
   if(capacity<=0) return;
-  try { stringToUTF8(localStorage.getItem("tagbound-exploration-v1-"+city)||"",output,capacity); }
-  catch(e) { HEAPU8[output]=0; }
+  try {
+    const current=localStorage.getItem("tagbound-exploration-v2-"+city);
+    const legacy=localStorage.getItem("tagbound-exploration-v1-"+city);
+    stringToUTF8(current||legacy||"",output,capacity);
+  } catch(e) { HEAPU8[output]=0; }
 });
-EM_JS(void, setMapControlsHidden, (int open), {
+EM_JS(void, setMapControlsState, (int open,int floor,int canPrevious,int canNext), {
   document.getElementById("touch-controls")?.classList.toggle("map-open",!!open);
   document.querySelector(".action.map")?.setAttribute("aria-label",open?"Close explored map":"Open explored map");
+  const panel=document.getElementById("map-floor-controls");
+  panel?.classList.toggle("hidden",!open);
+  const previous=document.getElementById("map-floor-prev");
+  const next=document.getElementById("map-floor-next");
+  const label=document.getElementById("map-floor-label");
+  if(previous) previous.disabled=!canPrevious;
+  if(next) next.disabled=!canNext;
+  if(label) label.textContent=["GROUND","ROOFTOP 1","ROOFTOP 2","ROOFTOP 3","BOSS DECK"][Math.max(0,Math.min(4,floor))];
 });
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
@@ -57,15 +68,18 @@ static void Save() {
     saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0,game.quest);
 }
 static void SaveExploration() {
-    std::array<char,ExplorationMapCells+1> encoded{};
-    for(int i=0;i<ExplorationMapCells;i++) encoded[i]=game.explored[i]?'1':'0';
+    std::array<char,ExplorationMapTotalCells+1> encoded{};
+    for(int i=0;i<ExplorationMapTotalCells;i++) encoded[i]=game.explored[i]?'1':'0';
     saveExploration(game.city,encoded.data());
 }
 static void LoadExploration() {
-    std::array<char,ExplorationMapCells+1> encoded{};
+    std::array<char,ExplorationMapTotalCells+1> encoded{};
     game.explored.fill(0);
+    game.currentFloor=0;
+    game.mapFloor=0;
     loadExploration(game.city,encoded.data(),(int)encoded.size());
-    for(int i=0;i<ExplorationMapCells&&encoded[i];i++) game.explored[i]=encoded[i]=='1'?1:0;
+    for(int i=0;i<ExplorationMapTotalCells&&encoded[i];i++) game.explored[i]=encoded[i]=='1'?1:0;
+    // A v1 map had no floor dimension. Its existing discovery is retained on ground.
 }
 extern "C" {
 KEEP void ChooseClass(int c) { selectedClass=std::clamp(c,0,2); classChosen=true; }
@@ -91,7 +105,7 @@ KEEP void StartGame() {
         game.player.escapeSkill=game.player.level>=3; game.player.combatSkill=game.player.level>=5;
     }
     game.player.weapon=ClassWeapon(game.player.playerClass);
-    game.started=true; game.finished=finished>0; game.mapOpen=false; setMapControlsHidden(0); BuildCity(game);
+    game.started=true; game.finished=finished>0; game.mapOpen=false; SyncMapControls(); BuildCity(game);
     if(game.finished) game.quest=std::clamp(quest<0?0:quest,0,3);
     else {
         SetQuestProgress(game,quest<0?0:quest);
@@ -119,17 +133,34 @@ KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,ga
 KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
 KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
 KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
+static void SyncMapControls() {
+    setMapControlsState(game.mapOpen?1:0,game.mapFloor,
+        CanChangeExplorationFloor(game,-1)?1:0,
+        CanChangeExplorationFloor(game,1)?1:0);
+}
 KEEP void ToggleMap() {
     if(!game.started||game.finished||isSettingsOpen()) return;
     game.mapOpen=!game.mapOpen;
-    setMapControlsHidden(game.mapOpen?1:0);
+    if(game.mapOpen) game.mapFloor=game.currentFloor;
+    SyncMapControls();
+}
+KEEP void ChangeMapFloor(int direction) {
+    if(!game.mapOpen) return;
+    if(ChangeExplorationFloor(game,direction)) SyncMapControls();
 }
 KEEP int IsMapOpen() { return game.mapOpen?1:0; }
+KEEP int GetMapFloor() { return game.mapFloor; }
+KEEP int CanChangeMapFloor(int direction) {
+    return CanChangeExplorationFloor(game,direction)?1:0;
+}
 KEEP int GetExploredCount() {
-    return (int)std::count(game.explored.begin(),game.explored.end(),(unsigned char)1);
+    const int start=game.mapFloor*ExplorationMapCells;
+    return (int)std::count(game.explored.begin()+start,
+        game.explored.begin()+start+ExplorationMapCells,(unsigned char)1);
 }
 KEEP int GetExploredCell(int index) {
-    return index>=0&&index<ExplorationMapCells?game.explored[index]:0;
+    if(index<0||index>=ExplorationMapCells) return 0;
+    return game.explored[game.mapFloor*ExplorationMapCells+index];
 }
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
