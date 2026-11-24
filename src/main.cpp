@@ -118,6 +118,11 @@ KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,ga
 KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
 KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
 KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
+KEEP void ToggleMap() {
+    if(!game.started||game.finished||isSettingsOpen()) return;
+    game.mapOpen=!game.mapOpen;
+    setMapControlsHidden(game.mapOpen?1:0);
+}
 KEEP int IsMapOpen() { return game.mapOpen?1:0; }
 KEEP int GetExploredCount() {
     return (int)std::count(game.explored.begin(),game.explored.end(),(unsigned char)1);
