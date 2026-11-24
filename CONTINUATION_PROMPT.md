@@ -361,3 +361,30 @@ Continue from the current repository; do not restart or create a replacement pro
 - Exact-head CI is pending. Do not mark the enclosure complete until the C++ gameplay suite, Emscripten build and Chromium smoke tests pass on this code/test head.
 - PR #16 is temporarily targeted at `main` for the repository's required pull-request CI filter. After exact-head verification, restore it to PR #15 (`fix/boss-arena-floor-bounds`). Keep the original PR #14 → #15 → #16 stack, draft state, and release hold.
 - No merge, production deployment, `dist/` change, billing change, or quota workaround was performed.
+
+ 
+## Active implementation checkpoint — explored-area map (2026-11-24)
+
+Development branch: `development/complete-game`.
+
+Implemented in this branch:
+- A 20-column × 16-row explored-area grid aligned to city world bounds (5 world units per cell).
+- Nearby tiles are revealed around the player's actual world position; unknown cells remain hidden.
+- The map draws platform/building footprints only where the corresponding cells are explored.
+- Player position/facing is shown. The active objective marker appears only if its cell has already been explored.
+- Keyboard M and an icon-only touch button toggle the map. Simulation pauses while the map is open.
+- On touch screens, gameplay controls are hidden while the map is open except for the map button used to close it.
+- Each city stores a fixed 320-character reveal state in its own localStorage key `tagbound-exploration-v1-<city>`, separate from the existing `tagbound-save` campaign record.
+- Added C++ exploration boundary/reveal tests, browser keyboard/touch map tests, updated mobile control-count assertions, and service-worker cache version `tagbound-v28`.
+
+Important release constraints:
+- Do not merge to `main` or deploy to production without explicit authorization.
+- Do not mark the map complete until the exact integration commit passes C++/Emscripten and desktop/mobile Chromium workflows.
+- User must still confirm actual rendering and touch usability on Android after an authorized Preview is accessible.
+- The root cause of the reported Android black flickering remains unknown; do not claim this map feature fixes it.
+
+Next:
+1. Create/inspect a draft PR targeting `main` so the repository CI runs on the exact development head.
+2. Fix any compile, gameplay, browser, UI, or persistence failures without removing assertions.
+3. Verify the artifact contains the new web UI/service-worker and WASM with map feature.
+4. Continue with the next substantial incomplete gameplay feature: separate Energy/Mana and actual multi-skill progression, based on the specification once located or reconstructed from project documents. Do not invent a design that conflicts with the master spec.
