@@ -225,6 +225,8 @@ document.querySelectorAll('.action').forEach(b=>{
  const up=e=>{e.preventDefault();buttons&=~bit;b.classList.remove('active');delete b.dataset.pointerId;send()};
  b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up);
 });
+const mapButton=document.querySelector('.action.map');
+mapButton?.addEventListener('click',()=>call('ToggleMap'));
 stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);updateStick(e)});
 stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});
 function releaseStick(e){if(e.pointerId!==pointer)return;pointer=null;moveX=moveY=0;knob.style.transform='translate(0,0)';send()}
