@@ -13,7 +13,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
 - Timed melee strike poses, enemy impact flashes, short hit-stun and knockback feedback.
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
-- Pursuit pressure, health, stamina and class-exclusive weapons: Vanguard sword, Skirmisher bow and Warden shield.
+- Pursuit pressure, health, stamina and separate slowly regenerating mana. Stamina supports physical traversal/guarding; Mana is reserved for class techniques. Vanguard uses a sword, Skirmisher a bow and Warden a shield.
 - Warden's shield reduces the stamina cost of blocking both pursuer and boss strikes.
 - Vanguard's sword deals a heavier melee strike; Skirmisher retains the fastest base movement speed; Warden uses less stamina while guarding.
 - Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss. The raised boss deck has three collision-bearing stone walls and an open south entrance aligned with the final rooftop route.
@@ -22,7 +22,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
 - Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
 - Bosses enter an enrage phase at half health, telegraph and recover faster, and deal increased strike damage.
-- XP, levels, two skill unlock milestones and local progress saving.
+- XP and levels, with one permanent stat choice at every level-up: Vitality (+8 max health), Endurance (+8 max stamina), Focus (+12 max mana), Power (+4% melee damage) or Precision (+4% bow damage). Each stat is capped at rank 10. Choices and the Mana resource are preserved in save schema version 2.
 - Floor-aware explored-area map: each city has five independent 20 × 16 map layers representing the existing ground, three objective rooftops, and boss deck. Nearby 5-unit cells reveal only while the player is grounded on that elevation. Discovered structures are drawn only in revealed areas, the player marker appears only on their current floor, and the objective marker appears only after its floor and map cell have been explored. Previous/next controls skip undiscovered floors.
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
@@ -165,7 +165,7 @@ During a run, tap the pause icon in the top HUD row to open Settings. The sound 
 
 ## Save data
 
-Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices. City/floor exploration is stored separately under a versioned key per city and does not overwrite the campaign save. Earlier 320-cell city maps are retained as the ground-floor layer when the new 1,600-cell format is first loaded.
+Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices. Campaign data uses save schema version 2 and migrates version 1 saves without changing the city, level, XP or class. City/floor exploration is stored separately under a versioned key per city and does not overwrite the campaign save. Earlier 320-cell city maps are retained as the ground-floor layer when the new 1,600-cell format is first loaded.
 
 ## Zero-cost notes
 
