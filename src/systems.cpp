@@ -789,8 +789,12 @@ bool ActivateClassSkill(GameState& g) {
     if(skill==ClassSkill::None) return false;
     if(skill==ClassSkill::ArrowRain) {
         if(p.mana<38.0f) return false;
+        Vector3 facing=p.facing; facing.y=0;
+        if(Vector3Length(facing)<0.001f) facing={0,0,1};
+        facing=Vector3Normalize(facing);
+        const Vector3 safeSide={facing.z,0,-facing.x};
         g.skillTargeting=true;
-        g.skillTarget=Vector3Add(p.position,Vector3Scale(p.facing,7.0f));
+        g.skillTarget=Vector3Add(p.position,Vector3Scale(safeSide,7.0f));
         g.skillTarget.y=p.position.y;
         return true;
     }
