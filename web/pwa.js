@@ -167,9 +167,7 @@ skillTarget?.addEventListener('pointerup',releaseSkillTarget);
 skillTarget?.addEventListener('pointercancel',releaseSkillTarget);
 document.getElementById('skill-target-confirm')?.addEventListener('click',()=>call('ConfirmSkillTarget'));
 document.getElementById('skill-target-cancel')?.addEventListener('click',()=>call('CancelSkillTarget'));
-document.querySelectorAll('[data-stat-choice]').forEach(button=>{
- button.addEventListener('click',()=>call('ChooseStat',Number(button.dataset.statChoice)));
-});
+
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 const classCards=[...document.querySelectorAll('.class-card')];
 const bowAction=document.querySelector('.action[data-bit="16"]');
