@@ -197,7 +197,7 @@ jobs:
               settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
               settingsButtonClearOfHud: (() => {
                 const s = document.querySelector('#settings-open').getBoundingClientRect();
-                const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+                const h = innerHeight <= 440 ? 116 : innerHeight - 78;
                 const boxes = [
                   { left: 12, right: 282, top: 12, bottom: 110 },
                   { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
@@ -457,7 +457,7 @@ jobs:
             }
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
-              const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+              const h = innerHeight <= 440 ? 116 : innerHeight - 78;
               const boxes = [
                 { left: 12, right: 282, top: 12, bottom: 110 },
                 { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
