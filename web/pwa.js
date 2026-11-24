@@ -216,6 +216,12 @@ document.addEventListener('keydown',event=>{
  if(event.key.toLowerCase()==='m'&&!event.repeat&&intro.classList.contains('hidden')) {
   event.preventDefault();
   call('ToggleMap');
+  return;
+ }
+ if((event.key==='['||event.key===']')&&
+    Module?.ccall&&Module.ccall('IsMapOpen','number',[],[])===1) {
+  event.preventDefault();
+  call('ChangeMapFloor',event.key==='['?-1:1);
  }
 });
 window.TagboundSettings={isOpen:()=>!settings.classList.contains('hidden')};
@@ -234,6 +240,8 @@ document.querySelectorAll('.action').forEach(b=>{
 });
 const mapButton=document.querySelector('.action.map');
 mapButton?.addEventListener('click',()=>call('ToggleMap'));
+document.getElementById('map-floor-prev')?.addEventListener('click',()=>call('ChangeMapFloor',-1));
+document.getElementById('map-floor-next')?.addEventListener('click',()=>call('ChangeMapFloor',1));
 stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);updateStick(e)});
 stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});
 function releaseStick(e){if(e.pointerId!==pointer)return;pointer=null;moveX=moveY=0;knob.style.transform='translate(0,0)';send()}
