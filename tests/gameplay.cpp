@@ -438,6 +438,97 @@ int main() {
     RegenerateMana(statBuild.player,0.1f);
     assert(near(statBuild.player.mana,PlayerMaxMana(statBuild.player)));
 
+    // Class skills are class-bound, with a new-skill or upgrade choice at each milestone.
+    assert(ClassSkillOption(PlayerClass::Vanguard,0)==ClassSkill::CleavingArc);
+    assert(ClassSkillOption(PlayerClass::Vanguard,1)==ClassSkill::BreakerStrike);
+    assert(ClassSkillOption(PlayerClass::Skirmisher,0)==ClassSkill::ArrowRain);
+    assert(ClassSkillOption(PlayerClass::Skirmisher,1)==ClassSkill::PiercingShot);
+    assert(ClassSkillOption(PlayerClass::Warden,0)==ClassSkill::ShieldBash);
+    assert(ClassSkillOption(PlayerClass::Warden,1)==ClassSkill::AegisGuard);
+    GameState skillMilestones;
+    BuildCity(skillMilestones);
+    UpdateProgression(skillMilestones,300);
+    assert(skillMilestones.player.level==3);
+    assert(skillMilestones.player.pendingSkillChoices==1);
+    assert((skillMilestones.player.skillMilestoneMask&1)!=0);
+    assert(ChooseSkillOption(skillMilestones,(int)ClassSkill::CleavingArc,false));
+    assert(skillMilestones.player.skills[0]==(int)ClassSkill::CleavingArc);
+    assert(skillMilestones.player.skillRanks[0]==1);
+    assert(skillMilestones.player.pendingSkillChoices==0);
+    assert(!ChooseSkillOption(skillMilestones,(int)ClassSkill::ArrowRain,false));
+    skillMilestones.player.playerClass=PlayerClass::Vanguard;
+    skillMilestones.player.pendingSkillChoices=1;
+    assert(ChooseSkillOption(skillMilestones,(int)ClassSkill::CleavingArc,true));
+    assert(skillMilestones.player.skillRanks[0]==2);
+    assert(skillMilestones.player.pendingSkillChoices==0);
+    skillMilestones.player.pendingSkillChoices=1;
+    assert(ChooseSkillOption(skillMilestones,(int)ClassSkill::BreakerStrike,false));
+    assert(skillMilestones.player.skills[1]==(int)ClassSkill::BreakerStrike);
+    assert(EquipSkill(skillMilestones,1));
+    assert(skillMilestones.player.activeSkillSlot==1);
+    assert(!EquipSkill(skillMilestones,2));
+    UpdateProgression(skillMilestones,700);
+    assert(skillMilestones.player.level==5);
+    assert(skillMilestones.player.pendingSkillChoices==1);
+    assert((skillMilestones.player.skillMilestoneMask&3)==3);
+
+    // Arrow Rain validates range/line-of-sight, then deals three separated area waves.
+    GameState arrowRain;
+    BuildCity(arrowRain);
+    arrowRain.player.playerClass=PlayerClass::Skirmisher;
+    arrowRain.player.weapon=Weapon::Bow;
+    arrowRain.player.skills[0]=(int)ClassSkill::ArrowRain;
+    arrowRain.player.skillRanks[0]=1;
+    arrowRain.player.activeSkillSlot=0;
+    arrowRain.player.mana=90.0f;
+    arrowRain.enemies.clear();
+    arrowRain.enemies.push_back({{0,0.3f,16.0f},100,100,0,0,false,true});
+    assert(ActivateClassSkill(arrowRain));
+    assert(arrowRain.skillTargeting);
+    assert(!ConfirmClassSkillTarget(arrowRain));
+    assert(SetClassSkillTarget(arrowRain,{0,0.3f,16.0f}));
+    assert(IsClassSkillTargetValid(arrowRain));
+    assert(ConfirmClassSkillTarget(arrowRain));
+    assert(!arrowRain.skillTargeting);
+    assert(near(arrowRain.player.mana,52.0f));
+    assert(near(arrowRain.player.techniqueCooldown,8.0f));
+    assert(arrowRain.skillEffects.size()==1);
+    UpdateClassSkills(arrowRain,1.0f);
+    assert(near(arrowRain.enemies.front().hp,86.0f));
+    UpdateClassSkills(arrowRain,0.25f);
+    assert(near(arrowRain.enemies.front().hp,72.0f));
+    UpdateClassSkills(arrowRain,0.25f);
+    assert(near(arrowRain.enemies.front().hp,58.0f));
+    assert(arrowRain.skillEffects.empty());
+
+    GameState invalidRain;
+    BuildCity(invalidRain);
+    invalidRain.player.playerClass=PlayerClass::Skirmisher;
+    invalidRain.player.skills[0]=(int)ClassSkill::ArrowRain;
+    invalidRain.player.skillRanks[0]=1;
+    invalidRain.player.mana=90;
+    assert(ActivateClassSkill(invalidRain));
+    assert(!SetClassSkillTarget(invalidRain,{0,0.3f,25.0f}));
+    assert(!SetClassSkillTarget(invalidRain,{0,2.45f,8.0f}));
+    invalidRain.platforms.push_back({{0,1.5f,8.0f},{5,3.0f,0.5f},GRAY});
+    assert(!SetClassSkillTarget(invalidRain,{0,0.3f,16.0f}));
+    CancelClassSkillTarget(invalidRain);
+    assert(!invalidRain.skillTargeting);
+    assert(near(invalidRain.player.mana,90.0f));
+
+    // Aegis Guard consumes Mana and creates a real defensive window.
+    GameState aegis;
+    BuildCity(aegis);
+    aegis.player.playerClass=PlayerClass::Warden;
+    aegis.player.skills[0]=(int)ClassSkill::AegisGuard;
+    aegis.player.skillRanks[0]=1;
+    aegis.player.activeSkillSlot=0;
+    aegis.player.mana=80.0f;
+    assert(ActivateClassSkill(aegis));
+    assert(near(aegis.player.mana,50.0f));
+    assert(aegis.player.aegisTime>2.5f);
+    assert(aegis.player.techniqueCooldown>9.0f);
+
     BuildCity(game);
     Camera3D camera{};
     ResetCamera(game.player,camera);
