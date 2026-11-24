@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v28';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v29';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -378,12 +378,37 @@ jobs:
             await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
             const exploredMap = await page.evaluate(() => ({
               open: Module.ccall('IsMapOpen','number',[],[]) === 1,
+              floor: Module.ccall('GetMapFloor','number',[],[]),
               count: Module.ccall('GetExploredCount','number',[],[]),
-              saved: localStorage.getItem('tagbound-exploration-v1-0')
+              saved: localStorage.getItem('tagbound-exploration-v2-0'),
+              label: document.querySelector('#map-floor-label')?.textContent,
+              controlsVisible: !document.querySelector('#map-floor-controls')?.classList.contains('hidden'),
+              previousDisabled: document.querySelector('#map-floor-prev')?.disabled,
+              nextDisabled: document.querySelector('#map-floor-next')?.disabled
             }));
-            if (!exploredMap.open || exploredMap.count < 1 || exploredMap.count >= 320 ||
-                !exploredMap.saved || exploredMap.saved.length !== 320 || !exploredMap.saved.includes('1')) {
-              throw new Error('Explored map did not reveal and persist only local exploration: ' + JSON.stringify(exploredMap));
+            if (!exploredMap.open || exploredMap.floor !== 0 || exploredMap.count < 1 || exploredMap.count >= 320 ||
+                !exploredMap.saved || exploredMap.saved.length !== 1600 || !exploredMap.saved.includes('1') ||
+                exploredMap.label !== 'GROUND' || !exploredMap.controlsVisible ||
+                !exploredMap.previousDisabled || !exploredMap.nextDisabled) {
+              throw new Error('Explored ground map/floor navigation did not restore correctly: ' + JSON.stringify(exploredMap));
+            }
+            const savedExploration = exploredMap.saved;
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            await page.locator('#start').click();
+            await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
+            const restoredExploration = await page.evaluate(() => ({
+              floor: Module.ccall('GetMapFloor','number',[],[]),
+              count: Module.ccall('GetExploredCount','number',[],[]),
+              saved: localStorage.getItem('tagbound-exploration-v2-0')
+            }));
+            if (restoredExploration.floor !== 0 || restoredExploration.count < 1 ||
+                restoredExploration.saved !== savedExploration) {
+              throw new Error('Exploration floor discovery did not persist across reload: ' + JSON.stringify(restoredExploration));
             }
             await page.keyboard.press('m');
             await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
@@ -734,13 +759,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v28');
+              const cache = await caches.open('tagbound-v29');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v28') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v29') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -800,11 +825,16 @@ jobs:
             await mobilePage.locator('#touch-controls .action.map').tap();
             await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
             const mobileMap = await mobilePage.evaluate(() => ({
+              floor: Module.ccall('GetMapFloor','number',[],[]),
               count: Module.ccall('GetExploredCount','number',[],[]),
-              saved: localStorage.getItem('tagbound-exploration-v1-0')
+              saved: localStorage.getItem('tagbound-exploration-v2-0'),
+              floorLabel: document.querySelector('#map-floor-label')?.textContent,
+              floorControlsVisible: !document.querySelector('#map-floor-controls')?.classList.contains('hidden'),
+              nextDisabled: document.querySelector('#map-floor-next')?.disabled
             }));
-            if (mobileMap.count < 1 || !mobileMap.saved || mobileMap.saved.length !== 320) {
-              throw new Error('Mobile map control did not open a saved exploration map: ' + JSON.stringify(mobileMap));
+            if (mobileMap.floor !== 0 || mobileMap.count < 1 || !mobileMap.saved || mobileMap.saved.length !== 1600 ||
+                mobileMap.floorLabel !== 'GROUND' || !mobileMap.floorControlsVisible || !mobileMap.nextDisabled) {
+              throw new Error('Mobile map did not show its saved ground floor and disabled undiscovered floors: ' + JSON.stringify(mobileMap));
             }
             await mobilePage.locator('#touch-controls .action.map').tap();
             await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
