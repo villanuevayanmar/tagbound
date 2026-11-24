@@ -675,6 +675,24 @@ int main() {
     assert(game.player.landingTime > 0.25f);
     assert(!game.player.landingRoll);
 
+    // Falling onto a raised roof must snap to that platform's actual top, not world Y=0.
+    GameState raisedLanding;
+    raisedLanding.platforms.push_back({{0,2.0f,0},{12,0.6f,12},GRAY});
+    raisedLanding.player.position={0,4.0f,0};
+    raisedLanding.player.velocity={0,-4.0f,0};
+    raisedLanding.player.grounded=false;
+    Camera3D raisedCamera{};
+    ResetCamera(raisedLanding.player,raisedCamera);
+    for(int frame=0;frame<90&&!raisedLanding.player.grounded;frame++)
+        UpdateMovement(raisedLanding,Controls{},raisedCamera,1.0f/60.0f);
+    assert(raisedLanding.player.grounded);
+    assert(near(raisedLanding.player.position.y,2.3f,0.001f));
+    assert(near(raisedLanding.player.velocity.y,0.0f));
+    assert(raisedLanding.player.landingTime>0.25f);
+    UpdateMovement(raisedLanding,Controls{},raisedCamera,1.0f/60.0f);
+    assert(raisedLanding.player.grounded);
+    assert(near(raisedLanding.player.position.y,2.3f,0.001f));
+
     game.player.escapeSkill = 1;
     Controls dash{};
     dash.skill = true;
