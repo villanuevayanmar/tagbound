@@ -2,6 +2,15 @@
 
 Last updated: 2026-11-24
 
+## Character resources and stat progression checkpoint — 2026-11-24
+
+- Added a separate Mana resource with class bases (Vanguard 70, Skirmisher 90, Warden 80) and slow 3.5-per-second regeneration. Stamina remains the physical traversal/guarding resource.
+- Added five bounded stats (rank 0–10): Vitality +8 max health, Endurance +8 max stamina, Focus +12 max mana, Power +4% melee damage, Precision +4% bow damage.
+- Each level gained adds one pending stat choice. The game pauses until the player selects exactly one upgrade through the level-up overlay. Capped stats cannot consume a choice.
+- Stat choices, Mana, and pending choices are stored in campaign save schema v2. Existing schema v1 saves keep their city/level/XP/class; pre-existing levels receive unspent stat choices on migration. Exploration storage remains separate.
+- Added C++ tests for max resource calculations, one-choice behavior, stat caps, Mana regeneration, and real melee/bow damage scaling. CI browser checks cover schema migration and the stat-selection flow.
+- Exact-head CI verification for this new resource/stat batch is pending. The feature is not complete until the skill system uses Mana and users can choose new skills or upgrades at skill milestones.
+
 ## Boss arena enclosure checkpoint — 2026-11-24
 
 - Added three raised collision-bearing stone walls around each city's final boss deck, leaving the south entrance open for the rooftop approach.
