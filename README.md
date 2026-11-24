@@ -23,6 +23,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
 - Bosses enter an enrage phase at half health, telegraph and recover faster, and deal increased strike damage.
 - XP, levels, two skill unlock milestones and local progress saving.
+- Explored-area city map: nearby 5-unit map cells reveal as the player moves, discovered rooftops and structures are drawn in their world positions, and each city’s exploration is stored locally without changing the campaign save record.
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
 
@@ -149,7 +150,8 @@ During a run, tap the pause icon in the top HUD row to open Settings. The sound 
 - Block: defend against incoming attacks
 - Bow: aim with the Skirmisher's bow; use Attack to fire
 - Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
-- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump. Wall-running drains stamina; release Sprint to regenerate it.
+- Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
+- Map: tap the map icon or press M to open the explored-area map; tap the map icon or press M again to close it. Wall-running drains stamina; release Sprint to regenerate it.
 
 ### Keyboard / mouse
 
@@ -163,7 +165,7 @@ During a run, tap the pause icon in the top HUD row to open Settings. The sound 
 
 ## Save data
 
-Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices.
+Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices. City exploration is stored separately per city in the same browser profile and does not overwrite the campaign save.
 
 ## Zero-cost notes
 
