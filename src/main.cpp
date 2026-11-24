@@ -57,6 +57,7 @@ static void playGameAudio(int) {}
 static int isSettingsOpen() { return 0; }
 #endif
 
+static void SyncMapControls();
 static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
