@@ -330,6 +330,21 @@ int main() {
         UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
     assert(std::abs(movementResponse.player.moveVelocity.y)<0.05f);
 
+    // The existing dash burst still reaches its burst speed during its active window.
+    GameState dashResponse;
+    dashResponse.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    dashResponse.player.position={0,0.3f,0};
+    dashResponse.player.escapeSkill=1;
+    Camera3D dashCamera{};
+    ResetCamera(dashResponse.player,dashCamera);
+    Controls dashMove{};
+    dashMove.move.y=1.0f;
+    dashMove.skill=true;
+    for(int frame=0;frame<12;frame++)
+        UpdateMovement(dashResponse,dashMove,dashCamera,1.0f/60.0f);
+    assert(dashResponse.player.dashTime>0.0f);
+    assert(dashResponse.player.moveVelocity.y>15.5f);
+
     // Air steering has less authority than grounded acceleration.
     GameState airControl;
     airControl.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
