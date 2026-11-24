@@ -593,6 +593,33 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
                               Color{83,112,112,255});
             }
         }
+        for(const Platform& platform:g.platforms) {
+            const bool worldFloor=platform.size.x>=100.0f&&platform.size.z>=100.0f&&platform.size.y<=1.0f;
+            if(worldFloor) continue;
+            const float left=platform.position.x-platform.size.x*0.5f;
+            const float right=platform.position.x+platform.size.x*0.5f;
+            const float top=platform.position.z-platform.size.z*0.5f;
+            const float bottom=platform.position.z+platform.size.z*0.5f;
+            for(int row=0;row<ExplorationMapRows;row++) {
+                const float cellTop=-36.0f+row*5.0f,cellBottom=cellTop+5.0f;
+                if(bottom<=cellTop||top>=cellBottom) continue;
+                for(int column=0;column<ExplorationMapColumns;column++) {
+                    const int index=row*ExplorationMapColumns+column;
+                    if(!g.explored[index]) continue;
+                    const float cellLeft=-50.0f+column*5.0f,cellRight=cellLeft+5.0f;
+                    if(right<=cellLeft||left>=cellRight) continue;
+                    const float clippedLeft=std::max(left,cellLeft);
+                    const float clippedRight=std::min(right,cellRight);
+                    const float clippedTop=std::max(top,cellTop);
+                    const float clippedBottom=std::min(bottom,cellBottom);
+                    const int x=mapX+(int)((clippedLeft+50.0f)/100.0f*mapW);
+                    const int y=mapY+(int)((clippedTop+36.0f)/80.0f*mapH);
+                    const int width=std::max(1,(int)std::ceil((clippedRight-clippedLeft)/100.0f*mapW));
+                    const int height=std::max(1,(int)std::ceil((clippedBottom-clippedTop)/80.0f*mapH));
+                    DrawRectangle(x+1,y+1,width-1,height-1,Color{116,137,133,255});
+                }
+            }
+        }
         DrawRectangleLines(mapX,mapY,mapW,mapH,Color{135,151,151,180});
         const int objectiveCell=ExplorationCellForPosition(QuestTarget(g.city,g.quest));
         if(g.explored[objectiveCell]) {
