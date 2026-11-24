@@ -98,6 +98,30 @@ bool UpdateQuestObjective(GameState& g,float dt) {
     }
     return false;
 }
+int ExplorationCellForPosition(Vector3 position) {
+    const int column=std::clamp((int)std::floor((position.x+50.0f)/5.0f),0,ExplorationMapColumns-1);
+    const int row=std::clamp((int)std::floor((position.z+36.0f)/5.0f),0,ExplorationMapRows-1);
+    return row*ExplorationMapColumns+column;
+}
+bool UpdateExploration(GameState& g,Vector3 position) {
+    constexpr float revealRadius=7.5f;
+    constexpr float minX=-50.0f,minZ=-36.0f,cellSize=5.0f;
+    const int playerCell=ExplorationCellForPosition(position);
+    bool changed=false;
+    if(!g.explored[playerCell]) { g.explored[playerCell]=1; changed=true; }
+    for(int row=0;row<ExplorationMapRows;row++) {
+        const float z=minZ+(row+0.5f)*cellSize;
+        for(int column=0;column<ExplorationMapColumns;column++) {
+            const float x=minX+(column+0.5f)*cellSize;
+            const float dx=x-position.x,dz=z-position.z;
+            if(dx*dx+dz*dz>revealRadius*revealRadius) continue;
+            const int index=row*ExplorationMapColumns+column;
+            if(!g.explored[index]) { g.explored[index]=1; changed=true; }
+        }
+    }
+    return changed;
+}
+
 Vector3 QuestCheckpoint(int city,int quest) {
     return quest>0?QuestTarget(city,quest-1):Vector3{0,0.3f,0};
 }
