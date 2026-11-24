@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "bash scripts/prepare-preview-dist.sh",
   "outputDirectory": "dist",
   "headers": [
     {
@@ -56,5 +57,5 @@
       ]
     }
   ],
-  "ignoreCommand": "git diff --quiet HEAD^ HEAD -- dist/"
+  "ignoreCommand": "exit 1"
 }
