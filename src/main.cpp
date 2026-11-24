@@ -62,7 +62,7 @@ EM_JS(void, setProgressionChoiceState, (int pending,int vitality,int endurance,i
   const gameReady=intro?.classList.contains("hidden")&&ending?.classList.contains("hidden");
   const settingsVisible=!settings?.classList.contains("hidden");
   panel?.classList.toggle("hidden",!open);
-  document.getElementById("touch-controls")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
+  document.getElementById("touch-controls")?.classList.toggle("hidden",open||settingsVisible);
   document.getElementById("settings-open")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
   const count=document.getElementById("level-up-count");
   if(count) count.textContent="STAT CHOICES REMAINING: "+pending;
@@ -85,7 +85,7 @@ EM_JS(void, setSkillChoiceState, (int pending,int pendingStats,int playerClass,i
     document.getElementById("ending")?.classList.contains("hidden");
   const settingsVisible=!settings?.classList.contains("hidden");
   panel?.classList.toggle("hidden",!open);
-  document.getElementById("touch-controls")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
+  document.getElementById("touch-controls")?.classList.toggle("hidden",open||settingsVisible);
   document.getElementById("settings-open")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
   const names=["","CLEAVING ARC","BREAKER STRIKE","ARROW RAIN","PIERCING SHOT","SHIELD BASH","AEGIS GUARD"];
   const descriptions=["","Frontal sword sweep that can strike several nearby foes.","Committed heavy strike that staggers and hits hard.",
