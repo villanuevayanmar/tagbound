@@ -232,7 +232,7 @@ void BuildCity(GameState& g) {
         float toughness=42.0f+g.city*14.0f;
         g.enemies.push_back({p,toughness,toughness,2.4f+g.city*0.32f,0,false,true});
     }
-    g.player.position={0,0.3f,0}; g.player.velocity={0,0,0};
+    g.player.position={0,0.3f,0}; g.player.velocity={0,0,0}; g.player.moveVelocity={0,0};
     g.player.grounded=true; g.player.wallRunning=false; g.player.dashTime=0;
     g.player.vaulting=false; g.player.vaultTime=0; g.player.ledgeGrabbing=false; g.player.climbing=false;
     g.player.landingTime=0; g.player.landingRoll=false; g.player.attackTime=0;
