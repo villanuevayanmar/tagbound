@@ -309,7 +309,7 @@ jobs:
             }
 
             // Legacy saves used stage 3 = High Spire and stage 4 = Imperial Capital.
-            // Re-map the city identities once, then persist schemaVersion 1 so reloads do not swap them again.
+            // Re-map the city identities once, then persist schemaVersion 2 so reloads do not swap them again.
             for (const savedStage of [3, 4]) {
               const stageContext = await browser.newContext();
               const stagePage = await stageContext.newPage();
@@ -329,7 +329,7 @@ jobs:
               const expectedStage = savedStage === 3 ? 4 : 3;
               const restoredStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
               if (restoredStage?.city !== expectedStage || restoredStage?.unlocked !== expectedStage ||
-                  restoredStage?.schemaVersion !== 1 || restoredStage?.quest !== 1 ||
+                  restoredStage?.schemaVersion !== 2 || restoredStage?.quest !== 1 ||
                   restoredStage?.level !== 2 || restoredStage?.xp !== 15 ||
                   restoredStage?.klass !== 1 || restoredStage?.weapon !== 3 ||
                   restoredStage?.finished !== 0) {
@@ -345,7 +345,7 @@ jobs:
               await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
               const reloadedStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
               if (reloadedStage?.city !== expectedStage || reloadedStage?.unlocked !== expectedStage ||
-                  reloadedStage?.schemaVersion !== 1 || reloadedStage?.quest !== 1 ||
+                  reloadedStage?.schemaVersion !== 2 || reloadedStage?.quest !== 1 ||
                   reloadedStage?.level !== 2 || reloadedStage?.xp !== 15 ||
                   reloadedStage?.klass !== 1 || reloadedStage?.weapon !== 3 ||
                   reloadedStage?.finished !== 0) {
@@ -740,7 +740,7 @@ jobs:
                 restarted.save?.city !== 0 || restarted.save?.unlocked !== 0 ||
                 restarted.save?.quest !== 0 || restarted.save?.level !== 1 ||
                 restarted.save?.xp !== 0 || restarted.save?.finished !== 0 ||
-                restarted.save?.schemaVersion !== 1 ||
+                restarted.save?.schemaVersion !== 2 ||
                 restarted.save?.klass !== 1 || restarted.save?.weapon !== 3 ||
                 restarted.selectedClass !== '1' || restarted.soundSetting !== 'on') {
               throw new Error('Campaign restart did not reset progression while preserving class and sound: ' + JSON.stringify(restarted));
@@ -1094,7 +1094,7 @@ jobs:
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
             if (!recoveryState.attempted || recoveryState.save?.city !== 0 ||
-                recoveryState.save?.unlocked !== 0 || recoveryState.save?.schemaVersion !== 1) {
+                recoveryState.save?.unlocked !== 0 || recoveryState.save?.schemaVersion !== 2) {
               throw new Error('WebGL context recovery did not flush the in-memory save before reloading: ' +
                 JSON.stringify(recoveryState));
             }
