@@ -309,7 +309,7 @@ int main() {
 
     // Ground movement ramps to the existing top speed, then brakes when released.
     GameState movementResponse;
-    movementResponse.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    movementResponse.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     movementResponse.player.position={0,0.3f,0};
     Camera3D movementCamera{};
     ResetCamera(movementResponse.player,movementCamera);
@@ -332,7 +332,7 @@ int main() {
 
     // The existing dash burst still reaches its burst speed during its active window.
     GameState dashResponse;
-    dashResponse.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    dashResponse.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     dashResponse.player.position={0,0.3f,0};
     dashResponse.player.escapeSkill=1;
     Camera3D dashCamera{};
@@ -347,7 +347,7 @@ int main() {
 
     // Air steering has less authority than grounded acceleration.
     GameState airControl;
-    airControl.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    airControl.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     airControl.player.position={0,4.0f,0};
     airControl.player.grounded=false;
     Camera3D airCamera{};
@@ -404,11 +404,11 @@ int main() {
 
     // Skirmisher keeps the fastest base movement speed without sprinting.
     GameState vanguardMovement;
-    vanguardMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    vanguardMovement.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     vanguardMovement.player.position={0,0.3f,0};
     vanguardMovement.player.playerClass=PlayerClass::Vanguard;
     GameState skirmisherMovement;
-    skirmisherMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    skirmisherMovement.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     skirmisherMovement.player.position={0,0.3f,0};
     skirmisherMovement.player.playerClass=PlayerClass::Skirmisher;
     Camera3D vanguardCamera{},skirmisherCamera{};
