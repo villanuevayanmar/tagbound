@@ -5,14 +5,25 @@
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #define KEEP EMSCRIPTEN_KEEPALIVE
-EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest), {
-  try { localStorage.setItem("tagbound-save",JSON.stringify({schemaVersion:1,city,level,xp,unlocked,klass,weapon,finished,quest})); } catch(e) {}
+EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest,
+                               int mana,int vitality,int endurance,int focus,int power,int precision,int pending), {
+  try {
+    localStorage.setItem("tagbound-save",JSON.stringify({
+      schemaVersion:2,city,level,xp,unlocked,klass,weapon,finished,quest,
+      mana,vitality,endurance,focus,power,precision,pendingStatChoices:pending
+    }));
+  } catch(e) {}
 });
 EM_JS(int, loadSaveVersion, (), {
   try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); return Number.isInteger(s.schemaVersion)?s.schemaVersion:0; } catch(e) { return 0; }
 });
 EM_JS(int, loadLocal, (int field), {
-  try { const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}"); const k=["city","level","xp","unlocked","klass","weapon","finished","quest"]; return Number.isFinite(s[k[field]])?s[k[field]]:-1; } catch(e) { return -1; }
+  try {
+    const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}");
+    const k=["city","level","xp","unlocked","klass","weapon","finished","quest",
+             "mana","vitality","endurance","focus","power","precision","pendingStatChoices"];
+    return Number.isFinite(s[k[field]])?s[k[field]]:-1;
+  } catch(e) { return -1; }
 });
 EM_JS(void, saveExploration, (int city,const char* data), {
   try { localStorage.setItem("tagbound-exploration-v2-"+city,UTF8ToString(data)); } catch(e) {}
@@ -38,6 +49,23 @@ EM_JS(void, setMapControlsState, (int open,int floor,int canPrevious,int canNext
   if(next) next.disabled=!canNext;
   if(label) label.textContent=["GROUND","ROOFTOP 1","ROOFTOP 2","ROOFTOP 3","BOSS DECK"][Math.max(0,Math.min(4,floor))];
 });
+EM_JS(void, setProgressionChoiceState, (int pending,int vitality,int endurance,int focus,int power,int precision), {
+  const panel=document.getElementById("level-up");
+  const open=pending>0;
+  panel?.classList.toggle("hidden",!open);
+  document.getElementById("touch-controls")?.classList.toggle("hidden",open);
+  document.getElementById("settings-open")?.classList.toggle("hidden",open);
+  const count=document.getElementById("level-up-count");
+  if(count) count.textContent="STAT CHOICES REMAINING: "+pending;
+  const ranks=[vitality,endurance,focus,power,precision];
+  document.querySelectorAll("[data-stat-choice]").forEach(button=>{
+    const stat=Number(button.dataset.statChoice);
+    const rank=ranks[stat]||0;
+    button.disabled=rank>=10;
+    const value=button.querySelector("[data-stat-rank]");
+    if(value) value.textContent="RANK "+rank+"/10";
+  });
+});
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
 EM_JS(void, showEnding, (), { window.TagboundAudio?.pauseMusic?.(); document.getElementById("ending")?.classList.remove("hidden"); });
 EM_JS(void, initGameAudio, (), { try { window.TagboundAudio?.init?.(); } catch (e) {} });
@@ -45,12 +73,13 @@ EM_JS(void, playGameAudio, (int kind), { try { window.TagboundAudio?.play?.(kind
 EM_JS(int, isSettingsOpen, (), { return document.getElementById("settings")?.classList.contains("hidden") ? 0 : 1; });
 #else
 #define KEEP
-static void saveLocal(int,int,int,int,int,int,int,int) {}
+static void saveLocal(int,int,int,int,int,int,int,int,int,int,int,int,int,int,int) {}
 static int loadSaveVersion() { return 0; }
 static int loadLocal(int) { return -1; }
 static void saveExploration(int,const char*) {}
 static void loadExploration(int,char*,int) {}
 static void setMapControlsState(int,int,int,int) {}
+static void setProgressionChoiceState(int,int,int,int,int,int) {}
 static void hideIntro() {}
 static void showEnding() {}
 static void initGameAudio() {}
@@ -67,7 +96,10 @@ static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
-    saveLocal(game.city,game.player.level,game.player.xp,game.unlockedCity,(int)game.player.playerClass,(int)game.player.weapon,game.finished?1:0,game.quest);
+    const Player& p=game.player;
+    saveLocal(game.city,p.level,p.xp,game.unlockedCity,(int)p.playerClass,(int)p.weapon,
+        game.finished?1:0,game.quest,(int)std::lround(p.mana),
+        p.vitality,p.endurance,p.focus,p.power,p.precision,p.pendingStatChoices);
 }
 static void SaveExploration() {
     std::array<char,ExplorationMapTotalCells+1> encoded{};
