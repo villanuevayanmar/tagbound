@@ -395,3 +395,15 @@ Next:
 - Each city now builds three 2.8-unit-high collision-bearing stone walls around its 8×8 raised boss deck. The south entrance remains open and aligned with the rooftop route.
 - Boss arena half-extents are derived from the inner wall faces; boss body radius is accounted for by the existing clamp used during pursuit, knockback and the Gilded Charger strike.
 - C++ tests verify wall geometry, boss containment and the open approach. This code still requires exact-head CI and later physical Android review; do not claim the user's original boss issue is proven fixed until tested in the new preview/device.
+
+ 
+## Floor-aware exploration map update — 2026-11-24
+
+- Exploration now contains five independent 20 × 16 layers per city (ground, three objective rooftop elevations, boss deck).
+- Discovery updates only while the player is grounded. Each 5 × 5 world-unit cell is revealed near the player; the floor layers never reveal one another.
+- The map displays only the selected discovered floor, with a player marker only on the player's current floor and an objective marker only when its floor/cell is discovered.
+- Floor navigation uses icon-only previous/next controls and keyboard `[` / `]`; undiscovered floors are skipped and cannot be selected.
+- The new localStorage key is `tagbound-exploration-v2-<city>` with 1,600 characters. Earlier v1 320-cell data is read into the ground layer; campaign key `tagbound-save` is unchanged.
+- Service-worker cache version: `tagbound-v29`.
+- Added C++ tests for height mapping, airborne reveal prevention, isolated floor state, and floor selection. CI browser checks verify the UI, mobile tap behavior, 1,600-cell save format, and reload persistence.
+- This latest implementation and the boss-arena walls are not yet verified by exact-head CI; never inherit the earlier run #347 result as proof of the new code.
