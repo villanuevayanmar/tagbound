@@ -350,3 +350,14 @@ Continue from the current repository; do not restart or create a replacement pro
 - PR #16 is stacked on PR #15, which is stacked on PR #14. All remain open/unmerged. Keep the release hold and zero-cost constraint.
 - Branch commits after tested application source/test SHA `c0334c0d...` are documentation-only.
 
+
+
+## Active implementation checkpoint — fortified five-city perimeter (2026-11-24)
+
+- Added a 12-unit-high, 2-unit-thick perimeter to each city using the existing solid platform/collision representation. The west, east and south sides are continuous; the north side is split around a gate opening aligned with that city's existing final boss-route platform.
+- Added gate towers and a lintel while preserving player clearance. Existing skyline pieces that would obstruct the gate approach are moved beyond the playable perimeter rather than removed.
+- Added deterministic C++ regression coverage for all five cities: expected wall geometry, collision against all four sides, and passage through the aligned gate. Existing platform-count assertions were updated for the eight new wall/gate structures.
+- Implementation commits: `cca3a538340e058bc0068ffa873e3b0197a07ae7` (walls), `fd61e6afc1194230c621defe9ce22dd82be854a8` (regressions), and `bdd3e22b78b21f8725114412612e65d02238d89b` (gate sightline clearance).
+- Exact-head CI is pending. Do not mark the enclosure complete until the C++ gameplay suite, Emscripten build and Chromium smoke tests pass on this code/test head.
+- PR #16 is temporarily targeted at `main` for the repository's required pull-request CI filter. After exact-head verification, restore it to PR #15 (`fix/boss-arena-floor-bounds`). Keep the original PR #14 → #15 → #16 stack, draft state, and release hold.
+- No merge, production deployment, `dist/` change, billing change, or quota workaround was performed.
