@@ -165,7 +165,7 @@ static void loadExploration(int,char*,int) {}
 static void setMapControlsState(int,int,int,int) {}
 static void setProgressionChoiceState(int,int,int,int,int,int) {}
 static void setSkillChoiceState(int,int,int,int,int,int,int,int,int) {}
-static void setSkillLoadoutState(int,int,int,int,int) {}
+static void setSkillLoadoutState(int,int,int,int,int,int) {}
 static void setSkillTargetState(int,int) {}
 static void hideIntro() {}
 static void showEnding() {}
@@ -445,7 +445,7 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
-    bool techniqueDown=IsKeyDown(KEY_Q)||(touchButtons&128);
+    bool techniqueDown=IsKeyDown(KEY_Q);
     c.technique=techniqueDown&&!techniqueWasDown;
     techniqueWasDown=techniqueDown;
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
