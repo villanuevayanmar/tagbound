@@ -20,7 +20,7 @@ int main() {
     GameState game;
     BuildCity(game);
     assert(game.city == 0);
-    assert(game.platforms.size() == 58);
+    assert(game.platforms.size() == 61);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
     assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
@@ -193,8 +193,8 @@ int main() {
         assert(near(arenaGame.bossArena.center.x,gate.x));
         assert(near(arenaGame.bossArena.center.y,gate.y));
         assert(near(arenaGame.bossArena.center.z,gate.z));
-        assert(near(arenaGame.bossArena.halfExtents.x,4.0f));
-        assert(near(arenaGame.bossArena.halfExtents.y,4.0f));
+        assert(near(arenaGame.bossArena.halfExtents.x,3.4f));
+        assert(near(arenaGame.bossArena.halfExtents.y,3.4f));
         assert(near(arenaGame.bossArena.floorY,gate.y));
         assert(arenaGame.enemies.size()==1&&arenaGame.enemies.front().boss);
         Enemy* arenaBoss=&arenaGame.enemies.front();
@@ -270,7 +270,7 @@ int main() {
         GameState enclosed;
         enclosed.city=city;
         BuildCity(enclosed);
-        assert(enclosed.platforms.size()==58);
+        assert(enclosed.platforms.size()==61);
         const float gateX=QuestTarget(city,3).x;
         const Platform& west=enclosed.platforms[34];
         const Platform& east=enclosed.platforms[35];
@@ -338,6 +338,23 @@ int main() {
                 assert(pier.position.z+pier.size.z*0.5f<deck.position.z+deck.size.z*0.5f);
             }
         }
+        // The boss deck has a visible, collision-bearing three-sided enclosure.
+        // The south side stays open for entry from the rooftop route.
+        const Vector3 gate=QuestTarget(city,3);
+        const Platform& arenaWest=enclosed.platforms[58];
+        const Platform& arenaEast=enclosed.platforms[59];
+        const Platform& arenaNorth=enclosed.platforms[60];
+        assert(near(arenaWest.position.x,gate.x-3.7f));
+        assert(near(arenaEast.position.x,gate.x+3.7f));
+        assert(near(arenaWest.position.y,gate.y+1.4f));
+        assert(near(arenaWest.size.x,0.6f)&&near(arenaWest.size.y,2.8f));
+        assert(near(arenaWest.size.z,7.4f));
+        assert(near(arenaEast.size.x,0.6f)&&near(arenaEast.size.y,2.8f));
+        assert(near(arenaNorth.position.z,gate.z+3.7f));
+        assert(near(arenaNorth.size.x,8.0f)&&near(arenaNorth.size.y,2.8f));
+        assert(near(arenaNorth.size.z,0.6f));
+        assert(near(arenaWest.position.z,gate.z)&&near(arenaEast.position.z,gate.z));
+
     }
 
     game.city = 0;
