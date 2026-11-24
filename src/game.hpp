@@ -47,6 +47,8 @@ struct Player {
 constexpr int ExplorationMapColumns=20;
 constexpr int ExplorationMapRows=16;
 constexpr int ExplorationMapCells=ExplorationMapColumns*ExplorationMapRows;
+constexpr int ExplorationMapFloors=5;
+constexpr int ExplorationMapTotalCells=ExplorationMapCells*ExplorationMapFloors;
 
 struct Controls {
     Vector2 move{0,0};
@@ -59,7 +61,8 @@ struct GameState {
     std::vector<Enemy> enemies;
     std::vector<Projectile> projectiles;
     BossArena bossArena;
-    std::array<unsigned char,ExplorationMapCells> explored{};
+    std::array<unsigned char,ExplorationMapTotalCells> explored{};
+    int currentFloor=0, mapFloor=0;
     bool mapOpen=false;
     int city=0, unlockedCity=0, quest=0, totalQuests=3, defeated=0;
     float danger=0, questTime=0, questLimit=110, beaconHoldTime=0;
@@ -87,7 +90,10 @@ bool QuestRequiresSurvival(int city,int quest);
 float QuestSurvivalDuration(int city,int quest);
 bool UpdateQuestObjective(GameState& game,float dt);
 int ExplorationCellForPosition(Vector3 position);
+int ExplorationFloorForPosition(float height);
 bool UpdateExploration(GameState& game,Vector3 position);
+bool CanChangeExplorationFloor(const GameState& game,int direction);
+bool ChangeExplorationFloor(GameState& game,int direction);
 float BossWindupDuration(int variant,bool enraged=false);
 float BossStrikeRange(int variant);
 bool BossArenaContains(const GameState& game,const Enemy& boss);
