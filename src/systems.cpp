@@ -772,9 +772,9 @@ static bool SkillTargetValid(const GameState& g,Vector3 target) {
 }
 
 bool SetClassSkillTarget(GameState& g,Vector3 target) {
-    if(!g.skillTargeting||!SkillTargetValid(g,target)) return false;
+    if(!g.skillTargeting) return false;
     g.skillTarget=target;
-    return true;
+    return SkillTargetValid(g,target);
 }
 bool IsClassSkillTargetValid(const GameState& g) {
     return g.skillTargeting&&SkillTargetValid(g,g.skillTarget);
