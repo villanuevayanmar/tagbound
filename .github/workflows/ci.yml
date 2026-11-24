@@ -797,7 +797,7 @@ jobs:
               }
             }
             await mobilePage.locator('#start').tap();
-            await mobilePage.locator('#touch-controls [data-bit="256"]').tap();
+            await mobilePage.locator('#touch-controls .action.map').tap();
             await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
             const mobileMap = await mobilePage.evaluate(() => ({
               count: Module.ccall('GetExploredCount','number',[],[]),
@@ -806,7 +806,7 @@ jobs:
             if (mobileMap.count < 1 || !mobileMap.saved || mobileMap.saved.length !== 320) {
               throw new Error('Mobile map control did not open a saved exploration map: ' + JSON.stringify(mobileMap));
             }
-            await mobilePage.locator('#touch-controls [data-bit="256"]').tap();
+            await mobilePage.locator('#touch-controls .action.map').tap();
             await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
