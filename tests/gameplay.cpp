@@ -20,7 +20,7 @@ int main() {
     GameState game;
     BuildCity(game);
     assert(game.city == 0);
-    assert(game.platforms.size() == 42);
+    assert(game.platforms.size() == 58);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
     assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
@@ -253,7 +253,7 @@ int main() {
     for (int city = 0; city < 5; ++city) {
         game.city = city;
         BuildCity(game);
-        assert(game.platforms.size() == 42);
+        assert(game.platforms.size() == 58);
         assert(game.enemies.size() == static_cast<size_t>(2 + city * 2));
         for(int quest=0;quest<4;quest++) {
             Vector3 target=QuestTarget(city,quest);
@@ -270,7 +270,7 @@ int main() {
         GameState enclosed;
         enclosed.city=city;
         BuildCity(enclosed);
-        assert(enclosed.platforms.size()==42);
+        assert(enclosed.platforms.size()==58);
         const float gateX=QuestTarget(city,3).x;
         const Platform& west=enclosed.platforms[34];
         const Platform& east=enclosed.platforms[35];
@@ -314,6 +314,30 @@ int main() {
         assert(southStop.z>-30.0f&&southStop.z<-29.0f);
         assert(northStop.z>36.0f&&northStop.z<37.0f);
         assert(gatePassage.z>37.0f);
+
+        // Each elevated objective deck and the boss deck is physically supported
+        // by four piers that meet the ground and the platform underside.
+        const float supportSideX[4]={-1.0f,-1.0f,1.0f,1.0f};
+        const float supportSideZ[4]={-1.0f,1.0f,-1.0f,1.0f};
+        for(int route=0;route<4;route++) {
+            const int deckIndex=route<3?2+route:5;
+            const Platform deck=enclosed.platforms[deckIndex];
+            const float pillarSize=route==3?0.85f:0.55f;
+            const float offset=deck.size.x*0.5f-pillarSize*0.5f-0.25f;
+            const float deckBottom=deck.position.y-deck.size.y*0.5f;
+            for(int corner=0;corner<4;corner++) {
+                const Platform& pier=enclosed.platforms[42+route*4+corner];
+                assert(near(pier.size.x,pillarSize)&&near(pier.size.z,pillarSize));
+                assert(near(pier.position.x,deck.position.x+supportSideX[corner]*offset));
+                assert(near(pier.position.z,deck.position.z+supportSideZ[corner]*offset));
+                assert(near(pier.position.y-pier.size.y*0.5f,0.0f));
+                assert(near(pier.position.y+pier.size.y*0.5f,deckBottom));
+                assert(pier.position.x-pier.size.x*0.5f>deck.position.x-deck.size.x*0.5f);
+                assert(pier.position.x+pier.size.x*0.5f<deck.position.x+deck.size.x*0.5f);
+                assert(pier.position.z-pier.size.z*0.5f>deck.position.z-deck.size.z*0.5f);
+                assert(pier.position.z+pier.size.z*0.5f<deck.position.z+deck.size.z*0.5f);
+            }
+        }
     }
 
     game.city = 0;
