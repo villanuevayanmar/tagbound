@@ -226,6 +226,33 @@ void BuildCity(GameState& g) {
         Vector3 p={std::cos(a)*r,h*0.5f,std::sin(a)*r-3.0f};
         g.platforms.push_back({p,{4.5f,h,4.5f},Color{(unsigned char)std::min(235,(int)tint[g.city].r+(i%3)*8),(unsigned char)std::min(235,(int)tint[g.city].g+(i%4)*6),(unsigned char)std::min(235,(int)tint[g.city].b+(i%2)*9),255}});
     }
+    // Fortify each city with a continuous stone perimeter. The north gate opening
+    // is aligned with this city's boss platform so the route and architecture agree.
+    const Color wallStone={78,74,67,255};
+    const Color gateStone={128,105,73,255};
+    const float wallX=44.0f, wallMinZ=-31.0f, wallMaxZ=38.0f;
+    const float wallHeight=12.0f, wallThickness=2.0f;
+    const float wallY=wallHeight*0.5f;
+    const float gateHalfWidth=5.0f;
+    const float gateLeft=gate.x-gateHalfWidth;
+    const float gateRight=gate.x+gateHalfWidth;
+    g.platforms.push_back({{-wallX,wallY,(wallMinZ+wallMaxZ)*0.5f},
+                           {wallThickness,wallHeight,wallMaxZ-wallMinZ},wallStone});
+    g.platforms.push_back({{wallX,wallY,(wallMinZ+wallMaxZ)*0.5f},
+                           {wallThickness,wallHeight,wallMaxZ-wallMinZ},wallStone});
+    g.platforms.push_back({{0,wallY,wallMinZ},{wallX*2,wallHeight,wallThickness},wallStone});
+    g.platforms.push_back({{(-wallX+gateLeft)*0.5f,wallY,wallMaxZ},
+                           {gateLeft+wallX,wallHeight,wallThickness},wallStone});
+    g.platforms.push_back({{(gateRight+wallX)*0.5f,wallY,wallMaxZ},
+                           {wallX-gateRight,wallHeight,wallThickness},wallStone});
+    // Gate towers and lintel make the opening legible while leaving ample player clearance.
+    const float gatePillarOffset=gateHalfWidth+0.6f;
+    g.platforms.push_back({{gate.x-gatePillarOffset,wallY,wallMaxZ},
+                           {1.2f,wallHeight,3.0f},gateStone});
+    g.platforms.push_back({{gate.x+gatePillarOffset,wallY,wallMaxZ},
+                           {1.2f,wallHeight,3.0f},gateStone});
+    g.platforms.push_back({{gate.x,wallHeight+0.8f,wallMaxZ},
+                           {gateHalfWidth*2+2.0f,1.6f,3.0f},gateStone});
     for(int i=0;i<2+g.city*2;i++) {
         float a=6.28318f*i/(2+g.city*2);
         Vector3 p={std::cos(a)*(12.0f+g.city),0.0f,std::sin(a)*(12.0f+g.city)+3.0f};
