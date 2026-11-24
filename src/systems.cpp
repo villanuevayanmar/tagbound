@@ -292,7 +292,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     float speed=p.playerClass==PlayerClass::Skirmisher?7.5f:6.0f;
     float sprintCost=18.0f*dt;
     if(c.sprint&&p.stamina>=sprintCost) { speed*=1.5f; p.stamina-=sprintCost; }
-    else if(!c.sprint) p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
+    else if(!c.sprint) p.stamina=std::min(PlayerMaxStamina(p),p.stamina+13*dt);
     if(c.slide&&p.grounded) speed*=1.22f;
     if(c.skill&&p.escapeSkill>0&&p.stamina>=20&&p.dashCooldown<=0) {
         p.dashTime=0.24f; p.dashCooldown=1.8f; p.stamina-=20;
@@ -562,7 +562,8 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
             }
         }
         if(target) {
-            float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:(p.weapon==Weapon::Sword?30:26)));
+            float damage=(p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:(p.weapon==Weapon::Sword?30:26))))*
+                PlayerMeleeDamageMultiplier(p);
             if(p.weapon==Weapon::Shield&&p.combatSkill) damage=29;
             target->hp-=damage;
             target->hitTime=0.16f;
@@ -601,7 +602,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         s.position=Vector3Lerp(from,to,std::min(firstHit,1.0f));
         s.life-=dt;
         if(target) {
-            target->hp-=45;
+            target->hp-=45.0f*PlayerRangedDamageMultiplier(p);
             target->hitTime=0.16f;
             target->stunTime=target->boss?0.08f:0.16f;
             Vector3 knock=Vector3Subtract(target->position,p.position); knock.y=0;
@@ -623,7 +624,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
     if(p.health<=0) {
         Vector3 checkpoint=QuestCheckpoint(g.city,g.quest);
         p.facing=QuestCheckpointFacing(g.city,g.quest);
-        p.health=ClassMaxHealth(p.playerClass);
+        p.health=PlayerMaxHealth(p);
         p.stamina=ClassMaxStamina(p.playerClass);
         p.position=checkpoint;
         p.velocity={0,0,0};
@@ -648,9 +649,40 @@ void UpdateProgression(GameState& g,int amount) {
     Player& p=g.player;
     p.xp=std::max(0,p.xp+amount);
     while(p.xp>=p.level*100) {
-        p.xp-=p.level*100; p.level++;
-        p.health=std::min(ClassMaxHealth(p.playerClass),p.health+12); p.stamina=ClassMaxStamina(p.playerClass);
+        p.xp-=p.level*100;
+        p.level++;
+        p.pendingStatChoices++;
+        p.health=std::min(PlayerMaxHealth(p),p.health+12.0f);
+        p.stamina=PlayerMaxStamina(p);
+        p.mana=std::min(PlayerMaxMana(p),p.mana+10.0f);
     }
     if(p.level>=3) p.escapeSkill=1;
     if(p.level>=5) p.combatSkill=1;
+}
+
+bool ChooseStatUpgrade(GameState& g,StatUpgrade stat) {
+    Player& p=g.player;
+    if(p.pendingStatChoices<=0) return false;
+    int* value=nullptr;
+    float resourceGain=0.0f;
+    switch(stat) {
+        case StatUpgrade::Vitality: value=&p.vitality; resourceGain=8.0f; break;
+        case StatUpgrade::Endurance: value=&p.endurance; resourceGain=8.0f; break;
+        case StatUpgrade::Focus: value=&p.focus; resourceGain=12.0f; break;
+        case StatUpgrade::Power: value=&p.power; break;
+        case StatUpgrade::Precision: value=&p.precision; break;
+        default: return false;
+    }
+    if(!value||*value>=MaxStatRank) return false;
+    ++*value;
+    --p.pendingStatChoices;
+    if(stat==StatUpgrade::Vitality) p.health=std::min(PlayerMaxHealth(p),p.health+resourceGain);
+    else if(stat==StatUpgrade::Endurance) p.stamina=std::min(PlayerMaxStamina(p),p.stamina+resourceGain);
+    else if(stat==StatUpgrade::Focus) p.mana=std::min(PlayerMaxMana(p),p.mana+resourceGain);
+    return true;
+}
+
+void RegenerateMana(Player& p,float dt) {
+    if(dt<=0.0f||p.health<=0.0f) return;
+    p.mana=std::min(PlayerMaxMana(p),p.mana+3.5f*std::min(dt,0.1f));
 }
