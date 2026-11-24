@@ -349,6 +349,9 @@ KEEP int GetSkillOption(int option) { return (int)ClassSkillOption(game.player.p
 KEEP int GetSkillSlot(int slot) { return slot>=0&&slot<2?game.player.skills[slot]:0; }
 KEEP int GetSkillSlotRank(int slot) { return slot>=0&&slot<2?game.player.skillRanks[slot]:0; }
 KEEP int GetActiveSkillSlot() { return game.player.activeSkillSlot; }
+KEEP int GetSkillEffectCount() { return (int)game.skillEffects.size(); }
+KEEP int GetPlayerMana() { return (int)std::lround(game.player.mana); }
+KEEP int GetTechniqueCooldownTenths() { return (int)std::lround(game.player.techniqueCooldown*10.0f); }
 KEEP void ChooseSkill(int skillId,int upgrade) {
     if(!game.started||isSettingsOpen()) return;
     if(ChooseSkillOption(game,skillId,upgrade!=0)) {
@@ -361,7 +364,10 @@ KEEP void EquipSkillSlot(int slot) {
 KEEP void UseClassSkill() {
     if(!game.started||game.mapOpen||isSettingsOpen()||game.player.pendingStatChoices>0||
        game.player.pendingSkillChoices>0) return;
-    if(ActivateClassSkill(game)) SyncSkillTargetUI();
+    if(ActivateClassSkill(game)) {
+        if(!game.skillTargeting) Save();
+        SyncSkillTargetUI();
+    }
 }
 KEEP int SetClassSkillTargetScreen(float x,float y) {
     if(!game.skillTargeting) return 0;
