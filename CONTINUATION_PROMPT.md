@@ -335,17 +335,18 @@ Continue from the current repository; do not restart or create a replacement pro
 - PR #16 has been restored to base PR #15; the draft stack remains #14 → #15 → #16. No merge, deployment or `dist/` edit.
 
 ### Next action for the next developer turn
-1. Trigger and verify an exact-head CI run containing the raised-rooftop landing test (`1753b20e0ac2c6e796ddfbbd58601fdaaa6e476c`) and the successful canvas diagnostic. If it fails, inspect the exact failure log; never weaken assertions just to pass.
-2. Keep the PR stack and release restriction unchanged.
-3. Continue with jump/landing, grounding and rooftop-transition regressions; then address the remaining master-spec systems in focused steps. The black-flicker root cause and physical Android verification remain open.
+1. Continue movement-foundation review with focused grounding, raised-floor, vault/ledge collision and enemy-navigation regressions. Avoid duplicating jump/landing tests already present.
+2. After movement/rendering stability, implement the master specification's remaining systems incrementally: separate stamina and mana, level-up stat choices, skill-versus-upgrade milestone choices, vertical city/floor progression, enemy archetypes, fog-of-war exploration, guaranteed boss keys and performance-banded equipment.
+3. Keep the PR stack and release hold unchanged. The intermittent black-flicker root cause and physical Android validation remain open.
 
 
 
-## Current exact-head run — 2026-11-24
+## Latest exact-head run — 2026-11-24
 
-- Run #336 (`45332306488`) tests PR #16 head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`, containing the raised-rooftop landing regression and the 12-frame-per-device canvas visibility check.
-- Build job `138236093166` passed: C++ gameplay regression suite (including raised-platform landing), Emscripten/WebAssembly build, PWA assembly and validation.
-- Browser-smoke job `138236454555` is still running its combined desktop/mobile runtime, save restoration, offline cache, boss arena captures and context-loss checks. Do not claim overall success until this job and visual artifact upload complete; `publish-dist` must remain skipped.
-- PR #16 is back on base PR #15; all relevant PRs remain open and unmerged. Keep the release hold and zero-cost constraint.
-- Next action: poll run #336. On success, inspect browser logs for desktop/mobile canvas PASS lines, inspect the artifact and update this file, `DEVELOPMENT_STATUS.md` and PR #16. On failure, inspect the exact log; do not weaken tests to obtain a green result.
+- Run #336 (`45332306488`) passed on application source/test head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`.
+- Build job `138236093166` and browser-smoke job `138236454555` both passed. Coverage includes the C++ regression suite with raised-platform landing, Emscripten/WebAssembly, PWA validation, Chromium desktop/mobile runtime, offline cache, boss-arena captures and forced context-loss recovery. `publish-dist` was skipped.
+- Desktop and mobile-landscape browser logs both report all 12 canvas samples passed; the minimum non-black pixel ratio was `1.0000` for each device.
+- Visual-review artifact `14892717266` uploaded 14 screenshots and was downloaded; the desktop gameplay capture was inspected. Finite Chromium sampling is not proof that the flicker is fixed on real Android hardware.
+- PR #16 is stacked on PR #15, which is stacked on PR #14. All remain open/unmerged. Keep the release hold and zero-cost constraint.
+- Branch commits after tested application source/test SHA `c0334c0d...` are documentation-only.
 
