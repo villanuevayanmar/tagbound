@@ -6,11 +6,14 @@
 #include <emscripten.h>
 #define KEEP EMSCRIPTEN_KEEPALIVE
 EM_JS(void, saveLocal, (int city,int level,int xp,int unlocked,int klass,int weapon,int finished,int quest,
-                               int mana,int vitality,int endurance,int focus,int power,int precision,int pending), {
+                               int mana,int vitality,int endurance,int focus,int power,int precision,int pending,
+                               int skill0,int rank0,int skill1,int rank1,int activeSlot,int pendingSkills,int milestoneMask), {
   try {
     localStorage.setItem("tagbound-save",JSON.stringify({
-      schemaVersion:2,city,level,xp,unlocked,klass,weapon,finished,quest,
-      mana,vitality,endurance,focus,power,precision,pendingStatChoices:pending
+      schemaVersion:3,city,level,xp,unlocked,klass,weapon,finished,quest,
+      mana,vitality,endurance,focus,power,precision,pendingStatChoices:pending,
+      skill0,rank0,skill1,rank1,activeSkillSlot:activeSlot,
+      pendingSkillChoices:pendingSkills,skillMilestoneMask:milestoneMask
     }));
   } catch(e) {}
 });
@@ -21,7 +24,8 @@ EM_JS(int, loadLocal, (int field), {
   try {
     const s=JSON.parse(localStorage.getItem("tagbound-save")||"{}");
     const k=["city","level","xp","unlocked","klass","weapon","finished","quest",
-             "mana","vitality","endurance","focus","power","precision","pendingStatChoices"];
+             "mana","vitality","endurance","focus","power","precision","pendingStatChoices",
+             "skill0","rank0","skill1","rank1","activeSkillSlot","pendingSkillChoices","skillMilestoneMask"];
     return Number.isFinite(s[k[field]])?s[k[field]]:-1;
   } catch(e) { return -1; }
 });
@@ -78,13 +82,16 @@ EM_JS(void, playGameAudio, (int kind), { try { window.TagboundAudio?.play?.(kind
 EM_JS(int, isSettingsOpen, (), { return document.getElementById("settings")?.classList.contains("hidden") ? 0 : 1; });
 #else
 #define KEEP
-static void saveLocal(int,int,int,int,int,int,int,int,int,int,int,int,int,int,int) {}
+static void saveLocal(int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int,int) {}
 static int loadSaveVersion() { return 0; }
 static int loadLocal(int) { return -1; }
 static void saveExploration(int,const char*) {}
 static void loadExploration(int,char*,int) {}
 static void setMapControlsState(int,int,int,int) {}
 static void setProgressionChoiceState(int,int,int,int,int,int) {}
+static void setSkillChoiceState(int,int,int,int,int,int,int,int) {}
+static void setSkillLoadoutState(int,int,int,int,int,int) {}
+static void setSkillTargetState(int,int) {}
 static void hideIntro() {}
 static void showEnding() {}
 static void initGameAudio() {}
@@ -94,18 +101,22 @@ static int isSettingsOpen() { return 0; }
 
 static void SyncMapControls();
 static void SyncProgressionUI();
+static void SyncSkillUI();
+static void SyncSkillTargetUI();
 static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
 static float touchX=0,touchY=0,lookX=0,lookY=0,attackCooldown=0,saveCooldown=0;
-static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
+static bool skillWasDown=false,jumpWasDown=false,techniqueWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
     const Player& p=game.player;
     saveLocal(game.city,p.level,p.xp,game.unlockedCity,(int)p.playerClass,(int)p.weapon,
         game.finished?1:0,game.quest,(int)std::lround(p.mana),
-        p.vitality,p.endurance,p.focus,p.power,p.precision,p.pendingStatChoices);
+        p.vitality,p.endurance,p.focus,p.power,p.precision,p.pendingStatChoices,
+        p.skills[0],p.skillRanks[0],p.skills[1],p.skillRanks[1],p.activeSkillSlot,
+        p.pendingSkillChoices,p.skillMilestoneMask);
 }
 static void SaveExploration() {
     std::array<char,ExplorationMapTotalCells+1> encoded{};
@@ -131,6 +142,8 @@ KEEP void StartGame() {
     int finished=loadLocal(6), quest=loadLocal(7), mana=loadLocal(8);
     int vitality=loadLocal(9), endurance=loadLocal(10), focus=loadLocal(11);
     int power=loadLocal(12), precision=loadLocal(13), pending=loadLocal(14);
+    int skill0=loadLocal(15),rank0=loadLocal(16),skill1=loadLocal(17),rank1=loadLocal(18);
+    int activeSlot=loadLocal(19),pendingSkills=loadLocal(20),milestoneMask=loadLocal(21);
     if(c>=0) {
         if(saveVersion<1) {
             c=MigrateLegacyCityIndex(c);
@@ -153,6 +166,37 @@ KEEP void StartGame() {
             game.player.pendingStatChoices=std::max(game.player.pendingStatChoices,
                 std::max(0,game.player.level-1-earnedStats));
         }
+        game.player.skills[0]=skill0;
+        game.player.skillRanks[0]=std::clamp(rank0,0,3);
+        game.player.skills[1]=skill1;
+        game.player.skillRanks[1]=std::clamp(rank1,0,3);
+        game.player.activeSkillSlot=std::clamp(activeSlot<0?0:activeSlot,0,1);
+        game.player.pendingSkillChoices=std::clamp(pendingSkills<0?0:pendingSkills,0,99);
+        game.player.skillMilestoneMask=std::clamp(milestoneMask<0?0:milestoneMask,0,3);
+        if(saveVersion<3) {
+            for(int milestoneLevel:{3,5}) if(game.player.level>=milestoneLevel) {
+                const int bit=milestoneLevel==3?1:2;
+                if(!(game.player.skillMilestoneMask&bit)) {
+                    game.player.skillMilestoneMask|=bit;
+                    game.player.pendingSkillChoices++;
+                }
+            }
+        }
+        for(int slot=0;slot<2;slot++) {
+            const int id=game.player.skills[slot];
+            if(id<0||id>(int)ClassSkill::AegisGuard||
+               (id!=(int)ClassSkill::None&&!((ClassSkill)id==ClassSkillOption(game.player.playerClass,0)||
+                 (ClassSkill)id==ClassSkillOption(game.player.playerClass,1)))) {
+                game.player.skills[slot]=0;
+                game.player.skillRanks[slot]=0;
+            }
+        }
+        if(game.player.skills[0]==game.player.skills[1]) {
+            game.player.skills[1]=0;
+            game.player.skillRanks[1]=0;
+        }
+        if(game.player.skills[game.player.activeSkillSlot]==0&&game.player.skills[1-game.player.activeSkillSlot]!=0)
+            game.player.activeSkillSlot=1-game.player.activeSkillSlot;
         game.player.escapeSkill=game.player.level>=3;
         game.player.combatSkill=game.player.level>=5;
     }
@@ -172,6 +216,8 @@ KEEP void StartGame() {
     SaveExploration();
     SyncMapControls();
     SyncProgressionUI();
+    SyncSkillUI();
+    SyncSkillTargetUI();
     ResetCamera(game.player,camera);
     savedCity=game.city; initGameAudio(); hideIntro(); Save();
     if(game.finished) showEnding();
@@ -189,9 +235,9 @@ KEEP float GetBeaconHoldProgress() { return game.beaconHoldTime; }
 KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,game.quest); }
 KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
 KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
-KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() && game.player.pendingStatChoices==0 ? 1 : 0; }
+KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() && game.player.pendingStatChoices==0 && game.player.pendingSkillChoices==0 ? 1 : 0; }
 KEEP void ToggleMap() {
-    if(!game.started||game.finished||isSettingsOpen()||game.player.pendingStatChoices>0) return;
+    if(!game.started||game.finished||isSettingsOpen()||game.player.pendingStatChoices>0||game.player.pendingSkillChoices>0) return;
     game.mapOpen=!game.mapOpen;
     if(game.mapOpen) game.mapFloor=game.currentFloor;
     SyncMapControls();
@@ -222,6 +268,42 @@ KEEP void ChooseStat(int stat) {
         SyncProgressionUI();
     }
 }
+KEEP int GetPendingSkillChoices() { return game.player.pendingSkillChoices; }
+KEEP int GetSkillOption(int option) { return (int)ClassSkillOption(game.player.playerClass,option); }
+KEEP int GetSkillSlot(int slot) { return slot>=0&&slot<2?game.player.skills[slot]:0; }
+KEEP int GetSkillSlotRank(int slot) { return slot>=0&&slot<2?game.player.skillRanks[slot]:0; }
+KEEP int GetActiveSkillSlot() { return game.player.activeSkillSlot; }
+KEEP void ChooseSkill(int skillId,int upgrade) {
+    if(!game.started||isSettingsOpen()) return;
+    if(ChooseSkillOption(game,skillId,upgrade!=0)) {
+        Save(); SyncSkillUI();
+    }
+}
+KEEP void EquipSkillSlot(int slot) {
+    if(EquipSkill(game,slot)) { Save(); SyncSkillUI(); }
+}
+KEEP void UseClassSkill() {
+    if(!game.started||game.mapOpen||isSettingsOpen()||game.player.pendingStatChoices>0||
+       game.player.pendingSkillChoices>0) return;
+    if(ActivateClassSkill(game)) SyncSkillTargetUI();
+}
+KEEP int SetClassSkillTargetScreen(float x,float y) {
+    if(!game.skillTargeting) return 0;
+    Ray ray=GetScreenToWorldRay({x,y},camera);
+    if(std::fabs(ray.direction.y)<0.0001f) return 0;
+    const float distance=(game.player.position.y-ray.position.y)/ray.direction.y;
+    if(distance<0.0f) return 0;
+    Vector3 target=Vector3Add(ray.position,Vector3Scale(ray.direction,distance));
+    const int valid=SetClassSkillTarget(game,target)?1:0;
+    SyncSkillTargetUI();
+    return valid;
+}
+KEEP void ConfirmSkillTarget() {
+    if(ConfirmClassSkillTarget(game)) { Save(); SyncSkillTargetUI(); }
+}
+KEEP void CancelSkillTarget() {
+    CancelClassSkillTarget(game); SyncSkillTargetUI();
+}
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
 }
@@ -238,6 +320,10 @@ KEEP void ResetProgress() {
     game.player.level=1; game.player.xp=0;
     game.player.vitality=game.player.endurance=game.player.focus=0;
     game.player.power=game.player.precision=game.player.pendingStatChoices=0;
+    game.player.skills={0,0}; game.player.skillRanks={0,0}; game.player.activeSkillSlot=0;
+    game.player.pendingSkillChoices=0; game.player.skillMilestoneMask=0;
+    game.player.techniqueCooldown=game.player.aegisTime=0;
+    game.skillEffects.clear(); game.skillTargeting=false;
     game.player.health=PlayerMaxHealth(game.player);
     game.player.stamina=PlayerMaxStamina(game.player);
     game.player.mana=PlayerMaxMana(game.player);
@@ -257,6 +343,17 @@ static void SyncProgressionUI() {
     const Player& p=game.player;
     setProgressionChoiceState(p.pendingStatChoices,p.vitality,p.endurance,p.focus,p.power,p.precision);
 }
+static void SyncSkillUI() {
+    const Player& p=game.player;
+    setSkillChoiceState(p.pendingSkillChoices,p.pendingStatChoices,(int)p.playerClass,
+        (int)ClassSkillOption(p.playerClass,0),(int)ClassSkillOption(p.playerClass,1),
+        p.skills[0],p.skillRanks[0],p.skills[1],p.skillRanks[1]);
+    setSkillLoadoutState(p.skills[0],p.skillRanks[0],p.skills[1],p.skillRanks[1],p.activeSkillSlot,
+        (int)p.playerClass);
+}
+static void SyncSkillTargetUI() {
+    setSkillTargetState(game.skillTargeting?1:0,IsClassSkillTargetValid(game)?1:0);
+}
 
 static Controls ReadControls() {
     Controls c{};
@@ -272,6 +369,9 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
+    bool techniqueDown=IsKeyDown(KEY_Q)||(touchButtons&128);
+    c.technique=techniqueDown&&!techniqueWasDown;
+    techniqueWasDown=techniqueDown;
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         Vector2 d=GetMouseDelta(); c.lookX+=d.x*0.7f; c.lookY+=d.y*0.7f;
@@ -303,7 +403,7 @@ static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
-        if(!game.mapOpen && game.player.pendingStatChoices==0) {
+        if(!game.mapOpen && game.player.pendingStatChoices==0 && game.player.pendingSkillChoices==0) {
         game.player.blocking=controls.block;
         const int previousLevel=game.player.level;
         float previousY=game.player.position.y;
@@ -313,8 +413,16 @@ static void Frame() {
         unsigned int previousWindups=BossWindupMask();
         int previousTaggerWindups=TaggerWindupCount();
         if(controls.attack) playGameAudio(game.player.weapon==Weapon::Bow?1:0);
+        if(game.skillTargeting) {
+            controls.move={0,0}; controls.jump=false; controls.slide=false; controls.sprint=false;
+            controls.attack=false; controls.block=false; controls.aim=false; controls.skill=false;
+            controls.technique=false; controls.lookX=controls.lookY=0;
+        } else if(controls.technique) {
+            ActivateClassSkill(game);
+        }
         UpdateMovement(game,controls,camera,dt);
         RegenerateMana(game.player,dt);
+        UpdateClassSkills(game,dt);
         if(UpdateExploration(game,game.player.position)) SaveExploration();
         if(controls.jump&&game.player.position.y>previousY+0.01f) playGameAudio(3);
         if(!wasDashing&&game.player.dashTime>0) playGameAudio(2);
@@ -362,6 +470,8 @@ static void Frame() {
         }
     }
     SyncProgressionUI();
+    SyncSkillUI();
+    SyncSkillTargetUI();
     BeginDrawing();
     DrawGame(game,camera);
     if(!game.started) {
