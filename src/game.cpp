@@ -237,9 +237,13 @@ void BuildCity(GameState& g) {
         gateFloor.position.y+gateFloor.size.y*0.5f,
         gateFloor.position.z
     };
+    const float arenaHalfWidth=gateFloor.size.x*0.5f;
+    const float arenaHalfDepth=gateFloor.size.z*0.5f;
+    constexpr float arenaWallThickness=0.6f;
+    constexpr float arenaWallHeight=2.8f;
     g.bossArena={
         gateFloorTop,
-        {gateFloor.size.x*0.5f,gateFloor.size.z*0.5f},
+        {arenaHalfWidth-arenaWallThickness,arenaHalfDepth-arenaWallThickness},
         gateFloorTop.y,
         false
     };
@@ -302,6 +306,21 @@ void BuildCity(GameState& g) {
                 {pillarSize,deckBottom,pillarSize},supportColor});
         }
     }
+    // Three stone walls enclose the raised boss platform while keeping its south
+    // entrance open for the final rooftop route. Their inner faces match the
+    // boss collision bounds so the model cannot clip through the visible arena.
+    const float arenaWallOffsetX=arenaHalfWidth-arenaWallThickness*0.5f;
+    const float arenaWallOffsetZ=arenaHalfDepth-arenaWallThickness*0.5f;
+    const float arenaWallY=gateFloorTop.y+arenaWallHeight*0.5f;
+    g.platforms.push_back({
+        {gate.x-arenaWallOffsetX,arenaWallY,gate.z},
+        {arenaWallThickness,arenaWallHeight,arenaHalfDepth*2.0f-arenaWallThickness},gateStone});
+    g.platforms.push_back({
+        {gate.x+arenaWallOffsetX,arenaWallY,gate.z},
+        {arenaWallThickness,arenaWallHeight,arenaHalfDepth*2.0f-arenaWallThickness},gateStone});
+    g.platforms.push_back({
+        {gate.x,arenaWallY,gate.z+arenaWallOffsetZ},
+        {arenaHalfWidth*2.0f,arenaWallHeight,arenaWallThickness},gateStone});
     for(int i=0;i<2+g.city*2;i++) {
         float a=6.28318f*i/(2+g.city*2);
         Vector3 p={std::cos(a)*(12.0f+g.city),0.0f,std::sin(a)*(12.0f+g.city)+3.0f};
