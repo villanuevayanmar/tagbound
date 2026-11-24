@@ -525,3 +525,13 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 2. Continue movement foundation regressions for jump/landing, grounding and rooftop transitions, then review ledge/vault/climb collision and enemy navigation.
 3. After the foundation is stable, implement the master specification's remaining systems incrementally: separate stamina/mana, stat choice on every level, skill-choice/upgrade milestones, vertical city/floor progression, enemy archetypes, fog-of-war discovery, guaranteed boss keys and performance-banded equipment rewards. Keep save migration, deterministic tests and mobile UI coverage in scope.
 
+
+
+## Latest diagnostic update — 2026-11-24: repeated canvas-frame sampling
+
+- Added a browser-smoke diagnostic in `.github/workflows/ci.yml` on source tree head `e5da108ec84281c2e08eb1bff3dca4244b7055d5`. It samples the WebGL canvas 12 times during desktop gameplay and 12 times during mobile-landscape gameplay.
+- Each captured canvas frame is decoded with the existing `pngjs` dependency. The check requires at least 97% of pixels to have one RGB channel above 12; this intentionally permits the normal dark palette but fails a near-total black canvas. A failure includes the sample index and visible-pixel ratio.
+- This is a repeatable browser diagnostic for fully/overwhelmingly black frames, not a proven root-cause fix and not evidence about physical Android GPUs. Sampling can still miss very brief events between captures.
+- Exact workflow run #335 (`45330722930`) was triggered for the exact workflow/source tree head `e5da108ec84281c2e08eb1bff3dca4244b7055d5`. At the latest check it remained in progress at the build job's `Install build tools` step; no result is claimed. The last fully verified code/test head remains `9a83d69b2862b1329467952e4cafa020e25d75fd`, run #334 (`45329538797`) passed.
+- PR #16 is restored to base `fix/boss-arena-floor-bounds`, still open/draft; PR #14 → PR #15 → PR #16 remains the intended stack. No merge, deployment or `dist/` change was made.
+
