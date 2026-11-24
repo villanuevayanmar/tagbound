@@ -134,6 +134,7 @@ bool ChooseSkillOption(GameState& game,int skillId,bool upgrade);
 bool EquipSkill(GameState& game,int slot);
 bool ActivateClassSkill(GameState& game);
 bool SetClassSkillTarget(GameState& game,Vector3 target);
+bool IsClassSkillTargetValid(const GameState& game);
 bool ConfirmClassSkillTarget(GameState& game);
 void CancelClassSkillTarget(GameState& game);
 void UpdateClassSkills(GameState& game,float dt);
