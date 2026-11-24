@@ -130,6 +130,8 @@ float PlayerRangedDamageMultiplier(const Player& player);
 bool ChooseStatUpgrade(GameState& game,StatUpgrade stat);
 ClassSkill ClassSkillOption(PlayerClass playerClass,int option);
 const char* ClassSkillName(ClassSkill skill);
+float ClassSkillManaCost(ClassSkill skill);
+float ClassSkillBaseCooldown(ClassSkill skill);
 bool ChooseSkillOption(GameState& game,int skillId,bool upgrade);
 bool EquipSkill(GameState& game,int slot);
 bool ActivateClassSkill(GameState& game);
