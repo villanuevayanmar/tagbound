@@ -20,7 +20,7 @@ int main() {
     GameState game;
     BuildCity(game);
     assert(game.city == 0);
-    assert(game.platforms.size() == 34);
+    assert(game.platforms.size() == 42);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
     assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
@@ -253,7 +253,7 @@ int main() {
     for (int city = 0; city < 5; ++city) {
         game.city = city;
         BuildCity(game);
-        assert(game.platforms.size() == 34);
+        assert(game.platforms.size() == 42);
         assert(game.enemies.size() == static_cast<size_t>(2 + city * 2));
         for(int quest=0;quest<4;quest++) {
             Vector3 target=QuestTarget(city,quest);
@@ -265,6 +265,56 @@ int main() {
         assert(game.quest == 0);
         assert(!game.bossUnlocked);
     }
+    // Every city has collision-bearing perimeter walls and a boss-route-aligned gate.
+    for(int city=0;city<5;city++) {
+        GameState enclosed;
+        enclosed.city=city;
+        BuildCity(enclosed);
+        assert(enclosed.platforms.size()==42);
+        const float gateX=QuestTarget(city,3).x;
+        const Platform& west=enclosed.platforms[34];
+        const Platform& east=enclosed.platforms[35];
+        const Platform& south=enclosed.platforms[36];
+        const Platform& northLeft=enclosed.platforms[37];
+        const Platform& northRight=enclosed.platforms[38];
+        const Platform& leftTower=enclosed.platforms[39];
+        const Platform& rightTower=enclosed.platforms[40];
+        const Platform& lintel=enclosed.platforms[41];
+        assert(near(west.position.x,-44.0f)&&near(west.size.x,2.0f));
+        assert(near(east.position.x,44.0f)&&near(east.size.x,2.0f));
+        assert(near(south.position.z,-31.0f)&&near(south.size.z,2.0f));
+        assert(near(west.size.y,12.0f)&&near(east.size.y,12.0f)&&near(south.size.y,12.0f));
+        assert(near(northLeft.position.x+northLeft.size.x*0.5f,gateX-5.0f));
+        assert(near(northRight.position.x-northRight.size.x*0.5f,gateX+5.0f));
+        assert(near(leftTower.position.x+leftTower.size.x*0.5f,gateX-5.0f));
+        assert(near(rightTower.position.x-rightTower.size.x*0.5f,gateX+5.0f));
+        assert(lintel.position.y-lintel.size.y*0.5f>2.0f);
+
+        auto moveFrom=[&](Vector3 start,Vector3 facing,Vector2 input) {
+            GameState movement;
+            movement.city=city;
+            BuildCity(movement);
+            movement.player.position=start;
+            movement.player.facing=facing;
+            Camera3D movementCamera{};
+            ResetCamera(movement.player,movementCamera);
+            Controls controls{};
+            controls.move=input;
+            UpdateMovement(movement,controls,movementCamera,0.3f);
+            return movement.player.position;
+        };
+        const Vector3 westStop=moveFrom({-42.0f,0.3f,4.0f},{-1,0,0},{0,1});
+        const Vector3 eastStop=moveFrom({42.0f,0.3f,4.0f},{1,0,0},{0,1});
+        const Vector3 southStop=moveFrom({0,0.3f,-29.0f},{0,0,-1},{0,1});
+        const Vector3 northStop=moveFrom({gateX+8.0f,0.3f,36.0f},{0,0,1},{0,1});
+        const Vector3 gatePassage=moveFrom({gateX,0.3f,36.0f},{0,0,1},{0,1});
+        assert(westStop.x>-43.0f&&westStop.x<-42.0f);
+        assert(eastStop.x>42.0f&&eastStop.x<43.0f);
+        assert(southStop.z>-30.0f&&southStop.z<-29.0f);
+        assert(northStop.z>36.0f&&northStop.z<37.0f);
+        assert(gatePassage.z>37.0f);
+    }
+
     game.city = 0;
     BuildCity(game);
 
