@@ -445,6 +445,14 @@ int main() {
     assert(ClassSkillOption(PlayerClass::Skirmisher,1)==ClassSkill::PiercingShot);
     assert(ClassSkillOption(PlayerClass::Warden,0)==ClassSkill::ShieldBash);
     assert(ClassSkillOption(PlayerClass::Warden,1)==ClassSkill::AegisGuard);
+    assert(near(ClassSkillManaCost(ClassSkill::CleavingArc),24.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::BreakerStrike),30.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::ArrowRain),38.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::PiercingShot),28.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::ShieldBash),22.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::AegisGuard),30.0f));
+    assert(near(ClassSkillBaseCooldown(ClassSkill::ArrowRain),8.0f));
+    assert(near(ClassSkillBaseCooldown(ClassSkill::AegisGuard),10.0f));
     GameState skillMilestones;
     BuildCity(skillMilestones);
     UpdateProgression(skillMilestones,300);
@@ -471,6 +479,10 @@ int main() {
     assert(skillMilestones.player.level==5);
     assert(skillMilestones.player.pendingSkillChoices==1);
     assert((skillMilestones.player.skillMilestoneMask&3)==3);
+    skillMilestones.player.skillRanks[0]=3;
+    skillMilestones.player.pendingSkillChoices=1;
+    assert(!ChooseSkillOption(skillMilestones,(int)ClassSkill::CleavingArc,true));
+    assert(skillMilestones.player.pendingSkillChoices==1);
 
     // Arrow Rain validates range/line-of-sight, then deals three separated area waves.
     GameState arrowRain;
@@ -516,6 +528,21 @@ int main() {
     CancelClassSkillTarget(invalidRain);
     assert(!invalidRain.skillTargeting);
     assert(near(invalidRain.player.mana,90.0f));
+
+    // A skill cannot activate without its full Mana cost or while cooling down.
+    GameState insufficientMana;
+    BuildCity(insufficientMana);
+    insufficientMana.player.playerClass=PlayerClass::Warden;
+    insufficientMana.player.skills[0]=(int)ClassSkill::AegisGuard;
+    insufficientMana.player.skillRanks[0]=1;
+    insufficientMana.player.mana=29.0f;
+    assert(!ActivateClassSkill(insufficientMana));
+    assert(near(insufficientMana.player.mana,29.0f));
+    assert(near(insufficientMana.player.techniqueCooldown,0.0f));
+    insufficientMana.player.mana=30.0f;
+    assert(ActivateClassSkill(insufficientMana));
+    assert(!ActivateClassSkill(insufficientMana));
+    assert(near(insufficientMana.player.mana,0.0f));
 
     // Aegis Guard consumes Mana and creates a real defensive window.
     GameState aegis;
