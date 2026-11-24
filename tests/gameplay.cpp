@@ -1653,9 +1653,20 @@ int main() {
     closedSpawn.platforms.push_back({{0,3.0f,0},{120,6.0f,120},GRAY});
     assert(!FindReinforcementSpawn(closedSpawn,{0,0.3f,0},spawn));
 
-    // Exploration reveals only nearby 5-unit cells and reports changes for persistence.
+    // Floor positions map to the five existing traversal heights; jumping does not reveal a floor.
+    assert(ExplorationFloorForPosition(0.3f)==0);
+    assert(ExplorationFloorForPosition(1.7f)==1);
+    assert(ExplorationFloorForPosition(2.45f)==2);
+    assert(ExplorationFloorForPosition(3.2f)==3);
+    assert(ExplorationFloorForPosition(3.95f)==4);
+    assert(std::string(ExplorationFloorName(0))=="GROUND");
+    assert(std::string(ExplorationFloorName(4))=="BOSS DECK");
+
+    // Discovery is independent per floor. Only grounded movement reveals the floor
+    // the player actually stands on, and floor navigation skips unknown floors.
     GameState exploration;
     BuildCity(exploration);
+    assert(exploration.explored.size()==ExplorationMapTotalCells);
     assert(ExplorationCellForPosition({-50,0.3f,-36})==0);
     assert(ExplorationCellForPosition({50,0.3f,44})==ExplorationMapCells-1);
     assert(std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1)==0);
@@ -1663,15 +1674,40 @@ int main() {
     assert(UpdateExploration(exploration,firstExplore));
     const int firstCell=ExplorationCellForPosition(firstExplore);
     assert(exploration.explored[firstCell]==1);
-    const int firstCount=(int)std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1);
-    assert(firstCount>1&&firstCount<ExplorationMapCells);
-    assert(exploration.explored[0]==0);
-    assert(!UpdateExploration(exploration,firstExplore));
-    const Vector3 secondExplore{20,0.3f,20};
-    assert(UpdateExploration(exploration,secondExplore));
-    assert(exploration.explored[ExplorationCellForPosition(secondExplore)]==1);
-    assert(std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1)>firstCount);
-    assert(exploration.explored[0]==0);
+    const int firstFloorCount=(int)std::count(exploration.explored.begin(),
+        exploration.explored.begin()+ExplorationMapCells,(unsigned char)1);
+    assert(firstFloorCount>1&&firstFloorCount<ExplorationMapCells);
+    assert(std::count(exploration.explored.begin()+ExplorationMapCells,
+        exploration.explored.end(),(unsigned char)1)==0);
+    assert(!CanChangeExplorationFloor(exploration,-1));
+    assert(!CanChangeExplorationFloor(exploration,1));
+
+    // Airborne movement cannot reveal an upper floor before a landing.
+    exploration.player.grounded=false;
+    assert(!UpdateExploration(exploration,{0,1.7f,0}));
+    assert(exploration.currentFloor==0);
+    assert(exploration.explored[ExplorationMapCells]==0);
+    exploration.player.grounded=true;
+    assert(UpdateExploration(exploration,{0,1.7f,0}));
+    assert(exploration.currentFloor==1&&exploration.mapFloor==1);
+    const int upperCell=ExplorationCellForPosition({0,1.7f,0});
+    const int upperCount=(int)std::count(exploration.explored.begin()+ExplorationMapCells,
+        exploration.explored.begin()+2*ExplorationMapCells,(unsigned char)1);
+    assert(upperCount>1&&upperCount<ExplorationMapCells);
+    assert(exploration.explored[ExplorationMapCells+upperCell]==1);
+    assert(CanChangeExplorationFloor(exploration,-1));
+    assert(!CanChangeExplorationFloor(exploration,1));
+
+    assert(ChangeExplorationFloor(exploration,-1));
+    assert(exploration.mapFloor==0);
+    assert(std::count(exploration.explored.begin()+ExplorationMapCells,
+        exploration.explored.begin()+2*ExplorationMapCells,(unsigned char)1)==upperCount);
+    assert(ChangeExplorationFloor(exploration,1));
+    assert(exploration.mapFloor==1);
+    assert(!ChangeExplorationFloor(exploration,1));
+    assert(!UpdateExploration(exploration,{20,0.3f,20}) || exploration.currentFloor==1);
+    assert(exploration.explored[ExplorationMapCells+
+        ExplorationCellForPosition({20,1.7f,20})]!=0);
 
     std::cout << "PASS: city setup, mixed beacon objectives, hold resets, XP/skills, movement, combat, and boss progression.\\n";
     return 0;
