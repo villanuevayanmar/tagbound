@@ -224,7 +224,59 @@ void BuildCity(GameState& g) {
         float a=i*0.2244f+g.city*0.08f, r=38.0f+(i%3)*1.0f;
         float h=4.0f+(i*3%7)*1.45f+g.city*0.55f;
         Vector3 p={std::cos(a)*r,h*0.5f,std::sin(a)*r-3.0f};
+        // Keep the approach behind the gate clear; move only obstructing skyline
+        // pieces beyond the playable perimeter instead of dropping city geometry.
+        if(p.z>30.0f&&std::abs(p.x-gate.x)<7.5f) p.z=46.0f;
         g.platforms.push_back({p,{4.5f,h,4.5f},Color{(unsigned char)std::min(235,(int)tint[g.city].r+(i%3)*8),(unsigned char)std::min(235,(int)tint[g.city].g+(i%4)*6),(unsigned char)std::min(235,(int)tint[g.city].b+(i%2)*9),255}});
+    }
+    // Fortify each city with a continuous stone perimeter. The north gate opening
+    // is aligned with this city's boss platform so the route and architecture agree.
+    const Color wallStone={78,74,67,255};
+    const Color gateStone={128,105,73,255};
+    const float wallX=44.0f, wallMinZ=-31.0f, wallMaxZ=38.0f;
+    const float wallHeight=12.0f, wallThickness=2.0f;
+    const float wallY=wallHeight*0.5f;
+    const float gateHalfWidth=5.0f;
+    const float gateLeft=gate.x-gateHalfWidth;
+    const float gateRight=gate.x+gateHalfWidth;
+    g.platforms.push_back({{-wallX,wallY,(wallMinZ+wallMaxZ)*0.5f},
+                           {wallThickness,wallHeight,wallMaxZ-wallMinZ},wallStone});
+    g.platforms.push_back({{wallX,wallY,(wallMinZ+wallMaxZ)*0.5f},
+                           {wallThickness,wallHeight,wallMaxZ-wallMinZ},wallStone});
+    g.platforms.push_back({{0,wallY,wallMinZ},{wallX*2,wallHeight,wallThickness},wallStone});
+    g.platforms.push_back({{(-wallX+gateLeft)*0.5f,wallY,wallMaxZ},
+                           {gateLeft+wallX,wallHeight,wallThickness},wallStone});
+    g.platforms.push_back({{(gateRight+wallX)*0.5f,wallY,wallMaxZ},
+                           {wallX-gateRight,wallHeight,wallThickness},wallStone});
+    // Gate towers and lintel make the opening legible while leaving ample player clearance.
+    const float gatePillarOffset=gateHalfWidth+0.6f;
+    g.platforms.push_back({{gate.x-gatePillarOffset,wallY,wallMaxZ},
+                           {1.2f,wallHeight,3.0f},gateStone});
+    g.platforms.push_back({{gate.x+gatePillarOffset,wallY,wallMaxZ},
+                           {1.2f,wallHeight,3.0f},gateStone});
+    g.platforms.push_back({{gate.x,wallHeight+0.8f,wallMaxZ},
+                           {gateHalfWidth*2+2.0f,1.6f,3.0f},gateStone});
+    // Support every elevated route deck with four grounded stone piers.
+    // The open center keeps the jump/landing approach clear while the piers
+    // physically connect each deck to the city floor.
+    const float supportSidesX[4]={-1.0f,-1.0f,1.0f,1.0f};
+    const float supportSidesZ[4]={-1.0f,1.0f,-1.0f,1.0f};
+    for(int route=0;route<4;route++) {
+        const int deckIndex=route<3?2+route:5;
+        const Platform deck=g.platforms[deckIndex];
+        const float pillarSize=route==3?0.85f:0.55f;
+        const float offset=deck.size.x*0.5f-pillarSize*0.5f-0.25f;
+        const float deckBottom=deck.position.y-deck.size.y*0.5f;
+        const Color supportColor=route==3?Color{91,78,59,255}:Color{
+            (unsigned char)(tint[g.city].r*0.68f),
+            (unsigned char)(tint[g.city].g*0.68f),
+            (unsigned char)(tint[g.city].b*0.68f),255};
+        for(int corner=0;corner<4;corner++) {
+            g.platforms.push_back({
+                {deck.position.x+supportSidesX[corner]*offset,deckBottom*0.5f,
+                 deck.position.z+supportSidesZ[corner]*offset},
+                {pillarSize,deckBottom,pillarSize},supportColor});
+        }
     }
     for(int i=0;i<2+g.city*2;i++) {
         float a=6.28318f*i/(2+g.city*2);
@@ -232,7 +284,7 @@ void BuildCity(GameState& g) {
         float toughness=42.0f+g.city*14.0f;
         g.enemies.push_back({p,toughness,toughness,2.4f+g.city*0.32f,0,false,true});
     }
-    g.player.position={0,0.3f,0}; g.player.velocity={0,0,0};
+    g.player.position={0,0.3f,0}; g.player.velocity={0,0,0}; g.player.moveVelocity={0,0};
     g.player.grounded=true; g.player.wallRunning=false; g.player.dashTime=0;
     g.player.vaulting=false; g.player.vaultTime=0; g.player.ledgeGrabbing=false; g.player.climbing=false;
     g.player.landingTime=0; g.player.landingRoll=false; g.player.attackTime=0;

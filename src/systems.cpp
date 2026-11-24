@@ -3,7 +3,24 @@
 #include <algorithm>
 #include <cmath>
 
-static float cameraYaw=0.0f, cameraPitch=-0.18f;
+static float cameraYaw=0.0f, cameraPitch=-0.18f, cameraManualLookTime=0.0f;
+
+static void SetCameraPose(Vector3 player,Camera3D& camera) {
+    Vector3 forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
+    Vector3 right={forward.z,0,-forward.x};
+    camera.target={player.x+forward.x*4.0f,player.y+1.2f+cameraPitch*5.0f,player.z+forward.z*4.0f};
+    camera.position={player.x-forward.x*8.0f+right.x*1.6f,player.y+4.0f,player.z-forward.z*8.0f+right.z*1.6f};
+}
+
+void ResetCamera(const Player& p,Camera3D& camera) {
+    Vector3 facing=p.facing; facing.y=0;
+    if(Vector3Length(facing)<0.001f) facing={0,0,1};
+    else facing=Vector3Normalize(facing);
+    cameraYaw=std::atan2(facing.x,facing.z);
+    cameraPitch=-0.18f;
+    cameraManualLookTime=0.0f;
+    SetCameraPose(p.position,camera);
+}
 
 static bool Inside(Vector3 p,const Platform& b) {
     return std::abs(p.x-b.position.x)<=b.size.x*0.5f &&
@@ -196,18 +213,29 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     p.vaultTime=std::max(0.0f,p.vaultTime-dt);
     p.vaulting=p.vaultTime>0;
 
+    const bool manualLook=std::abs(c.lookX)>0.001f||std::abs(c.lookY)>0.001f;
+    if(manualLook) cameraManualLookTime=1.2f;
+    else cameraManualLookTime=std::max(0.0f,cameraManualLookTime-dt);
     cameraYaw-=c.lookX*0.008f;
     cameraPitch=std::clamp(cameraPitch-c.lookY*0.008f,-0.48f,0.42f);
     Vector3 forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
     Vector3 right={forward.z,0,-forward.x};
-    auto updateCamera=[&]() {
-        camera.target={p.position.x+forward.x*4.0f,p.position.y+1.2f+cameraPitch*5.0f,p.position.z+forward.z*4.0f};
-        camera.position={p.position.x-forward.x*8.0f+right.x*1.6f,p.position.y+4.0f,p.position.z-forward.z*8.0f+right.z*1.6f};
-    };
     Vector3 direction=Vector3Add(Vector3Scale(right,c.move.x),Vector3Scale(forward,c.move.y));
     if(Vector3Length(direction)>1.0f) direction=Vector3Normalize(direction);
-    if(Vector3Length(direction)>0.05f) p.facing=Vector3Normalize(direction);
+    const bool moving=Vector3Length(direction)>0.05f;
+    if(moving) p.facing=Vector3Normalize(direction);
     else if(c.aim) p.facing=forward;
+    else if(cameraManualLookTime<=0.0f&&!p.ledgeGrabbing&&!p.climbing) {
+        Vector3 facing=p.facing; facing.y=0;
+        if(Vector3Length(facing)>0.001f) {
+            const float targetYaw=std::atan2(facing.x,facing.z);
+            const float yawDelta=std::atan2(std::sin(targetYaw-cameraYaw),std::cos(targetYaw-cameraYaw));
+            cameraYaw+=yawDelta*(1.0f-std::exp(-4.0f*dt));
+            forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
+            right={forward.z,0,-forward.x};
+        }
+    }
+    auto updateCamera=[&]() { SetCameraPose(p.position,camera); };
 
     if(p.ledgeGrabbing) {
         p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
@@ -226,6 +254,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
         } else {
             p.position=p.ledgeHangPosition;
             p.velocity={0,0,0};
+            p.moveVelocity={0,0};
             p.grounded=false;
             p.wallRunning=false;
             p.vaulting=false;
@@ -243,6 +272,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             Vector3Scale(Vector3Subtract(p.ledgeTargetPosition,p.ledgeHangPosition),eased));
         p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
         p.velocity={0,0,0};
+        p.moveVelocity={0,0};
         p.grounded=false;
         p.vaulting=true;
         if(t>=1.0f) {
@@ -270,6 +300,26 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     }
     if(p.dashTime>0) speed*=2.7f;
 
+    // Keep player-driven locomotion separate from physics impulses such as vaults
+    // and knockback. Ground movement accelerates and brakes responsively; air
+    // steering is weaker and preserves more horizontal momentum.
+    const Vector2 targetMoveVelocity={direction.x*speed,direction.z*speed};
+    const float targetSpeed=std::sqrt(targetMoveVelocity.x*targetMoveVelocity.x+
+                                      targetMoveVelocity.y*targetMoveVelocity.y);
+    const float currentDeltaX=targetMoveVelocity.x-p.moveVelocity.x;
+    const float currentDeltaZ=targetMoveVelocity.y-p.moveVelocity.y;
+    const float deltaLength=std::sqrt(currentDeltaX*currentDeltaX+currentDeltaZ*currentDeltaZ);
+    const float rate=targetSpeed>0.05f
+        ? (p.dashTime>0.0f?100.0f:(p.grounded?34.0f:16.0f))
+        : (p.grounded?28.0f:3.5f);
+    const float maxChange=rate*dt;
+    if(deltaLength<=maxChange) p.moveVelocity=targetMoveVelocity;
+    else if(deltaLength>0.0001f) {
+        const float scale=maxChange/deltaLength;
+        p.moveVelocity.x+=currentDeltaX*scale;
+        p.moveVelocity.y+=currentDeltaZ*scale;
+    }
+
     auto moveAxis=[&](float amount,bool xAxis) {
         if(std::abs(amount)<0.000001f) return false;
         int steps=std::max(1,(int)std::ceil(std::abs(amount)/0.12f));
@@ -280,15 +330,15 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             bool blocked=false;
             for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) { blocked=true; break; }
             if(blocked) {
-                if(xAxis) { p.position.x-=step; p.velocity.x=0; }
-                else { p.position.z-=step; p.velocity.z=0; }
+                if(xAxis) { p.position.x-=step; p.moveVelocity.x=0; p.velocity.x=0; }
+                else { p.position.z-=step; p.moveVelocity.y=0; p.velocity.z=0; }
                 return true;
             }
         }
         return false;
     };
-    bool wallContact=moveAxis((direction.x*speed+p.velocity.x)*dt,true);
-    wallContact=moveAxis((direction.z*speed+p.velocity.z)*dt,false)||wallContact;
+    bool wallContact=moveAxis((p.moveVelocity.x+p.velocity.x)*dt,true);
+    wallContact=moveAxis((p.moveVelocity.y+p.velocity.z)*dt,false)||wallContact;
     p.velocity.x*=std::max(0.0f,1.0f-9.0f*dt);
     p.velocity.z*=std::max(0.0f,1.0f-9.0f*dt);
 
@@ -300,6 +350,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             p.ledgeTargetPosition=target;
             p.position=hang;
             p.velocity={0,0,0};
+            p.moveVelocity={0,0};
             p.grounded=false;
             p.ledgeGrabbing=true;
             p.vaulting=false;
@@ -576,6 +627,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         p.stamina=ClassMaxStamina(p.playerClass);
         p.position=checkpoint;
         p.velocity={0,0,0};
+        p.moveVelocity={0,0};
         p.grounded=true;
         p.wallRunning=false;
         p.dashTime=0;

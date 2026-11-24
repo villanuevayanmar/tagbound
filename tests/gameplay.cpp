@@ -9,11 +9,18 @@ static bool near(float a, float b, float epsilon=0.02f) {
     return std::fabs(a-b) <= epsilon;
 }
 
+static float cameraTargetYaw(const Camera3D& camera,Vector3 player) {
+    return std::atan2(camera.target.x-player.x,camera.target.z-player.z);
+}
+static float angleDistance(float a,float b) {
+    return std::atan2(std::sin(a-b),std::cos(a-b));
+}
+
 int main() {
     GameState game;
     BuildCity(game);
     assert(game.city == 0);
-    assert(game.platforms.size() == 34);
+    assert(game.platforms.size() == 58);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
     assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
@@ -246,7 +253,7 @@ int main() {
     for (int city = 0; city < 5; ++city) {
         game.city = city;
         BuildCity(game);
-        assert(game.platforms.size() == 34);
+        assert(game.platforms.size() == 58);
         assert(game.enemies.size() == static_cast<size_t>(2 + city * 2));
         for(int quest=0;quest<4;quest++) {
             Vector3 target=QuestTarget(city,quest);
@@ -258,6 +265,81 @@ int main() {
         assert(game.quest == 0);
         assert(!game.bossUnlocked);
     }
+    // Every city has collision-bearing perimeter walls and a boss-route-aligned gate.
+    for(int city=0;city<5;city++) {
+        GameState enclosed;
+        enclosed.city=city;
+        BuildCity(enclosed);
+        assert(enclosed.platforms.size()==58);
+        const float gateX=QuestTarget(city,3).x;
+        const Platform& west=enclosed.platforms[34];
+        const Platform& east=enclosed.platforms[35];
+        const Platform& south=enclosed.platforms[36];
+        const Platform& northLeft=enclosed.platforms[37];
+        const Platform& northRight=enclosed.platforms[38];
+        const Platform& leftTower=enclosed.platforms[39];
+        const Platform& rightTower=enclosed.platforms[40];
+        const Platform& lintel=enclosed.platforms[41];
+        assert(near(west.position.x,-44.0f)&&near(west.size.x,2.0f));
+        assert(near(east.position.x,44.0f)&&near(east.size.x,2.0f));
+        assert(near(south.position.z,-31.0f)&&near(south.size.z,2.0f));
+        assert(near(west.size.y,12.0f)&&near(east.size.y,12.0f)&&near(south.size.y,12.0f));
+        assert(near(northLeft.position.x+northLeft.size.x*0.5f,gateX-5.0f));
+        assert(near(northRight.position.x-northRight.size.x*0.5f,gateX+5.0f));
+        assert(near(leftTower.position.x+leftTower.size.x*0.5f,gateX-5.0f));
+        assert(near(rightTower.position.x-rightTower.size.x*0.5f,gateX+5.0f));
+        assert(lintel.position.y-lintel.size.y*0.5f>2.0f);
+
+        auto moveFrom=[&](Vector3 start,Vector3 facing,Vector2 input) {
+            GameState movement;
+            movement.city=city;
+            BuildCity(movement);
+            movement.player.position=start;
+            movement.player.facing=facing;
+            Camera3D movementCamera{};
+            ResetCamera(movement.player,movementCamera);
+            Controls controls{};
+            controls.move=input;
+            UpdateMovement(movement,controls,movementCamera,0.3f);
+            return movement.player.position;
+        };
+        const Vector3 westStop=moveFrom({-42.0f,0.3f,4.0f},{-1,0,0},{0,1});
+        const Vector3 eastStop=moveFrom({42.0f,0.3f,4.0f},{1,0,0},{0,1});
+        const Vector3 southStop=moveFrom({0,0.3f,-29.0f},{0,0,-1},{0,1});
+        const float northWallTestX=gateX>=0.0f?-34.0f:34.0f;
+        const Vector3 northStop=moveFrom({northWallTestX,0.3f,36.0f},{0,0,1},{0,1});
+        const Vector3 gatePassage=moveFrom({gateX,0.3f,36.0f},{0,0,1},{0,1});
+        assert(westStop.x>-43.0f&&westStop.x<-42.0f);
+        assert(eastStop.x>42.0f&&eastStop.x<43.0f);
+        assert(southStop.z>-30.0f&&southStop.z<-29.0f);
+        assert(northStop.z>36.0f&&northStop.z<37.0f);
+        assert(gatePassage.z>37.0f);
+
+        // Each elevated objective deck and the boss deck is physically supported
+        // by four piers that meet the ground and the platform underside.
+        const float supportSideX[4]={-1.0f,-1.0f,1.0f,1.0f};
+        const float supportSideZ[4]={-1.0f,1.0f,-1.0f,1.0f};
+        for(int route=0;route<4;route++) {
+            const int deckIndex=route<3?2+route:5;
+            const Platform deck=enclosed.platforms[deckIndex];
+            const float pillarSize=route==3?0.85f:0.55f;
+            const float offset=deck.size.x*0.5f-pillarSize*0.5f-0.25f;
+            const float deckBottom=deck.position.y-deck.size.y*0.5f;
+            for(int corner=0;corner<4;corner++) {
+                const Platform& pier=enclosed.platforms[42+route*4+corner];
+                assert(near(pier.size.x,pillarSize)&&near(pier.size.z,pillarSize));
+                assert(near(pier.position.x,deck.position.x+supportSideX[corner]*offset));
+                assert(near(pier.position.z,deck.position.z+supportSideZ[corner]*offset));
+                assert(near(pier.position.y-pier.size.y*0.5f,0.0f));
+                assert(near(pier.position.y+pier.size.y*0.5f,deckBottom));
+                assert(pier.position.x-pier.size.x*0.5f>deck.position.x-deck.size.x*0.5f);
+                assert(pier.position.x+pier.size.x*0.5f<deck.position.x+deck.size.x*0.5f);
+                assert(pier.position.z-pier.size.z*0.5f>deck.position.z-deck.size.z*0.5f);
+                assert(pier.position.z+pier.size.z*0.5f<deck.position.z+deck.size.z*0.5f);
+            }
+        }
+    }
+
     game.city = 0;
     BuildCity(game);
 
@@ -294,22 +376,123 @@ int main() {
 
     BuildCity(game);
     Camera3D camera{};
+    ResetCamera(game.player,camera);
     Controls move{};
     move.move.y = 1.0f;
-    UpdateMovement(game, move, camera, 0.1f);
+    for(int frame=0;frame<12;frame++) UpdateMovement(game,move,camera,1.0f/60.0f);
     assert(game.player.position.z > 0.4f);
+
+    // Ground movement ramps to the existing top speed, then brakes when released.
+    GameState movementResponse;
+    movementResponse.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    movementResponse.player.position={0,0.3f,0};
+    Camera3D movementCamera{};
+    ResetCamera(movementResponse.player,movementCamera);
+    Controls forwardMove{};
+    forwardMove.move.y=1.0f;
+    for(int frame=0;frame<6;frame++)
+        UpdateMovement(movementResponse,forwardMove,movementCamera,1.0f/60.0f);
+    assert(movementResponse.player.moveVelocity.y>1.0f);
+    assert(movementResponse.player.moveVelocity.y<6.0f);
+    for(int frame=0;frame<30;frame++)
+        UpdateMovement(movementResponse,forwardMove,movementCamera,1.0f/60.0f);
+    assert(near(movementResponse.player.moveVelocity.y,6.0f,0.08f));
+    const float speedBeforeBrake=movementResponse.player.moveVelocity.y;
+    UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
+    assert(movementResponse.player.moveVelocity.y<speedBeforeBrake);
+    assert(movementResponse.player.moveVelocity.y>0.0f);
+    for(int frame=0;frame<30;frame++)
+        UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
+    assert(std::abs(movementResponse.player.moveVelocity.y)<0.05f);
+
+    // The existing dash burst still reaches its burst speed during its active window.
+    GameState dashResponse;
+    dashResponse.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    dashResponse.player.position={0,0.3f,0};
+    dashResponse.player.escapeSkill=1;
+    Camera3D dashCamera{};
+    ResetCamera(dashResponse.player,dashCamera);
+    Controls dashMove{};
+    dashMove.move.y=1.0f;
+    dashMove.skill=true;
+    for(int frame=0;frame<12;frame++)
+        UpdateMovement(dashResponse,dashMove,dashCamera,1.0f/60.0f);
+    assert(dashResponse.player.dashTime>0.0f);
+    assert(dashResponse.player.moveVelocity.y>15.5f);
+
+    // Air steering has less authority than grounded acceleration.
+    GameState airControl;
+    airControl.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    airControl.player.position={0,4.0f,0};
+    airControl.player.grounded=false;
+    Camera3D airCamera{};
+    ResetCamera(airControl.player,airCamera);
+    Controls airStrafe{};
+    airStrafe.move.x=1.0f;
+    UpdateMovement(airControl,airStrafe,airCamera,1.0f/60.0f);
+    assert(airControl.player.moveVelocity.x>0.0f);
+    assert(airControl.player.moveVelocity.x<0.4f);
+
+    // The camera-relative control scheme keeps its heading while moving, then follows
+    // the direction the character last faced after movement and any manual-look override end.
+    GameState cameraFollow;
+    cameraFollow.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    cameraFollow.player.position={0,0.3f,0};
+    cameraFollow.player.facing={0,0,1};
+    Camera3D followCamera{};
+    ResetCamera(cameraFollow.player,followCamera);
+    assert(near(cameraTargetYaw(followCamera,cameraFollow.player.position),0.0f));
+    assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
+    Controls strafe{};
+    strafe.move.x=1.0f;
+    UpdateMovement(cameraFollow,strafe,followCamera,0.1f);
+    assert(cameraFollow.player.facing.x>0.99f&&std::abs(cameraFollow.player.facing.z)<0.02f);
+    assert(near(cameraTargetYaw(followCamera,cameraFollow.player.position),0.0f));
+    for(int frame=0;frame<30;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),PI/2.0f))<0.05f);
+
+    // A manual swipe overrides automatic follow briefly while preserving camera-relative input.
+    cameraFollow.player.position={0,0.3f,0};
+    cameraFollow.player.facing={0,0,1};
+    ResetCamera(cameraFollow.player,followCamera);
+    Controls manualStrafe{};
+    manualStrafe.move.x=1.0f;
+    manualStrafe.lookX=60.0f;
+    UpdateMovement(cameraFollow,manualStrafe,followCamera,0.1f);
+    const float manuallySetYaw=cameraTargetYaw(followCamera,cameraFollow.player.position);
+    assert(near(manuallySetYaw,-0.48f));
+    for(int frame=0;frame<4;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),manuallySetYaw))<0.01f);
+    for(int frame=0;frame<30;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    const float strafeFacingYaw=std::atan2(cameraFollow.player.facing.x,cameraFollow.player.facing.z);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),strafeFacingYaw))<0.05f);
+
+    // Starting a new run resets yaw, pitch and manual-look override to the new spawn facing.
+    cameraFollow.player.facing={-1,0,0};
+    ResetCamera(cameraFollow.player,followCamera);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
+    assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
+    UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
+    Player defaultCameraPlayer;
+    ResetCamera(defaultCameraPlayer,camera);
 
     // Skirmisher keeps the fastest base movement speed without sprinting.
     GameState vanguardMovement;
-    vanguardMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    vanguardMovement.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     vanguardMovement.player.position={0,0.3f,0};
     vanguardMovement.player.playerClass=PlayerClass::Vanguard;
     GameState skirmisherMovement;
-    skirmisherMovement.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    skirmisherMovement.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
     skirmisherMovement.player.position={0,0.3f,0};
     skirmisherMovement.player.playerClass=PlayerClass::Skirmisher;
-    UpdateMovement(vanguardMovement,move,camera,0.1f);
-    UpdateMovement(skirmisherMovement,move,camera,0.1f);
+    Camera3D vanguardCamera{},skirmisherCamera{};
+    ResetCamera(vanguardMovement.player,vanguardCamera);
+    ResetCamera(skirmisherMovement.player,skirmisherCamera);
+    for(int frame=0;frame<20;frame++) {
+        UpdateMovement(vanguardMovement,move,vanguardCamera,1.0f/60.0f);
+        UpdateMovement(skirmisherMovement,move,skirmisherCamera,1.0f/60.0f);
+    }
     assert(skirmisherMovement.player.position.z>vanguardMovement.player.position.z+0.1f);
 
     // Simulate every raised rooftop transfer from each city's spawn roof to its boss gate.
@@ -354,8 +537,9 @@ int main() {
                 assert(near(boss.position.x,target.x)&&near(boss.position.y,target.y)&&near(boss.position.z,target.z));
             }
 
-            // Keep BuildCity's valid grounded spawn state for the opening jump.
+            // Keep BuildCity's grounded spawn state and reset the shared camera for this route.
             Camera3D routeCamera=camera;
+            ResetCamera(routeGame.player,routeCamera);
 
             const float targetHalf=segment==3?4.0f:2.5f;
             bool airborne=false;
@@ -366,9 +550,13 @@ int main() {
                 Controls input{};
                 if(remaining>0.25f) {
                     const Vector3 desired=Vector3Scale(toTarget,1.0f/remaining);
-                    // The test leaves camera yaw at its default +Z orientation.
-                    input.move.x=desired.x;
-                    input.move.y=desired.z;
+                    // Controls are camera-relative, so convert the world-space route direction
+                    // into this frame's camera basis before applying the movement input.
+                    const float yaw=cameraTargetYaw(routeCamera,routeGame.player.position);
+                    const Vector3 cameraForward={std::sin(yaw),0,std::cos(yaw)};
+                    const Vector3 cameraRight={cameraForward.z,0,-cameraForward.x};
+                    input.move.x=Vector3DotProduct(desired,cameraRight);
+                    input.move.y=Vector3DotProduct(desired,cameraForward);
                     input.sprint=true;
                 }
                 // If the jump reaches a ledge, use the game's required jump-to-climb action.
@@ -398,6 +586,8 @@ int main() {
             }
         }
     }
+    Player defaultRouteCameraPlayer;
+    ResetCamera(defaultRouteCameraPlayer,camera);
 
     // A high-speed Skirmisher dash cannot tunnel through a thin wall.
     GameState dashCollision;
@@ -559,6 +749,24 @@ int main() {
     assert(game.player.grounded);
     assert(game.player.landingTime > 0.25f);
     assert(!game.player.landingRoll);
+
+    // Falling onto a raised roof must snap to that platform's actual top, not world Y=0.
+    GameState raisedLanding;
+    raisedLanding.platforms.push_back({{0,2.0f,0},{12,0.6f,12},GRAY});
+    raisedLanding.player.position={0,4.0f,0};
+    raisedLanding.player.velocity={0,-4.0f,0};
+    raisedLanding.player.grounded=false;
+    Camera3D raisedCamera{};
+    ResetCamera(raisedLanding.player,raisedCamera);
+    for(int frame=0;frame<90&&!raisedLanding.player.grounded;frame++)
+        UpdateMovement(raisedLanding,Controls{},raisedCamera,1.0f/60.0f);
+    assert(raisedLanding.player.grounded);
+    assert(near(raisedLanding.player.position.y,2.3f,0.001f));
+    assert(near(raisedLanding.player.velocity.y,0.0f));
+    assert(raisedLanding.player.landingTime>0.25f);
+    UpdateMovement(raisedLanding,Controls{},raisedCamera,1.0f/60.0f);
+    assert(raisedLanding.player.grounded);
+    assert(near(raisedLanding.player.position.y,2.3f,0.001f));
 
     game.player.escapeSkill = 1;
     Controls dash{};

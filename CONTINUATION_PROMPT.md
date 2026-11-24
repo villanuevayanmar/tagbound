@@ -268,3 +268,96 @@ Run exact-head CI for the context-loss recovery, inspect logs/artifacts, then re
 
 ### Next exact task
 Restore PR #15's base to PR #14 after the full current-head CI. Then continue the P1 camera follow/orientation fix: preserve the existing camera-relative control scheme, add a predictable camera-follow rule with manual-look override, reset camera state for a new run, and write tests for yaw, facing and movement. Follow with movement acceleration/deceleration, grounding and parkour edge cases. Continue investigating flicker with evidence rather than assuming the new recovery path is its root cause.
+
+
+## Latest verified continuation — 2026-11-24, camera orientation
+
+- Current camera branch: fix/camera-facing-follow, draft PR #16, temporarily targeting main for the repository's pull_request CI. After its final exact-head CI, retarget it to fix/boss-arena-floor-bounds (PR #15). PR #15 is draft and stacked on PR #14.
+- Camera-relative movement remains the control model. When movement stops and the player is not aiming, camera yaw smoothly follows the character's last facing direction after the 1.2-second manual-look override. Touch/mouse look remains responsive and takes priority during the override.
+- ResetCamera initializes yaw from the restored spawn/checkpoint facing, resets pitch and clears manual-look state. StartGame applies this after restoring the player position/facing.
+- Regression tests cover reset, strafe facing, camera-relative controls, idle follow, manual-look override and follow resumption. Existing rooftop route tests now derive joystick input from the live camera basis rather than assuming a fixed world-aligned camera.
+- Exact-head run #327 (45276625519) passed on 015c6013c5db740729f33d96789a7ed2eccb5c7f: C++ gameplay tests, WebAssembly build, PWA validation and Chromium desktop/mobile/offline smoke. Visual artifacts for all five boss arenas were reviewed at desktop resolution; mobile-landscape gameplay and Spire boss captures were also reviewed.
+- PR #15's boss containment and WebGL context-loss save/reload recovery passed exact-head run #322 (45273216472), with docs head revalidated by run #323 (45274447641). Black-flicker cause remains unconfirmed; no Android test has occurred.
+- Production is unchanged and READY on the older main runtime. No dist output, merge, deploy, Vercel billing change or quota workaround was made. All services remain zero-cost.
+
+### Next task
+After the documentation/control README update passes exact-head CI, stack PR #16 on PR #15 and check the clean stacked diff. Continue with movement acceleration/deceleration, air control, jump/landing and parkour grounding/collision; preserve existing routes and add deterministic regressions. Keep physical Android limitations and the still-unconfirmed black flicker cause explicit.
+
+
+## Latest continuation checkpoint — 2026-11-24
+
+Continue from the current repository; do not restart or create a replacement project.
+
+### Live branch structure
+- Main: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`.
+- PR #14 / `feat/campaign-imperial-before-spire`: head `814d2e86c0c7cb5afc7b794e0d26d054eed87222`, base `main`; exact-head run #317 (`45185250016`) passed.
+- PR #15 / `fix/boss-arena-floor-bounds`: head `c92136f54d38df42aa239342dc803e784182ac73`, base PR #14; exact-head run #323 (`45274447641`) passed.
+- PR #16 / `fix/camera-facing-follow`: head `9a83d69b2862b1329467952e4cafa020e25d75fd`, base PR #15; compare is 13 commits ahead, zero behind. All PRs remain open drafts, not merged.
+- Do not flatten the stack, force-push, merge, edit `dist/` or deploy without explicit authorization.
+
+### Latest implementation on PR #16
+- Camera follow, manual-look override, camera reset and camera-relative traversal regressions remain in place.
+- Added transient `Player::moveVelocity` for horizontal player locomotion, separate from physics impulses/vertical velocity.
+- Ground acceleration/braking: 34 / 28 units/s². Air steering/braking: 16 / 3.5 units/s². Existing class top-speed targets are preserved.
+- While dash is active, acceleration is 100 units/s² so the existing 2.7× burst can be reached during its 0.24-second window.
+- Wall collision cancels the corresponding locomotion and impulse axis. City rebuild, ledge/climb transitions and death/checkpoint reset the transient movement velocity. It is intentionally not serialized.
+- Added regressions for acceleration ramp, top speed, release braking, weaker air steering, dash burst and the class speed distinction.
+
+### Exact test evidence
+- GitHub Actions run #334 (`45329538797`) passed on code/test head `9a83d69b2862b1329467952e4cafa020e25d75fd`.
+- Build: C++ gameplay regression suite, Emscripten/WebAssembly, PWA assembly/validation passed.
+- Browser smoke: desktop and mobile-landscape Chromium, gameplay start/input, save migration/restoration, offline cache, all five boss-arena visual captures, and forced WebGL context-loss/save-flush/reload recovery passed.
+- Visual artifact `tagbound-visual-review` was uploaded and inspected. PR-only `publish-dist` was skipped.
+- Earlier run #332 failed only the class-speed assertion because its synthetic platform had a top surface at Y=0 while the player spawn surface is Y=0.3; test fixtures were corrected. The corrected exact head is run #334 and passed.
+
+### Still unresolved
+- Intermittent black flickering has no confirmed root cause. The source audit found one frame drawing pair and one 3D pass per frame, with no repeated per-frame model/texture allocations identified. WebGL context-loss recovery is resilience, not a proven flicker fix.
+- Physical Android GPU/browser, touch-feel and sustained performance testing has not been performed. Chromium is not a substitute.
+- Production alias still points to older READY runtime SHA `9115f13b4021f9052a95eea66ceaa1000f134978`; no deployment or merge was performed. Maintain ₱0/$0 and do not work around quotas.
+
+### Next work order
+1. Investigate black-frame flicker with a repeatable multi-frame canvas check in hosted Chromium. Check for an actually black framebuffer rather than treating a dark scene as failure; preserve current screenshot/visual assertions. Report this as browser evidence only, not Android validation.
+2. Add focused deterministic tests for jump/landing, grounding and rooftop transitions; then review ledge/vault/climb collision and enemy navigation.
+3. Once the movement/rendering foundation is stable, use the master specification to implement the remaining systems in focused increments: separate stamina and mana, a stat choice at each level, skill-vs-upgrade choices at milestones, fortified vertical city/floor progression, enemy archetypes, fog-of-war exploration, guaranteed boss keys and performance-banded equipment loot.
+4. Keep `DEVELOPMENT_STATUS.md` and this file synchronized with exact PR heads, bases and GitHub Actions run IDs. Check exact tested SHA; a started run is not a passing run.
+
+
+
+## Newest pending diagnostic — 2026-11-24
+
+- Added repeatable WebGL canvas-frame sampling to `.github/workflows/ci.yml` in commit `e5da108ec84281c2e08eb1bff3dca4244b7055d5`.
+- During desktop and mobile-landscape gameplay, Playwright captures 12 frames from the actual `#canvas` element per device. `pngjs` checks that each frame has at least 97% pixels with an RGB channel above 12. The threshold allows dark scene colors while flagging a nearly all-black canvas. Failure reports the sample index and ratio.
+- This test is intended to catch obvious intermittent black canvas frames in hosted Chromium. It can miss shorter events between samples and cannot prove the real Android symptom is gone. Do not describe this as a flicker fix.
+- Run #335 (`45330722930`) passed on exact workflow/source-tree SHA `e5da108ec84281c2e08eb1bff3dca4244b7055d5`: build, C++ gameplay tests, Emscripten/WebAssembly, PWA validation and Chromium browser-smoke succeeded; `publish-dist` was skipped. Logs explicitly report desktop 12/12 and mobile-landscape 12/12 canvas samples passed, with minimum non-black pixel ratio `1.0000` on both.
+- Previous gameplay verification remains run #334 (`45329538797`) on code/test SHA `9a83d69b2862b1329467952e4cafa020e25d75fd`; both build and browser-smoke succeeded, and `publish-dist` was skipped.
+- The 14-image visual-review artifact from run #335 (`14892037925`) was inspected. No sampled black canvas frame appeared, but 12 samples per device can miss short events and do not prove the real-world flicker is fixed.
+- A test-only raised-platform landing regression was added after run #335 in commit `1753b20e0ac2c6e796ddfbbd58601fdaaa6e476c`. It checks that falling onto a rooftop whose actual top is Y=2.3 snaps to and remains at Y=2.3, resets vertical speed, and begins landing recovery. This test is included in run #336.
+- PR #16 has been restored to base PR #15; the draft stack remains #14 → #15 → #16. No merge, deployment or `dist/` edit.
+
+### Next action for the next developer turn
+1. Continue movement-foundation review with focused grounding, raised-floor, vault/ledge collision and enemy-navigation regressions. Avoid duplicating jump/landing tests already present.
+2. After movement/rendering stability, implement the master specification's remaining systems incrementally: separate stamina and mana, level-up stat choices, skill-versus-upgrade milestone choices, vertical city/floor progression, enemy archetypes, fog-of-war exploration, guaranteed boss keys and performance-banded equipment.
+3. Keep the PR stack and release hold unchanged. The intermittent black-flicker root cause and physical Android validation remain open.
+
+
+
+## Latest exact-head run — 2026-11-24
+
+- Run #336 (`45332306488`) passed on application source/test head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`.
+- Build job `138236093166` and browser-smoke job `138236454555` both passed. Coverage includes the C++ regression suite with raised-platform landing, Emscripten/WebAssembly, PWA validation, Chromium desktop/mobile runtime, offline cache, boss-arena captures and forced context-loss recovery. `publish-dist` was skipped.
+- Desktop and mobile-landscape browser logs both report all 12 canvas samples passed; the minimum non-black pixel ratio was `1.0000` for each device.
+- Visual-review artifact `14892717266` uploaded 14 screenshots and was downloaded; the desktop gameplay capture was inspected. Finite Chromium sampling is not proof that the flicker is fixed on real Android hardware.
+- PR #16 is stacked on PR #15, which is stacked on PR #14. All remain open/unmerged. Keep the release hold and zero-cost constraint.
+- Branch commits after tested application source/test SHA `c0334c0d...` are documentation-only.
+
+
+
+## Active implementation checkpoint — fortified five-city perimeter (2026-11-24)
+
+- Added a 12-unit-high, 2-unit-thick perimeter to each city using the existing solid platform/collision representation. The west, east and south sides are continuous; the north side is split around a gate opening aligned with that city's existing final boss-route platform.
+- Added gate towers and a lintel while preserving player clearance. Existing skyline pieces that would obstruct the gate approach are moved beyond the playable perimeter rather than removed.
+- Added deterministic C++ regression coverage for all five cities: expected wall geometry, collision against all four sides, and passage through the aligned gate. Existing platform-count assertions were updated for the eight new wall/gate structures.
+- Implementation commits: `cca3a538340e058bc0068ffa873e3b0197a07ae7` (walls), `fd61e6afc1194230c621defe9ce22dd82be854a8` (regressions), and `bdd3e22b78b21f8725114412612e65d02238d89b` (gate sightline clearance).
+- Exact-head CI is pending. Do not mark the enclosure complete until the C++ gameplay suite, Emscripten build and Chromium smoke tests pass on this code/test head.
+- PR #16 is temporarily targeted at `main` for the repository's required pull-request CI filter. After exact-head verification, restore it to PR #15 (`fix/boss-arena-floor-bounds`). Keep the original PR #14 → #15 → #16 stack, draft state, and release hold.
+- No merge, production deployment, `dist/` change, billing change, or quota workaround was performed.

@@ -31,6 +31,7 @@ struct Enemy {
 };
 struct Player {
     Vector3 position{0,1,0}, velocity{0,0,0}, facing{0,0,1};
+    Vector2 moveVelocity{0,0};
     float health=100, stamina=100, invulnerable=0;
     float dashTime=0, dashCooldown=0, vaultTime=0, climbTime=0, landingTime=0, attackTime=0;
     bool landingRoll=false;
@@ -58,6 +59,7 @@ struct GameState {
     bool started=false, finished=false, bossUnlocked=false;
 };
 
+void ResetCamera(const Player& player, Camera3D& camera);
 void UpdateMovement(GameState& game, const Controls& controls, Camera3D& camera, float dt);
 void UpdatePursuit(GameState& game, float dt);
 void UpdateCombat(GameState& game, const Controls& controls, float dt);

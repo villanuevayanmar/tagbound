@@ -465,3 +465,105 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 1. Restore PR #15's base to feat/campaign-imperial-before-spire and confirm the stacked diff/mergeability.
 2. Continue P1 camera orientation: current movement is camera-relative, but camera yaw is changed by look input and is not automatically aligned to the character's movement-facing direction. Add a deliberate follow/override model and deterministic tests before tuning movement acceleration and grounding.
 3. Continue the flicker investigation without assuming the context-loss path is the root cause; collect physical Android evidence only after an authorized release.
+
+
+## Verified checkpoint — 2026-11-24, camera follow and arena/graphics recovery
+
+### Third-person camera — PR #16
+
+- Draft PR #16: https://github.com/villanuevayanmar/tagbound/pull/16, branch fix/camera-facing-follow. Its current CI base is main; after exact-head verification it will be retargeted to PR #15 (fix/boss-arena-floor-bounds), which is itself stacked on PR #14.
+- Kept camera-relative controls: joystick movement is resolved against camera forward/right. Character facing changes with intended movement/aim direction.
+- When movement stops and there is no aim or active manual-look override, camera yaw eases toward the character's last facing direction using shortest-angle interpolation. Manual mouse/touch look gets a 1.2-second priority window so automatic follow does not fight a swipe.
+- ResetCamera derives the initial camera yaw from the restored player's spawn facing, restores the default pitch and clears the manual-look timer. StartGame calls it after the player spawn/checkpoint is restored.
+- C++ regression tests cover initial camera alignment, camera-relative strafe, idle follow after release, manual-look override, follow resumption and reset. The rooftop route-transfer tests now compute their movement input in the camera's current basis, preserving the declared camera-relative control scheme.
+- Exact-head run #327 (45276625519) passed on 015c6013c5db740729f33d96789a7ed2eccb5c7f: Emscripten/WebAssembly compile, full C++ gameplay regression suite, PWA validation, Chromium desktop/mobile smoke and offline-cache checks. Full-resolution browser visual artifacts were inspected for all five boss arenas at desktop and for gameplay plus Spire boss at mobile landscape.
+
+### Previously verified foundations
+
+- PR #15 boss-arena containment and WebGL context-loss recovery remain in draft, stacked on PR #14. Exact-head run #322 (45273216472) passed the simulated WebGL loss/restore, save flush, reload and gameplay restart; PR #15's docs head was revalidated by run #323 (45274447641).
+- The black-flicker root cause remains unknown. WebGL context-loss recovery is tested resilience, not proof that context loss caused the reported symptom.
+- Production alias remains READY on deployment dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ, runtime commit 9115f13b4021f9052a95eea66ceaa1000f134978. No dist/ changes, merge, deployment, billing change or quota workaround occurred.
+- Physical Android camera, flicker, touch and performance checks remain unverified. Chromium visual artifacts are not device testing.
+
+### Next exact task
+
+1. Run exact-head CI after these documentation/control-description updates, then stack PR #16 on PR #15 and verify both PR diffs/mergeability.
+2. Continue P1 movement and parkour grounding: acceleration/deceleration, turn response, sprint/air control, jump and landing consistency, ledge/vault/climb transitions and collision/visual alignment. Add deterministic tests before tuning.
+3. Keep investigating flicker with evidence and obtain physical Android observations only after an authorized release. Continue toward the remaining approved scope (medieval-fantasy city layout, floor/zone encounters, separate stamina/mana, stat/skill milestones, fog of war, guaranteed boss keys and performance-based loot) in testable increments.
+
+
+## Verified checkpoint — 2026-11-24: movement response and stacked PR verification
+
+### Exact branch / PR state
+- Main remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`; production has not been changed.
+- PR #14: `feat/campaign-imperial-before-spire` at `814d2e86c0c7cb5afc7b794e0d26d054eed87222`, based on `main`; exact-head run #317 (`45185250016`) passed.
+- PR #15: `fix/boss-arena-floor-bounds` at `c92136f54d38df42aa239342dc803e784182ac73`, based on PR #14; exact-head run #323 (`45274447641`) passed.
+- PR #16: `fix/camera-facing-follow` at `9a83d69b2862b1329467952e4cafa020e25d75fd`, based on PR #15. GitHub compare confirms 13 commits ahead and zero behind. All three PRs remain open drafts; none is merged.
+
+### Movement response implementation — PR #16
+- Added transient horizontal locomotion velocity to `Player`, separate from the existing physics velocity used for vertical motion and impulses.
+- Ground acceleration is 34 units/s² and ground braking is 28 units/s². Air steering acceleration is 16 units/s² and air braking is 3.5 units/s², retaining more horizontal momentum while airborne.
+- Existing class top speeds and input direction calculations are retained. Dash uses a faster 100 units/s² acceleration while active so the existing 2.7× burst remains reachable inside its 0.24-second window.
+- Horizontal collision stops the locomotion and impulse components on the blocked axis. City rebuild, ledge/climb transitions and death/checkpoint reset the transient movement velocity; it is not persisted as save data.
+- Added deterministic tests for the initial movement ramp, normal top speed, release braking, weak air steering, the dash burst and the Vanguard/Skirmisher speed distinction.
+- The first new CI attempt exposed a test-fixture issue: its synthetic floor top was at Y=0 while the player spawn feet are at Y=0.3, leaving the test player airborne. Fixtures were corrected to use the actual spawn-floor height; the production movement code was not changed to accommodate the bad fixture.
+
+### Exact-head verification
+- Run #334 (`45329538797`) passed on exact source head `9a83d69b2862b1329467952e4cafa020e25d75fd`.
+- Build job passed: C++ gameplay regressions, Emscripten/WebAssembly compilation, static PWA assembly and validation.
+- Browser-smoke job passed: Chromium runtime, desktop/mobile-landscape behavior, save restoration, offline cache and forced WebGL context-loss/recovery checks.
+- The `tagbound-visual-review` artifact was uploaded and inspected: desktop/mobile gameplay and all five boss-gate scenes rendered. The browser test confirmed boss containment during the captures.
+- PR-only `publish-dist` was skipped. No generated files were committed to `dist/`.
+
+### Unresolved issues and release state
+- Intermittent black flickering remains unresolved. Source audit still finds one `BeginDrawing/EndDrawing` pair and one `BeginMode3D/EndMode3D` pass per frame, with no repeated per-frame model/texture allocation identified. WebGL context-loss recovery is a tested resilience path, not proof of the flicker cause.
+- Chromium sampling and screenshots do not replace physical Android testing. Device GPU/browser behavior, real touch feel and sustained frame pacing remain unverified.
+- Production alias `https://tagbound.vercel.app` remains on the older READY runtime commit `9115f13b4021f9052a95eea66ceaa1000f134978`. No merge, production deployment, Vercel upgrade, billing change or quota workaround was performed. Cost remains ₱0/$0.
+
+### Next exact task
+1. Continue the black-frame investigation with a repeatable multi-frame canvas check in hosted Chromium; distinguish a fully black framebuffer from normal dark scene content and preserve existing visual assertions. Do not call this an Android fix.
+2. Continue movement foundation regressions for jump/landing, grounding and rooftop transitions, then review ledge/vault/climb collision and enemy navigation.
+3. After the foundation is stable, implement the master specification's remaining systems incrementally: separate stamina/mana, stat choice on every level, skill-choice/upgrade milestones, vertical city/floor progression, enemy archetypes, fog-of-war discovery, guaranteed boss keys and performance-banded equipment rewards. Keep save migration, deterministic tests and mobile UI coverage in scope.
+
+
+
+## Latest diagnostic update — 2026-11-24: repeated canvas-frame sampling
+
+- Added a browser-smoke diagnostic in `.github/workflows/ci.yml` on source tree head `e5da108ec84281c2e08eb1bff3dca4244b7055d5`. It samples the WebGL canvas 12 times during desktop gameplay and 12 times during mobile-landscape gameplay.
+- Each captured canvas frame is decoded with the existing `pngjs` dependency. The check requires at least 97% of pixels to have one RGB channel above 12; this intentionally permits the normal dark palette but fails a near-total black canvas. A failure includes the sample index and visible-pixel ratio.
+- This is a repeatable browser diagnostic for fully/overwhelmingly black frames, not a proven root-cause fix and not evidence about physical Android GPUs. Sampling can still miss very brief events between captures.
+- Exact workflow run #335 (`45330722930`) passed on workflow/source tree head `e5da108ec84281c2e08eb1bff3dca4244b7055d5`. Build/gameplay tests, WebAssembly, PWA validation and Chromium browser-smoke all passed; `publish-dist` was skipped. The browser log explicitly reports 12/12 desktop and 12/12 mobile-landscape samples passed with a minimum non-black pixel ratio of `1.0000` on both.
+- PR #16 is restored to base `fix/boss-arena-floor-bounds`, still open/draft; PR #14 → PR #15 → PR #16 remains the intended stack. No merge, deployment or `dist/` change was made.
+- The 14-image visual-review artifact (`14892037925`) was inspected. Desktop/mobile gameplay and five boss-arena scenes rendered. The canvas sampling did not detect a black frame, but this is a short Chromium sample window and does not prove the intermittent report is fixed.
+- Added a test-only raised-rooftop landing regression in `tests/gameplay.cpp` at commit `1753b20e0ac2c6e796ddfbbd58601fdaaa6e476c`: falling onto a platform with top height Y=2.3 must snap and remain at Y=2.3, with vertical velocity reset and landing recovery started. It was included in run #336.
+
+
+
+## Latest exact-head verification — 2026-11-24
+
+- Run #336 (`45332306488`) passed on PR #16 application source/test head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`, including the raised-rooftop landing regression and canvas-frame diagnostic.
+- Build job `138236093166` passed: C++ gameplay regression tests, Emscripten/WebAssembly compilation, PWA assembly and PWA validation.
+- Browser-smoke job `138236454555` passed: Chromium desktop/mobile runtime, save restoration/migration, offline cache, five-city boss-arena visual captures, forced WebGL context-loss recovery and screenshots.
+- Browser logs explicitly report 12/12 desktop and 12/12 mobile-landscape canvas samples passed, with minimum non-black pixel ratio `1.0000` on both.
+- Visual-review artifact `14892717266` was uploaded (14 screenshots). The desktop gameplay capture was inspected. The CI canvas sampling found no overwhelmingly black frames during the sampled intervals; it does not prove the intermittent black flicker is permanently fixed or establish Android GPU behavior.
+- PR-only `publish-dist` was skipped. The workflow was started while PR #16 temporarily targeted `main` to satisfy the repository's current PR trigger filter, then the PR was restored to base `fix/boss-arena-floor-bounds`.
+- Current application source/test head verified is `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. Later changes to this branch tip are documentation-only. PR #14 → PR #15 → PR #16 remains intact; no merge, deployment or `dist/` change was made.
+
+
+
+## Active implementation checkpoint — fortified city perimeters (2026-11-24)
+
+- Added five connected wall sections per city (west, east, south, and two north sections) using the existing solid-platform collision system. Each wall is 12 units high and 2 units thick.
+- The north opening is centered on the city's existing boss-gate route. Two gate towers and a lintel define the entrance; skyline pieces that obstruct the approach are relocated beyond the playable boundary.
+- Added deterministic C++ coverage for all five city layouts, wall dimensions and gate alignment, player collision against all four sides, and passage through the gate.
+- Source/test commits: `cca3a538340e058bc0068ffa873e3b0197a07ae7`, `fd61e6afc1194230c621defe9ce22dd82be854a8`, `bdd3e22b78b21f8725114412612e65d02238d89b`. Checkpoint documentation head: `eaf84617467a6b3830ce36cf5528dd333c5d08c4`.
+- Exact-head CI is **pending**. The previously passing run #336 predates these changes and does not verify them. Do not mark the wall feature complete until the updated gameplay suite, Emscripten build, PWA validation and browser smoke pass.
+- PR #16 has been restored to its original draft base PR #15. PR #15 remains based on PR #14. No PR was merged, no production deployment was attempted, and no generated `dist/` files were changed.
+- Production remains on the existing READY deployment. The ₱0/$0 restriction and release hold remain in force.
+
+### Next steps
+
+1. Run the CI workflow on the exact current PR #16 source/test head and fix any failures before calling the walls verified.
+2. Review the visual layout and collision in the generated five-city scenes; pay particular attention to the gate approach and skyline clearance.
+3. Continue the approved remaining systems in dependency order: floor/zone progression, separate Mana alongside the existing stamina/energy resource, level-up stat and milestone choices, enemy archetypes/skills, fog-of-war exploration, and boss key/performance-based equipment rewards.
+4. Keep PR #16 stacked on PR #15, avoid `dist/` changes, and do not merge or deploy without the required release authorization and verified zero-cost deployment capacity.
