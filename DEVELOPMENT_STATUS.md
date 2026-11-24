@@ -539,11 +539,13 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 
 
 
-## Exact-head verification in progress — 2026-11-24
+## Latest exact-head verification — 2026-11-24
 
-- Run #336 (`45332306488`) was triggered on PR #16 branch head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. It includes the raised-rooftop landing test and the canvas-frame diagnostic.
-- Build job `138236093166` completed successfully: Emscripten/WebAssembly compilation, C++ gameplay regression tests (including the raised platform snap/hold case), PWA assembly and PWA validation passed.
-- Browser-smoke job `138236454555` is still in progress at `Serve and test browser runtime and offline cache`. Do not claim run #336 fully passed until browser-smoke and artifact upload complete. The PR-only `publish-dist` job must remain skipped.
-- The workflow was started while PR #16 temporarily targeted `main` to satisfy the repository's existing PR trigger filter, then PR #16 was immediately restored to base `fix/boss-arena-floor-bounds`. It remains open/draft; PR #14 → PR #15 → PR #16 remains intact.
-- Current application source/test head under verification is `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. Any later branch movement is documentation-only and must not be confused with the tested SHA.
+- Run #336 (`45332306488`) passed on PR #16 application source/test head `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`, including the raised-rooftop landing regression and canvas-frame diagnostic.
+- Build job `138236093166` passed: C++ gameplay regression tests, Emscripten/WebAssembly compilation, PWA assembly and PWA validation.
+- Browser-smoke job `138236454555` passed: Chromium desktop/mobile runtime, save restoration/migration, offline cache, five-city boss-arena visual captures, forced WebGL context-loss recovery and screenshots.
+- Browser logs explicitly report 12/12 desktop and 12/12 mobile-landscape canvas samples passed, with minimum non-black pixel ratio `1.0000` on both.
+- Visual-review artifact `14892717266` was uploaded (14 screenshots). The desktop gameplay capture was inspected. The CI canvas sampling found no overwhelmingly black frames during the sampled intervals; it does not prove the intermittent black flicker is permanently fixed or establish Android GPU behavior.
+- PR-only `publish-dist` was skipped. The workflow was started while PR #16 temporarily targeted `main` to satisfy the repository's current PR trigger filter, then the PR was restored to base `fix/boss-arena-floor-bounds`.
+- Current application source/test head verified is `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. Later changes to this branch tip are documentation-only. PR #14 → PR #15 → PR #16 remains intact; no merge, deployment or `dist/` change was made.
 
