@@ -256,6 +256,28 @@ void BuildCity(GameState& g) {
                            {1.2f,wallHeight,3.0f},gateStone});
     g.platforms.push_back({{gate.x,wallHeight+0.8f,wallMaxZ},
                            {gateHalfWidth*2+2.0f,1.6f,3.0f},gateStone});
+    // Support every elevated route deck with four grounded stone piers.
+    // The open center keeps the jump/landing approach clear while the piers
+    // physically connect each deck to the city floor.
+    const float supportSidesX[4]={-1.0f,-1.0f,1.0f,1.0f};
+    const float supportSidesZ[4]={-1.0f,1.0f,-1.0f,1.0f};
+    for(int route=0;route<4;route++) {
+        const int deckIndex=route<3?2+route:5;
+        const Platform deck=g.platforms[deckIndex];
+        const float pillarSize=route==3?0.85f:0.55f;
+        const float offset=deck.size.x*0.5f-pillarSize*0.5f-0.25f;
+        const float deckBottom=deck.position.y-deck.size.y*0.5f;
+        const Color supportColor=route==3?Color{91,78,59,255}:Color{
+            (unsigned char)(tint[g.city].r*0.68f),
+            (unsigned char)(tint[g.city].g*0.68f),
+            (unsigned char)(tint[g.city].b*0.68f),255};
+        for(int corner=0;corner<4;corner++) {
+            g.platforms.push_back({
+                {deck.position.x+supportSidesX[corner]*offset,deckBottom*0.5f,
+                 deck.position.z+supportSidesZ[corner]*offset},
+                {pillarSize,deckBottom,pillarSize},supportColor});
+        }
+    }
     for(int i=0;i<2+g.city*2;i++) {
         float a=6.28318f*i/(2+g.city*2);
         Vector3 p={std::cos(a)*(12.0f+g.city),0.0f,std::sin(a)*(12.0f+g.city)+3.0f};
