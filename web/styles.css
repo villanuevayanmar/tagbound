@@ -38,12 +38,12 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 @media(pointer:coarse){#touch-controls{display:block}}
 @media(pointer:fine){#touch-controls{display:none}}
 #touch-controls.map-open .stick-area,#touch-controls.map-open .action-pad .action:not(.map){display:none;visibility:hidden;pointer-events:none}
-.map-floor-controls{position:absolute;z-index:6;top:calc(50% - 174px);left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:10px;min-height:34px;padding:3px 8px;border:1px solid #b58e60;background:#141c27f2;color:#f4e6ce;pointer-events:auto}
+.map-floor-controls{position:absolute;z-index:6;top:calc(50% - 186px);left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:10px;min-height:34px;padding:3px 8px;border:1px solid #b58e60;background:#141c27f2;color:#f4e6ce;pointer-events:auto}
 .map-floor-controls button{width:32px;height:28px;padding:3px;display:grid;place-items:center;border:1px solid #7c705e;background:#27313c;color:#f4e6ce}
 .map-floor-controls button:disabled{opacity:.32;cursor:default}
 .map-floor-controls svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 #map-floor-label{min-width:110px;text-align:center;font-size:10px;font-weight:800;letter-spacing:.14em}
-@media(max-height:440px){.map-floor-controls{top:calc(50% - 165px);min-height:30px}.map-floor-controls button{height:26px}}
+@media(max-height:440px){.map-floor-controls{top:calc(50% - 186px);min-height:30px}.map-floor-controls button{height:26px}}
 
 #touch-controls.map-open .action-pad{width:72px;display:block}
 #touch-controls.map-open .action.map{width:64px;margin-left:auto;visibility:visible;pointer-events:auto}
