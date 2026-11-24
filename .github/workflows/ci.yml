@@ -374,6 +374,19 @@ jobs:
             await page.locator('[data-class="1"]').click();
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
+            const exploredMap = await page.evaluate(() => ({
+              open: Module.ccall('IsMapOpen','number',[],[]) === 1,
+              count: Module.ccall('GetExploredCount','number',[],[]),
+              saved: localStorage.getItem('tagbound-exploration-v1-0')
+            }));
+            if (!exploredMap.open || exploredMap.count < 1 || exploredMap.count >= 320 ||
+                !exploredMap.saved || exploredMap.saved.length !== 320 || !exploredMap.saved.includes('1')) {
+              throw new Error('Explored map did not reveal and persist only local exploration: ' + JSON.stringify(exploredMap));
+            }
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
             await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
             await page.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             await page.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
@@ -762,14 +775,14 @@ jobs:
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
             if (!mobile.controlsVisible || !mobile.installVisible || !mobile.soundToggleVisible ||
-                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 6 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.rotateHidden ||
+                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             const mobileLoadouts = [
-              { klass: 1, weapon: 3, bowVisible: true, actions: 7 },
-              { klass: 2, weapon: 2, bowVisible: false, actions: 6 },
-              { klass: 0, weapon: 0, bowVisible: false, actions: 6 },
+              { klass: 1, weapon: 3, bowVisible: true, actions: 8 },
+              { klass: 2, weapon: 2, bowVisible: false, actions: 7 },
+              { klass: 0, weapon: 0, bowVisible: false, actions: 7 },
               { klass: 1, weapon: 3, bowVisible: true, actions: 7 }
             ];
             for (const loadout of mobileLoadouts) {
@@ -784,6 +797,17 @@ jobs:
               }
             }
             await mobilePage.locator('#start').tap();
+            await mobilePage.locator('#touch-controls [data-bit="256"]').tap();
+            await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
+            const mobileMap = await mobilePage.evaluate(() => ({
+              count: Module.ccall('GetExploredCount','number',[],[]),
+              saved: localStorage.getItem('tagbound-exploration-v1-0')
+            }));
+            if (mobileMap.count < 1 || !mobileMap.saved || mobileMap.saved.length !== 320) {
+              throw new Error('Mobile map control did not open a saved exploration map: ' + JSON.stringify(mobileMap));
+            }
+            await mobilePage.locator('#touch-controls [data-bit="256"]').tap();
+            await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
