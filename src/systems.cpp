@@ -254,6 +254,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
         } else {
             p.position=p.ledgeHangPosition;
             p.velocity={0,0,0};
+            p.moveVelocity={0,0};
             p.grounded=false;
             p.wallRunning=false;
             p.vaulting=false;
@@ -271,6 +272,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             Vector3Scale(Vector3Subtract(p.ledgeTargetPosition,p.ledgeHangPosition),eased));
         p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
         p.velocity={0,0,0};
+        p.moveVelocity={0,0};
         p.grounded=false;
         p.vaulting=true;
         if(t>=1.0f) {
@@ -298,6 +300,26 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     }
     if(p.dashTime>0) speed*=2.7f;
 
+    // Keep player-driven locomotion separate from physics impulses such as vaults
+    // and knockback. Ground movement accelerates and brakes responsively; air
+    // steering is weaker and preserves more horizontal momentum.
+    const Vector2 targetMoveVelocity={direction.x*speed,direction.z*speed};
+    const float targetSpeed=std::sqrt(targetMoveVelocity.x*targetMoveVelocity.x+
+                                      targetMoveVelocity.y*targetMoveVelocity.y);
+    const float currentDeltaX=targetMoveVelocity.x-p.moveVelocity.x;
+    const float currentDeltaZ=targetMoveVelocity.y-p.moveVelocity.y;
+    const float deltaLength=std::sqrt(currentDeltaX*currentDeltaX+currentDeltaZ*currentDeltaZ);
+    const float rate=targetSpeed>0.05f
+        ? (p.grounded?34.0f:16.0f)
+        : (p.grounded?28.0f:3.5f);
+    const float maxChange=rate*dt;
+    if(deltaLength<=maxChange) p.moveVelocity=targetMoveVelocity;
+    else if(deltaLength>0.0001f) {
+        const float scale=maxChange/deltaLength;
+        p.moveVelocity.x+=currentDeltaX*scale;
+        p.moveVelocity.y+=currentDeltaZ*scale;
+    }
+
     auto moveAxis=[&](float amount,bool xAxis) {
         if(std::abs(amount)<0.000001f) return false;
         int steps=std::max(1,(int)std::ceil(std::abs(amount)/0.12f));
@@ -308,15 +330,15 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             bool blocked=false;
             for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) { blocked=true; break; }
             if(blocked) {
-                if(xAxis) { p.position.x-=step; p.velocity.x=0; }
-                else { p.position.z-=step; p.velocity.z=0; }
+                if(xAxis) { p.position.x-=step; p.moveVelocity.x=0; p.velocity.x=0; }
+                else { p.position.z-=step; p.moveVelocity.y=0; p.velocity.z=0; }
                 return true;
             }
         }
         return false;
     };
-    bool wallContact=moveAxis((direction.x*speed+p.velocity.x)*dt,true);
-    wallContact=moveAxis((direction.z*speed+p.velocity.z)*dt,false)||wallContact;
+    bool wallContact=moveAxis((p.moveVelocity.x+p.velocity.x)*dt,true);
+    wallContact=moveAxis((p.moveVelocity.y+p.velocity.z)*dt,false)||wallContact;
     p.velocity.x*=std::max(0.0f,1.0f-9.0f*dt);
     p.velocity.z*=std::max(0.0f,1.0f-9.0f*dt);
 
@@ -328,6 +350,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             p.ledgeTargetPosition=target;
             p.position=hang;
             p.velocity={0,0,0};
+            p.moveVelocity={0,0};
             p.grounded=false;
             p.ledgeGrabbing=true;
             p.vaulting=false;
@@ -604,6 +627,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         p.stamina=ClassMaxStamina(p.playerClass);
         p.position=checkpoint;
         p.velocity={0,0,0};
+        p.moveVelocity={0,0};
         p.grounded=true;
         p.wallRunning=false;
         p.dashTime=0;
