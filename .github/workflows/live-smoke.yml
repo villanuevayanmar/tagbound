@@ -434,7 +434,7 @@ jobs:
               { klass: 1, weapon: 3, bowVisible: true, actions: 8 },
               { klass: 2, weapon: 2, bowVisible: false, actions: 7 },
               { klass: 0, weapon: 0, bowVisible: false, actions: 7 },
-              { klass: 1, weapon: 3, bowVisible: true, actions: 7 }
+              { klass: 1, weapon: 3, bowVisible: true, actions: 8 }
             ];
             for (const loadout of mobileLoadouts) {
               await mobilePage.locator('[data-class="' + loadout.klass + '"]').tap();
