@@ -129,6 +129,9 @@ window.TagboundAudio={
 syncSoundButtons();
 [soundToggle,settingsSoundToggle].filter(Boolean).forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
+document.querySelectorAll('[data-stat-choice]').forEach(button=>{
+ button.addEventListener('click',()=>call('ChooseStat',Number(button.dataset.statChoice)));
+});
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 const classCards=[...document.querySelectorAll('.class-card')];
 const bowAction=document.querySelector('.action[data-bit="16"]');
