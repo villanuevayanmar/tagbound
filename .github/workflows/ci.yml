@@ -931,6 +931,15 @@ jobs:
             if (equippedChoice.active !== 0 || !equippedChoice.label?.includes('CLEAVING ARC')) {
               throw new Error('Settings skill loadout did not retain the equipped technique: ' + JSON.stringify(equippedChoice));
             }
+            const equippedAction = await statPage.evaluate(() => {
+              const button=document.querySelector('.action.technique');
+              return { label:button?.getAttribute('aria-label'), cost:button?.dataset.cost,
+                icon:button?.querySelector('svg path')?.getAttribute('d'), disabled:button?.disabled };
+            });
+            if (!equippedAction.label?.includes('CLEAVING ARC') || equippedAction.cost !== '24M' ||
+                !equippedAction.icon?.includes('M19 5') || equippedAction.disabled) {
+              throw new Error('Active technique icon/cost/readiness did not match the equipped skill: ' + JSON.stringify(equippedAction));
+            }
             await statContext.close();
 
             // Skirmisher Arrow Rain enters a target-confirm flow and spends Mana only on confirmation.
@@ -954,7 +963,16 @@ jobs:
             if (unlockedArrow?.skill0 !== 3 || unlockedArrow?.rank0 !== 1 || unlockedArrow?.pendingSkillChoices !== 0) {
               throw new Error('Skirmisher did not unlock Arrow Rain: ' + JSON.stringify(unlockedArrow));
             }
-            await arrowPage.evaluate(() => Module.ccall('UseClassSkill','number',[],[]));
+            const arrowAction = await arrowPage.evaluate(() => ({
+              label:document.querySelector('.action.technique')?.getAttribute('aria-label'),
+              cost:document.querySelector('.action.technique')?.dataset.cost,
+              icon:document.querySelector('.action.technique svg path')?.getAttribute('d')
+            }));
+            if (!arrowAction.label?.includes('ARROW RAIN') || arrowAction.cost !== '38M' ||
+                !arrowAction.icon?.includes('M18 3')) {
+              throw new Error('Skirmisher technique button did not update to the Arrow Rain icon/cost: ' + JSON.stringify(arrowAction));
+            }
+            await arrowPage.keyboard.press('q');
             await arrowPage.waitForFunction(() => !document.querySelector('#skill-target')?.classList.contains('hidden'));
             const targetReady = await arrowPage.evaluate(() => ({
               targeting: Module.ccall('IsSkillTargeting','number',[],[]),
@@ -966,15 +984,30 @@ jobs:
                 targetReady.confirmDisabled || targetReady.status !== 'TARGET VALID') {
               throw new Error('Arrow Rain target was not ready without spending Mana: ' + JSON.stringify(targetReady));
             }
+            await arrowPage.locator('#skill-target-cancel').click();
+            await arrowPage.waitForFunction(() => Module.ccall('IsSkillTargeting','number',[],[]) === 0);
+            const arrowCancelled = await arrowPage.evaluate(() => ({
+              mana: Module.ccall('GetPlayerMana','number',[],[]),
+              effects: Module.ccall('GetSkillEffectCount','number',[],[]),
+              saved: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (arrowCancelled.mana !== 90 || arrowCancelled.effects !== 0 || arrowCancelled.saved?.mana !== 90) {
+              throw new Error('Cancelling Arrow Rain spent Mana or created an effect: ' + JSON.stringify(arrowCancelled));
+            }
+            await arrowPage.keyboard.press('q');
+            await arrowPage.waitForFunction(() => !document.querySelector('#skill-target')?.classList.contains('hidden'));
             await arrowPage.locator('#skill-target-confirm').click();
             await arrowPage.waitForFunction(() => Module.ccall('IsSkillTargeting','number',[],[]) === 0);
             const arrowConfirmed = await arrowPage.evaluate(() => ({
               effects: Module.ccall('GetSkillEffectCount','number',[],[]),
               mana: Module.ccall('GetPlayerMana','number',[],[]),
-              saved: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+              saved: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
+              cooldown: document.querySelector('.action.technique')?.dataset.cooldown,
+              disabled: document.querySelector('.action.technique')?.disabled
             }));
             if (arrowConfirmed.effects !== 1 || arrowConfirmed.mana !== 52 ||
-                arrowConfirmed.saved?.mana !== 52) {
+                arrowConfirmed.saved?.mana !== 52 || arrowConfirmed.cooldown !== '8.0s' ||
+                !arrowConfirmed.disabled) {
               throw new Error('Arrow Rain did not create its effect and spend/save Mana on confirmation: ' + JSON.stringify(arrowConfirmed));
             }
             await arrowContext.close();
