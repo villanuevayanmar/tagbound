@@ -933,6 +933,52 @@ jobs:
             }
             await statContext.close();
 
+            // Skirmisher Arrow Rain enters a target-confirm flow and spends Mana only on confirmation.
+            const arrowContext = await browser.newContext();
+            const arrowPage = await arrowContext.newPage();
+            const arrowResponse = await arrowPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!arrowResponse?.ok()) throw new Error('Arrow Rain page did not return HTTP 200.');
+            await arrowPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            const arrowSave = {
+              schemaVersion: 2, city: 0, level: 3, xp: 0, unlocked: 0,
+              klass: 1, weapon: 3, finished: 0, quest: 0, mana: 90,
+              vitality: 0, endurance: 0, focus: 0, power: 0, precision: 0,
+              pendingStatChoices: 0
+            };
+            await arrowPage.evaluate(save => localStorage.setItem('tagbound-save', JSON.stringify(save)), arrowSave);
+            await arrowPage.locator('#start').click();
+            await arrowPage.waitForFunction(() => !document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            await arrowPage.locator('#skill-option-0').click();
+            await arrowPage.waitForFunction(() => document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            const unlockedArrow = await arrowPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+            if (unlockedArrow?.skill0 !== 3 || unlockedArrow?.rank0 !== 1 || unlockedArrow?.pendingSkillChoices !== 0) {
+              throw new Error('Skirmisher did not unlock Arrow Rain: ' + JSON.stringify(unlockedArrow));
+            }
+            await arrowPage.evaluate(() => Module.ccall('UseClassSkill','number',[],[]));
+            await arrowPage.waitForFunction(() => !document.querySelector('#skill-target')?.classList.contains('hidden'));
+            const targetReady = await arrowPage.evaluate(() => ({
+              targeting: Module.ccall('IsSkillTargeting','number',[],[]),
+              mana: Module.ccall('GetPlayerMana','number',[],[]),
+              confirmDisabled: document.querySelector('#skill-target-confirm')?.disabled,
+              status: document.querySelector('#skill-target-status')?.textContent
+            }));
+            if (targetReady.targeting !== 1 || targetReady.mana !== 90 ||
+                targetReady.confirmDisabled || targetReady.status !== 'TARGET VALID') {
+              throw new Error('Arrow Rain target was not ready without spending Mana: ' + JSON.stringify(targetReady));
+            }
+            await arrowPage.locator('#skill-target-confirm').click();
+            await arrowPage.waitForFunction(() => Module.ccall('IsSkillTargeting','number',[],[]) === 0);
+            const arrowConfirmed = await arrowPage.evaluate(() => ({
+              effects: Module.ccall('GetSkillEffectCount','number',[],[]),
+              mana: Module.ccall('GetPlayerMana','number',[],[]),
+              saved: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (arrowConfirmed.effects !== 1 || arrowConfirmed.mana !== 52 ||
+                arrowConfirmed.saved?.mana !== 52) {
+              throw new Error('Arrow Rain did not create its effect and spend/save Mana on confirmation: ' + JSON.stringify(arrowConfirmed));
+            }
+            await arrowContext.close();
+
             // One floor-navigation key press advances only to the next discovered floor.
             const floorContext = await browser.newContext();
             const floorPage = await floorContext.newPage();
