@@ -435,7 +435,7 @@ jobs:
                 const s = document.querySelector('#settings-open').getBoundingClientRect();
                 const h = innerHeight <= 440 ? 96 : innerHeight - 78;
                 const boxes = [
-                  { left: 12, right: 262, top: 12, bottom: 110 },
+                  { left: 12, right: 282, top: 12, bottom: 110 },
                   { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
                   { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
                   { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
@@ -948,7 +948,7 @@ jobs:
               const s = document.querySelector('#settings-open').getBoundingClientRect();
               const h = innerHeight <= 440 ? 96 : innerHeight - 78;
               const boxes = [
-                { left: 12, right: 262, top: 12, bottom: 110 },
+                { left: 12, right: 282, top: 12, bottom: 110 },
                 { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
                 { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
                 { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
