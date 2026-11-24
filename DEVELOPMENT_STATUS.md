@@ -549,3 +549,21 @@ Continue the source/test audit for any remaining gameplay or PWA edge cases in t
 - PR-only `publish-dist` was skipped. The workflow was started while PR #16 temporarily targeted `main` to satisfy the repository's current PR trigger filter, then the PR was restored to base `fix/boss-arena-floor-bounds`.
 - Current application source/test head verified is `c0334c0d71bafda76e9a67a72dd5d9aebceede3c`. Later changes to this branch tip are documentation-only. PR #14 → PR #15 → PR #16 remains intact; no merge, deployment or `dist/` change was made.
 
+
+
+## Active implementation checkpoint — fortified city perimeters (2026-11-24)
+
+- Added five connected wall sections per city (west, east, south, and two north sections) using the existing solid-platform collision system. Each wall is 12 units high and 2 units thick.
+- The north opening is centered on the city's existing boss-gate route. Two gate towers and a lintel define the entrance; skyline pieces that obstruct the approach are relocated beyond the playable boundary.
+- Added deterministic C++ coverage for all five city layouts, wall dimensions and gate alignment, player collision against all four sides, and passage through the gate.
+- Source/test commits: `cca3a538340e058bc0068ffa873e3b0197a07ae7`, `fd61e6afc1194230c621defe9ce22dd82be854a8`, `bdd3e22b78b21f8725114412612e65d02238d89b`. Checkpoint documentation head: `eaf84617467a6b3830ce36cf5528dd333c5d08c4`.
+- Exact-head CI is **pending**. The previously passing run #336 predates these changes and does not verify them. Do not mark the wall feature complete until the updated gameplay suite, Emscripten build, PWA validation and browser smoke pass.
+- PR #16 has been restored to its original draft base PR #15. PR #15 remains based on PR #14. No PR was merged, no production deployment was attempted, and no generated `dist/` files were changed.
+- Production remains on the existing READY deployment. The ₱0/$0 restriction and release hold remain in force.
+
+### Next steps
+
+1. Run the CI workflow on the exact current PR #16 source/test head and fix any failures before calling the walls verified.
+2. Review the visual layout and collision in the generated five-city scenes; pay particular attention to the gate approach and skyline clearance.
+3. Continue the approved remaining systems in dependency order: floor/zone progression, separate Mana alongside the existing stamina/energy resource, level-up stat and milestone choices, enemy archetypes/skills, fog-of-war exploration, and boss key/performance-based equipment rewards.
+4. Keep PR #16 stacked on PR #15, avoid `dist/` changes, and do not merge or deploy without the required release authorization and verified zero-cost deployment capacity.
