@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v29';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v30';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -759,13 +759,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v29');
+              const cache = await caches.open('tagbound-v30');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v29') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v30') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -860,6 +860,7 @@ jobs:
               localStorage.setItem('tagbound-exploration-v1-0', map);
               localStorage.setItem('tagbound-save', JSON.stringify(save));
             }, { map: legacyMap, save: legacyCampaign });
+            await legacyMapPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
             await legacyMapPage.locator('#start').click();
             await legacyMapPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
             const migratedMap = await legacyMapPage.evaluate(() => ({
@@ -869,11 +870,80 @@ jobs:
             }));
             if (!migratedMap.map || migratedMap.map.length !== 1600 ||
                 migratedMap.map[150] !== '1' || migratedMap.legacy !== legacyMap ||
-                migratedMap.campaign?.schemaVersion !== 1 || migratedMap.campaign?.level !== 2 ||
-                migratedMap.campaign?.xp !== 15 || migratedMap.campaign?.city !== 0) {
+                migratedMap.campaign?.schemaVersion !== 2 || migratedMap.campaign?.level !== 2 ||
+                migratedMap.campaign?.xp !== 15 || migratedMap.campaign?.city !== 0 ||
+                migratedMap.campaign?.pendingStatChoices !== 1 || migratedMap.campaign?.vitality !== 0) {
               throw new Error('Legacy map migration changed or lost existing progress: ' + JSON.stringify(migratedMap));
             }
             await legacyMapContext.close();
+
+            // A saved level-up choice pauses play and persists exactly one selected stat.
+            const statContext = await browser.newContext();
+            const statPage = await statContext.newPage();
+            const statResponse = await statPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!statResponse?.ok()) throw new Error('Stat-choice page did not return HTTP 200.');
+            await statPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            const statSave = {
+              schemaVersion: 2, city: 0, level: 3, xp: 0, unlocked: 0,
+              klass: 0, weapon: 0, finished: 0, quest: 0, mana: 70,
+              vitality: 0, endurance: 0, focus: 0, power: 0, precision: 0,
+              pendingStatChoices: 1
+            };
+            await statPage.evaluate(save => localStorage.setItem('tagbound-save', JSON.stringify(save)), statSave);
+            await statPage.locator('#start').click();
+            await statPage.waitForFunction(() => document.querySelector('#level-up')?.classList.contains('hidden') === false);
+            const beforeChoice = await statPage.evaluate(() => ({
+              pending: Module.ccall('GetPendingStatChoices','number',[],[]),
+              buttons: [...document.querySelectorAll('[data-stat-choice]')].map(button => ({
+                name: button.querySelector('strong')?.textContent,
+                disabled: button.disabled
+              }))
+            }));
+            if (beforeChoice.pending !== 1 || beforeChoice.buttons.length !== 5 || beforeChoice.buttons.some(button => button.disabled)) {
+              throw new Error('Level-up stat selection did not open with five available choices: ' + JSON.stringify(beforeChoice));
+            }
+            await statPage.locator('[data-stat-choice="0"]').click();
+            await statPage.waitForFunction(() => document.querySelector('#level-up')?.classList.contains('hidden'));
+            const afterChoice = await statPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+            if (afterChoice?.schemaVersion !== 2 || afterChoice?.vitality !== 1 ||
+                afterChoice?.pendingStatChoices !== 0 || afterChoice?.level !== 3) {
+              throw new Error('Stat choice did not persist exactly once: ' + JSON.stringify(afterChoice));
+            }
+            await statContext.close();
+
+            // One floor-navigation key press advances only to the next discovered floor.
+            const floorContext = await browser.newContext();
+            const floorPage = await floorContext.newPage();
+            await floorPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await floorPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            const floorSave = {
+              schemaVersion: 2, city: 0, level: 1, xp: 0, unlocked: 0,
+              klass: 0, weapon: 0, finished: 0, quest: 0, mana: 70,
+              vitality: 0, endurance: 0, focus: 0, power: 0, precision: 0,
+              pendingStatChoices: 0
+            };
+            const floorDiscovery = Array(1600).fill('0');
+            floorDiscovery[150]='1';
+            floorDiscovery[470]='1';
+            floorDiscovery[1110]='1';
+            await floorPage.evaluate(({save,map}) => {
+              localStorage.setItem('tagbound-save',JSON.stringify(save));
+              localStorage.setItem('tagbound-exploration-v2-0',map.join(''));
+            },{save:floorSave,map:floorDiscovery});
+            await floorPage.locator('#start').click();
+            await floorPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await floorPage.keyboard.press('m');
+            await floorPage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[])===1);
+            await floorPage.keyboard.press(']');
+            await floorPage.waitForFunction(() => Module.ccall('GetMapFloor','number',[],[])===1);
+            const oneStep = await floorPage.evaluate(() => ({
+              floor:Module.ccall('GetMapFloor','number',[],[]),
+              label:document.querySelector('#map-floor-label')?.textContent
+            }));
+            if(oneStep.floor!==1||oneStep.label!=='ROOFTOP 1') {
+              throw new Error('A single floor key press skipped more than one discovered floor: '+JSON.stringify(oneStep));
+            }
+            await floorContext.close();
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
               const h = innerHeight <= 440 ? 96 : innerHeight - 78;
