@@ -223,11 +223,7 @@ document.addEventListener('keydown',event=>{
   event.preventDefault();
   call('ChangeMapFloor',event.key==='['?-1:1);
  }
- if((event.key==='['||event.key===']')&&
-    Module?.ccall&&Module.ccall('IsMapOpen','number',[],[])===1) {
-  event.preventDefault();
-  call('ChangeMapFloor',event.key==='['?-1:1);
- }
+
 });
 window.TagboundSettings={isOpen:()=>!settings.classList.contains('hidden')};
 document.getElementById('start').addEventListener('click',()=>{
