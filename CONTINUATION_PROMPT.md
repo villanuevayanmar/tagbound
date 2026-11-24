@@ -321,3 +321,19 @@ Continue from the current repository; do not restart or create a replacement pro
 3. Once the movement/rendering foundation is stable, use the master specification to implement the remaining systems in focused increments: separate stamina and mana, a stat choice at each level, skill-vs-upgrade choices at milestones, fortified vertical city/floor progression, enemy archetypes, fog-of-war exploration, guaranteed boss keys and performance-banded equipment loot.
 4. Keep `DEVELOPMENT_STATUS.md` and this file synchronized with exact PR heads, bases and GitHub Actions run IDs. Check exact tested SHA; a started run is not a passing run.
 
+
+
+## Newest pending diagnostic — 2026-11-24
+
+- Added repeatable WebGL canvas-frame sampling to `.github/workflows/ci.yml` in commit `e5da108ec84281c2e08eb1bff3dca4244b7055d5`.
+- During desktop and mobile-landscape gameplay, Playwright captures 12 frames from the actual `#canvas` element per device. `pngjs` checks that each frame has at least 97% pixels with an RGB channel above 12. The threshold allows dark scene colors while flagging a nearly all-black canvas. Failure reports the sample index and ratio.
+- This test is intended to catch obvious intermittent black canvas frames in hosted Chromium. It can miss shorter events between samples and cannot prove the real Android symptom is gone. Do not describe this as a flicker fix.
+- Run #335 (`45330722930`) was triggered on exact workflow/source-tree SHA `e5da108ec84281c2e08eb1bff3dca4244b7055d5`. Latest observed status: in progress at `Install build tools` in the build job. Do not claim the new detector passed until the exact run finishes and its browser-smoke job is successful.
+- Previous full verification remains run #334 (`45329538797`) on code/test SHA `9a83d69b2862b1329467952e4cafa020e25d75fd`; both build and browser-smoke succeeded, and `publish-dist` was skipped.
+- PR #16 has been restored to base PR #15; the draft stack remains #14 → #15 → #16. No merge, deployment or `dist/` edit.
+
+### Next action for the next developer turn
+1. Poll run #335. If it passes, inspect the browser job logs for both desktop/mobile canvas-sampling PASS lines and inspect the newly uploaded visual-review artifact. Then update this file, `DEVELOPMENT_STATUS.md` and PR #16's body with the final run ID/conclusion. If it fails, inspect the exact failure log and adjust the detector only if the failure is a valid threshold/automation issue; never weaken existing assertions just to pass.
+2. Keep the PR stack and release restriction unchanged.
+3. Continue with jump/landing, grounding and rooftop-transition regressions; then address the remaining master-spec systems in focused steps. The black-flicker root cause and physical Android verification remain open.
+
