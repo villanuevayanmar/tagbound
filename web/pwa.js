@@ -218,6 +218,11 @@ document.addEventListener('keydown',event=>{
   call('ToggleMap');
   return;
  }
+ if((event.key==='['||event.key===']')&&Module?.ccall&&
+    Module.ccall('IsMapOpen','number',[],[])===1) {
+  event.preventDefault();
+  call('ChangeMapFloor',event.key==='['?-1:1);
+ }
  if((event.key==='['||event.key===']')&&
     Module?.ccall&&Module.ccall('IsMapOpen','number',[],[])===1) {
   event.preventDefault();
