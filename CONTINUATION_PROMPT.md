@@ -418,3 +418,13 @@ Next:
 - C++ tests cover derived resource limits, actual melee/bow damage scaling, caps, and Mana regeneration. Browser CI now tests one saved level-up selection and v1 migration.
 - Service-worker cache is `tagbound-v30`.
 - Mana is not yet consumed by active class skills in this checkpoint. The next gameplay batch must add the class skill selection at level milestones and connect each activated skill to Mana cost/cooldown, including the specified Skirmisher Arrow Rain targeting interaction.
+
+
+## Class skill system update — 2026-11-24
+
+- Class skills are actual combat systems: Vanguard has Cleaving Arc/Breaker Strike; Skirmisher has Arrow Rain/Piercing Shot; Warden has Shield Bash/Aegis Guard.
+- Level 3 and level 5 each issue one pending skill choice. A milestone offers either a new class skill in an empty slot or an upgrade to an owned skill; ranks cap at 3. Two skill slots are available; one is equipped as the active technique action in Settings.
+- Mana costs and cooldowns are separate from Stamina. Current costs: Cleaving Arc 24, Breaker Strike 30, Arrow Rain 38, Piercing Shot 28, Shield Bash 22, Aegis Guard 30. Arrow Rain is charged only on confirm; it has target validation, visible area/warning, then three damage waves. Cancel does not consume Mana. Aegis reduces direct pursuer/boss damage during its timer.
+- Save schema v3 persists both skill slots, ranks, active slot, pending milestone choices, milestone mask, stats, Mana and campaign state. Older save versions get unclaimed level 3/5 milestones once.
+- Added C++ skill regressions and Playwright browser workflows for skill-choice UI, equip/save, and Arrow Rain activation/confirmation. Exact-head CI for this current integration is pending.
+- Web cache version is tagbound-v31.
