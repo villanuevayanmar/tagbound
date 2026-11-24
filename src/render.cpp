@@ -568,4 +568,51 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
         DrawRectangle(0,0,w,h,Fade(BLACK,0.7f));
         DrawText("THE FIVE CITIES ARE FREE",w/2-190,h/2-18,28,GOLD);
     }
+    if(g.mapOpen) {
+        const int mapWidth=std::min(340,w-32);
+        const int mapHeight=std::min(296,h-24);
+        const int panelX=(w-mapWidth)/2,panelY=(h-mapHeight)/2;
+        DrawRectangle(0,0,w,h,Fade(BLACK,0.78f));
+        DrawRectangle(panelX,panelY,mapWidth,mapHeight,Color{20,27,35,248});
+        DrawRectangleLines(panelX,panelY,mapWidth,mapHeight,Color{177,140,92,230});
+        DrawText(TextFormat("%s  /  EXPLORED MAP",CityName(g.city)),panelX+12,panelY+9,14,GOLD);
+        const int mapX=panelX+12,mapY=panelY+34;
+        const int mapW=mapWidth-24,mapH=mapHeight-58;
+        const float cellW=(float)mapW/ExplorationMapColumns;
+        const float cellH=(float)mapH/ExplorationMapRows;
+        DrawRectangle(mapX,mapY,mapW,mapH,Color{8,13,19,255});
+        for(int row=0;row<ExplorationMapRows;row++) {
+            for(int column=0;column<ExplorationMapColumns;column++) {
+                const int index=row*ExplorationMapColumns+column;
+                if(!g.explored[index]) continue;
+                const int x=mapX+(int)std::floor(column*cellW);
+                const int y=mapY+(int)std::floor(row*cellH);
+                const int right=mapX+(int)std::ceil((column+1)*cellW);
+                const int bottom=mapY+(int)std::ceil((row+1)*cellH);
+                DrawRectangle(x+1,y+1,std::max(1,right-x-2),std::max(1,bottom-y-2),
+                              Color{83,112,112,255});
+            }
+        }
+        DrawRectangleLines(mapX,mapY,mapW,mapH,Color{135,151,151,180});
+        const int objectiveCell=ExplorationCellForPosition(QuestTarget(g.city,g.quest));
+        if(g.explored[objectiveCell]) {
+            Vector3 target=QuestTarget(g.city,g.quest);
+            const float markerX=mapX+(target.x+50.0f)/100.0f*mapW;
+            const float markerY=mapY+(target.z+36.0f)/80.0f*mapH;
+            DrawCircle((int)markerX,(int)markerY,4.0f,GOLD);
+        }
+        const float playerX=mapX+(g.player.position.x+50.0f)/100.0f*mapW;
+        const float playerY=mapY+(g.player.position.z+36.0f)/80.0f*mapH;
+        DrawCircle((int)playerX,(int)playerY,5.0f,WHITE);
+        Vector3 facing=g.player.facing;
+        facing.y=0;
+        if(Vector3Length(facing)>0.001f) {
+            facing=Vector3Normalize(facing);
+            DrawLineEx({playerX,playerY},
+                       {playerX+facing.x*11.0f,playerY+facing.z*11.0f},2.0f,GOLD);
+        }
+        DrawText("WHITE: YOU    GOLD: OBJECTIVE    M / MAP: CLOSE",
+                 panelX+12,panelY+mapHeight-18,9,Color{210,205,190,255});
+    }
+
 }
