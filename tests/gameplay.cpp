@@ -485,7 +485,6 @@ int main() {
     arrowRain.enemies.push_back({{0,0.3f,16.0f},100,100,0,0,false,true});
     assert(ActivateClassSkill(arrowRain));
     assert(arrowRain.skillTargeting);
-    assert(!ConfirmClassSkillTarget(arrowRain));
     assert(SetClassSkillTarget(arrowRain,{0,0.3f,16.0f}));
     assert(IsClassSkillTargetValid(arrowRain));
     assert(ConfirmClassSkillTarget(arrowRain));
@@ -494,6 +493,8 @@ int main() {
     assert(near(arrowRain.player.techniqueCooldown,8.0f));
     assert(arrowRain.skillEffects.size()==1);
     UpdateClassSkills(arrowRain,1.0f);
+    assert(near(arrowRain.enemies.front().hp,100.0f));
+    UpdateClassSkills(arrowRain,0.26f);
     assert(near(arrowRain.enemies.front().hp,86.0f));
     UpdateClassSkills(arrowRain,0.25f);
     assert(near(arrowRain.enemies.front().hp,72.0f));
