@@ -76,6 +76,17 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .pause-emblem{width:66px;height:66px;display:grid;place-items:center;border:1px solid #d9bd8c88;border-radius:50%;background:#1b2633;color:#d9bd8c}
 .pause-emblem svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
 .settings-panel{width:min(280px,86vw);min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
+.level-up-panel{width:min(860px,94vw);max-height:94dvh;text-align:center}
+.level-up-panel h1{font-size:clamp(30px,5vw,48px)}
+.level-up-count{margin:12px 0;color:#d9bd8c;font-size:12px;font-weight:800;letter-spacing:.14em}
+.stat-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:9px;margin-top:18px}
+.stat-choice{min-height:112px;padding:12px 9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px solid #8c7657;background:#1b2633;color:#f2eadb;text-align:center}
+.stat-choice:active,.stat-choice:focus-visible{border-color:#e3bd7e;background:#342c25;outline:2px solid #e3bd7e;outline-offset:2px}
+.stat-choice:disabled{opacity:.38;cursor:not-allowed}
+.stat-choice strong{font-size:13px;letter-spacing:.14em;color:#e7c38e}
+.stat-choice small{font-size:12px;line-height:1.35;color:#d4dbe0}
+.stat-choice span{font-size:10px;color:#99a8b5;letter-spacing:.1em}
+
 .settings-actions{display:flex;align-items:center;justify-content:center;gap:14px;margin:0}
 .icon-action{width:56px;height:56px;margin:0;padding:0;display:grid;place-items:center;border:1px solid #d9bd8c99;border-radius:50%;background:#182331;color:#f2dfbd}
 .icon-action svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -89,6 +100,16 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
   .game-settings{width:40px;height:40px}
   .game-settings svg{width:23px;height:23px}
   .settings-panel{min-height:190px;gap:12px}
+  .level-up-panel{max-height:calc(100dvh - 16px);padding:12px 16px}
+  .level-up-panel h1{margin:4px 0;font-size:28px}
+  .level-up-panel .story-copy{font-size:12px;line-height:1.35;margin:6px 0}
+  .level-up-count{margin:4px 0;font-size:10px}
+  .stat-choice-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:8px}
+  .stat-choice{min-height:78px;padding:6px 4px;gap:4px}
+  .stat-choice strong{font-size:10px}
+  .stat-choice small{font-size:9px}
+  .stat-choice span{font-size:8px}
+
   .pause-emblem{width:56px;height:56px}
   .icon-action{width:48px;height:48px}
   .resume-icon{width:60px;height:60px}
