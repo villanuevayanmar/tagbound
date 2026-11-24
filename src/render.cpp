@@ -531,13 +531,17 @@ void DrawGame(const GameState& g,const Camera3D& camera) {
     else DrawText("DASH UNLOCKS AT LVL 3",24,79,10,GRAY);
     if(g.player.wallRunning) DrawText("WALL RUN",180,79,10,ORANGE);
     const ClassSkill equippedSkill=(ClassSkill)g.player.skills[std::clamp(g.player.activeSkillSlot,0,1)];
+    const float skillCost=ClassSkillManaCost(equippedSkill);
     if(equippedSkill==ClassSkill::None)
         DrawText("TECHNIQUE: CHOOSE AT LVL 3",24,96,9,GRAY);
     else if(g.player.techniqueCooldown>0.0f)
-        DrawText(TextFormat("%s  %.1fs",ClassSkillName(equippedSkill),g.player.techniqueCooldown),24,96,9,ORANGE);
+        DrawText(TextFormat("%s  MANA %d  CD %.1fs",ClassSkillName(equippedSkill),(int)skillCost,g.player.techniqueCooldown),
+                 24,96,9,ORANGE);
+    else if(g.player.mana<skillCost)
+        DrawText(TextFormat("%s  NEED %d MANA",ClassSkillName(equippedSkill),(int)skillCost),24,96,9,RED);
     else
-        DrawText(TextFormat("%s  READY",ClassSkillName(equippedSkill)),24,96,9,GOLD);
-    if(g.player.aegisTime>0.0f) DrawText(TextFormat("AEGIS %.1fs",g.player.aegisTime),185,96,9,Color{133,197,235,255});
+        DrawText(TextFormat("%s  MANA %d  READY",ClassSkillName(equippedSkill),(int)skillCost),24,96,9,GOLD);
+    if(g.player.aegisTime>0.0f) DrawText(TextFormat("AEGIS %.1fs",g.player.aegisTime),220,96,9,Color{133,197,235,255});
     if(!g.finished&&!survivalObjective) {
         Vector3 toward=Vector3Subtract(objectiveTarget,g.player.position);
         toward.y=0;
