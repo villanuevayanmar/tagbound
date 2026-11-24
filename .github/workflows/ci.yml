@@ -63,7 +63,7 @@ jobs:
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v30';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v31';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
                         '/game.js', '/game.wasm'):
@@ -164,7 +164,7 @@ jobs:
                 .map(selector => document.querySelector(selector));
               return {
                 touchHelpRemoved: !document.querySelector('#touch-help'),
-                actionButtonsIconOnly: actionButtons.length === 8 && actionButtons.every(iconOnly),
+                actionButtonsIconOnly: actionButtons.length === 9 && actionButtons.every(iconOnly),
                 pauseButtonIconOnly: iconOnly(document.querySelector('#settings-open')),
                 pauseActionsIconOnly: pauseActions.every(iconOnly),
                 pauseTitleAccessible: document.querySelector('#settings-title')?.classList.contains('sr-only')
@@ -329,7 +329,7 @@ jobs:
               const expectedStage = savedStage === 3 ? 4 : 3;
               const restoredStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
               if (restoredStage?.city !== expectedStage || restoredStage?.unlocked !== expectedStage ||
-                  restoredStage?.schemaVersion !== 2 || restoredStage?.quest !== 1 ||
+                  restoredStage?.schemaVersion !== 3 || restoredStage?.quest !== 1 ||
                   restoredStage?.level !== 2 || restoredStage?.xp !== 15 ||
                   restoredStage?.klass !== 1 || restoredStage?.weapon !== 3 ||
                   restoredStage?.finished !== 0) {
@@ -345,7 +345,7 @@ jobs:
               await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
               const reloadedStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
               if (reloadedStage?.city !== expectedStage || reloadedStage?.unlocked !== expectedStage ||
-                  reloadedStage?.schemaVersion !== 2 || reloadedStage?.quest !== 1 ||
+                  reloadedStage?.schemaVersion !== 3 || reloadedStage?.quest !== 1 ||
                   reloadedStage?.level !== 2 || reloadedStage?.xp !== 15 ||
                   reloadedStage?.klass !== 1 || reloadedStage?.weapon !== 3 ||
                   reloadedStage?.finished !== 0) {
@@ -607,7 +607,7 @@ jobs:
                 restored.save?.quest !== 3 || restored.save?.level !== 1 ||
                 restored.save?.xp !== 0 || restored.save?.klass !== 1 ||
                 restored.save?.weapon !== 3 || restored.save?.finished !== 0 ||
-                restored.save?.schemaVersion !== 2) {
+                restored.save?.schemaVersion !== 3) {
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
@@ -740,7 +740,7 @@ jobs:
                 restarted.save?.city !== 0 || restarted.save?.unlocked !== 0 ||
                 restarted.save?.quest !== 0 || restarted.save?.level !== 1 ||
                 restarted.save?.xp !== 0 || restarted.save?.finished !== 0 ||
-                restarted.save?.schemaVersion !== 2 ||
+                restarted.save?.schemaVersion !== 3 ||
                 restarted.save?.klass !== 1 || restarted.save?.weapon !== 3 ||
                 restarted.selectedClass !== '1' || restarted.soundSetting !== 'on') {
               throw new Error('Campaign restart did not reset progression while preserving class and sound: ' + JSON.stringify(restarted));
@@ -759,13 +759,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v30');
+              const cache = await caches.open('tagbound-v31');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
                 '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v30') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v31') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -800,15 +800,15 @@ jobs:
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
             if (!mobile.controlsVisible || !mobile.installVisible || !mobile.soundToggleVisible ||
-                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 7 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.rotateHidden ||
+                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 8 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             const mobileLoadouts = [
-              { klass: 1, weapon: 3, bowVisible: true, actions: 8 },
-              { klass: 2, weapon: 2, bowVisible: false, actions: 7 },
-              { klass: 0, weapon: 0, bowVisible: false, actions: 7 },
-              { klass: 1, weapon: 3, bowVisible: true, actions: 8 }
+              { klass: 1, weapon: 3, bowVisible: true, actions: 9 },
+              { klass: 2, weapon: 2, bowVisible: false, actions: 8 },
+              { klass: 0, weapon: 0, bowVisible: false, actions: 8 },
+              { klass: 1, weapon: 3, bowVisible: true, actions: 9 }
             ];
             for (const loadout of mobileLoadouts) {
               await mobilePage.locator('[data-class="' + loadout.klass + '"]').tap();
@@ -870,7 +870,7 @@ jobs:
             }));
             if (!migratedMap.map || migratedMap.map.length !== 1600 ||
                 migratedMap.map[150] !== '1' || migratedMap.legacy !== legacyMap ||
-                migratedMap.campaign?.schemaVersion !== 2 || migratedMap.campaign?.level !== 2 ||
+                migratedMap.campaign?.schemaVersion !== 3 || migratedMap.campaign?.level !== 2 ||
                 migratedMap.campaign?.xp !== 15 || migratedMap.campaign?.city !== 0 ||
                 migratedMap.campaign?.pendingStatChoices !== 1 || migratedMap.campaign?.vitality !== 0) {
               throw new Error('Legacy map migration changed or lost existing progress: ' + JSON.stringify(migratedMap));
@@ -1094,7 +1094,7 @@ jobs:
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
             if (!recoveryState.attempted || recoveryState.save?.city !== 0 ||
-                recoveryState.save?.unlocked !== 0 || recoveryState.save?.schemaVersion !== 2) {
+                recoveryState.save?.unlocked !== 0 || recoveryState.save?.schemaVersion !== 3) {
               throw new Error('WebGL context recovery did not flush the in-memory save before reloading: ' +
                 JSON.stringify(recoveryState));
             }
