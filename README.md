@@ -23,7 +23,7 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
 - Bosses enter an enrage phase at half health, telegraph and recover faster, and deal increased strike damage.
 - XP, levels, two skill unlock milestones and local progress saving.
-- Explored-area city map: nearby 5-unit map cells reveal as the player moves, discovered rooftops and structures are drawn in their world positions, and each city’s exploration is stored locally without changing the campaign save record.
+- Floor-aware explored-area map: each city has five independent 20 × 16 map layers representing the existing ground, three objective rooftops, and boss deck. Nearby 5-unit cells reveal only while the player is grounded on that elevation. Discovered structures are drawn only in revealed areas, the player marker appears only on their current floor, and the objective marker appears only after its floor and map cell have been explored. Previous/next controls skip undiscovered floors.
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
 
@@ -151,7 +151,7 @@ During a run, tap the pause icon in the top HUD row to open Settings. The sound 
 - Bow: aim with the Skirmisher's bow; use Attack to fire
 - Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
 - Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
-- Map: tap the map icon or press M to open the explored-area map; tap the map icon or press M again to close it. Wall-running drains stamina; release Sprint to regenerate it.
+- Map: tap the map icon or press M to open the explored-area map; tap the map icon or press M again to close it. Use the floor arrows or [ and ] to browse floors already discovered in that city.
 
 ### Keyboard / mouse
 
@@ -165,7 +165,7 @@ During a run, tap the pause icon in the top HUD row to open Settings. The sound 
 
 ## Save data
 
-Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices. City exploration is stored separately per city in the same browser profile and does not overwrite the campaign save.
+Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices. City/floor exploration is stored separately under a versioned key per city and does not overwrite the campaign save. Earlier 320-cell city maps are retained as the ground-floor layer when the new 1,600-cell format is first loaded.
 
 ## Zero-cost notes
 
