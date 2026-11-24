@@ -182,7 +182,7 @@ static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
 static float touchX=0,touchY=0,lookX=0,lookY=0,attackCooldown=0,saveCooldown=0;
-static bool skillWasDown=false,jumpWasDown=false,techniqueWasDown=false,classChosen=false;
+static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
 
 static void Save() {
@@ -451,9 +451,6 @@ static Controls ReadControls() {
     bool skillDown=IsKeyDown(KEY_E)||(touchButtons&32);
     c.skill=skillDown&&!skillWasDown;
     skillWasDown=skillDown;
-    bool techniqueDown=IsKeyDown(KEY_Q);
-    c.technique=techniqueDown&&!techniqueWasDown;
-    techniqueWasDown=techniqueDown;
     c.lookX=lookX; c.lookY=lookY; lookX=lookY=0;
     if(IsMouseButtonDown(MOUSE_BUTTON_RIGHT)) {
         Vector2 d=GetMouseDelta(); c.lookX+=d.x*0.7f; c.lookY+=d.y*0.7f;
@@ -499,8 +496,6 @@ static void Frame() {
             controls.move={0,0}; controls.jump=false; controls.slide=false; controls.sprint=false;
             controls.attack=false; controls.block=false; controls.aim=false; controls.skill=false;
             controls.technique=false; controls.lookX=controls.lookY=0;
-        } else if(controls.technique) {
-            ActivateClassSkill(game);
         }
         UpdateMovement(game,controls,camera,dt);
         RegenerateMana(game.player,dt);
