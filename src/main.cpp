@@ -49,7 +49,7 @@ static int loadSaveVersion() { return 0; }
 static int loadLocal(int) { return -1; }
 static void saveExploration(int,const char*) {}
 static void loadExploration(int,char*,int) {}
-static void setMapControlsHidden(int) {}
+static void setMapControlsState(int,int,int,int) {}
 static void hideIntro() {}
 static void showEnding() {}
 static void initGameAudio() {}
@@ -57,6 +57,7 @@ static void playGameAudio(int) {}
 static int isSettingsOpen() { return 0; }
 #endif
 
+static void SyncMapControls();
 static GameState game;
 static Camera3D camera{};
 static int selectedClass=0, touchButtons=0;
