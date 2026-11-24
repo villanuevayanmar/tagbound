@@ -103,10 +103,25 @@ int ExplorationCellForPosition(Vector3 position) {
     const int row=std::clamp((int)std::floor((position.z+36.0f)/5.0f),0,ExplorationMapRows-1);
     return row*ExplorationMapColumns+column;
 }
+int ExplorationFloorForPosition(float height) {
+    static constexpr float floorHeights[ExplorationMapFloors]={0.3f,1.7f,2.45f,3.2f,3.95f};
+    int nearest=0;
+    float closest=std::fabs(height-floorHeights[0]);
+    for(int floor=1;floor<ExplorationMapFloors;floor++) {
+        const float distance=std::fabs(height-floorHeights[floor]);
+        if(distance<closest) { closest=distance; nearest=floor; }
+    }
+    return nearest;
+}
 bool UpdateExploration(GameState& g,Vector3 position) {
+    if(!g.player.grounded) return false;
     constexpr float revealRadius=7.5f;
     constexpr float minX=-50.0f,minZ=-36.0f,cellSize=5.0f;
-    const int playerCell=ExplorationCellForPosition(position);
+    const int floor=ExplorationFloorForPosition(position.y);
+    g.currentFloor=floor;
+    if(g.mapFloor!=floor) g.mapFloor=floor;
+    const int floorOffset=floor*ExplorationMapCells;
+    const int playerCell=floorOffset+ExplorationCellForPosition(position);
     bool changed=false;
     if(!g.explored[playerCell]) { g.explored[playerCell]=1; changed=true; }
     for(int row=0;row<ExplorationMapRows;row++) {
@@ -115,11 +130,34 @@ bool UpdateExploration(GameState& g,Vector3 position) {
             const float x=minX+(column+0.5f)*cellSize;
             const float dx=x-position.x,dz=z-position.z;
             if(dx*dx+dz*dz>revealRadius*revealRadius) continue;
-            const int index=row*ExplorationMapColumns+column;
+            const int index=floorOffset+row*ExplorationMapColumns+column;
             if(!g.explored[index]) { g.explored[index]=1; changed=true; }
         }
     }
     return changed;
+}
+bool CanChangeExplorationFloor(const GameState& g,int direction) {
+    if(direction==0) return false;
+    const int step=direction>0?1:-1;
+    for(int floor=g.mapFloor+step;floor>=0&&floor<ExplorationMapFloors;floor+=step) {
+        const int start=floor*ExplorationMapCells;
+        if(std::find(g.explored.begin()+start,g.explored.begin()+start+ExplorationMapCells,
+                     (unsigned char)1)!=g.explored.begin()+start+ExplorationMapCells) return true;
+    }
+    return false;
+}
+bool ChangeExplorationFloor(GameState& g,int direction) {
+    if(!CanChangeExplorationFloor(g,direction)) return false;
+    const int step=direction>0?1:-1;
+    for(int floor=g.mapFloor+step;floor>=0&&floor<ExplorationMapFloors;floor+=step) {
+        const int start=floor*ExplorationMapCells;
+        if(std::find(g.explored.begin()+start,g.explored.begin()+start+ExplorationMapCells,
+                     (unsigned char)1)!=g.explored.begin()+start+ExplorationMapCells) {
+            g.mapFloor=floor;
+            return true;
+        }
+    }
+    return false;
 }
 
 Vector3 QuestCheckpoint(int city,int quest) {
