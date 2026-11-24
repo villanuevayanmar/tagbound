@@ -303,8 +303,44 @@ int main() {
     Camera3D camera{};
     Controls move{};
     move.move.y = 1.0f;
-    UpdateMovement(game, move, camera, 0.1f);
+    for(int frame=0;frame<12;frame++) UpdateMovement(game,move,camera,1.0f/60.0f);
     assert(game.player.position.z > 0.4f);
+
+    // Ground movement ramps to the existing top speed, then brakes when released.
+    GameState movementResponse;
+    movementResponse.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    movementResponse.player.position={0,0.3f,0};
+    Camera3D movementCamera{};
+    ResetCamera(movementResponse.player,movementCamera);
+    Controls forwardMove{};
+    forwardMove.move.y=1.0f;
+    for(int frame=0;frame<6;frame++)
+        UpdateMovement(movementResponse,forwardMove,movementCamera,1.0f/60.0f);
+    assert(movementResponse.player.moveVelocity.y>1.0f);
+    assert(movementResponse.player.moveVelocity.y<6.0f);
+    for(int frame=0;frame<30;frame++)
+        UpdateMovement(movementResponse,forwardMove,movementCamera,1.0f/60.0f);
+    assert(near(movementResponse.player.moveVelocity.y,6.0f,0.08f));
+    const float speedBeforeBrake=movementResponse.player.moveVelocity.y;
+    UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
+    assert(movementResponse.player.moveVelocity.y<speedBeforeBrake);
+    assert(movementResponse.player.moveVelocity.y>0.0f);
+    for(int frame=0;frame<30;frame++)
+        UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
+    assert(std::abs(movementResponse.player.moveVelocity.y)<0.05f);
+
+    // Air steering has less authority than grounded acceleration.
+    GameState airControl;
+    airControl.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    airControl.player.position={0,4.0f,0};
+    airControl.player.grounded=false;
+    Camera3D airCamera{};
+    ResetCamera(airControl.player,airCamera);
+    Controls airStrafe{};
+    airStrafe.move.x=1.0f;
+    UpdateMovement(airControl,airStrafe,airCamera,1.0f/60.0f);
+    assert(airControl.player.moveVelocity.x>0.0f);
+    assert(airControl.player.moveVelocity.x<0.4f);
 
     // The camera-relative control scheme keeps its heading while moving, then follows
     // the direction the character last faced after movement and any manual-look override end.
