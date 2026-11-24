@@ -1,6 +1,7 @@
 #pragma once
 #include "raylib.h"
 #include <vector>
+#include <array>
 #include <string>
 
 enum class Weapon { Sword, Axe, Shield, Bow, Spear };
@@ -43,10 +44,14 @@ struct Player {
     bool grounded=true, blocking=false, bowAiming=false;
     int escapeSkill=0, combatSkill=0;
 };
+constexpr int ExplorationMapColumns=20;
+constexpr int ExplorationMapRows=16;
+constexpr int ExplorationMapCells=ExplorationMapColumns*ExplorationMapRows;
+
 struct Controls {
     Vector2 move{0,0};
     float lookX=0, lookY=0;
-    bool jump=false, slide=false, sprint=false, attack=false, block=false, aim=false, skill=false;
+    bool jump=false, slide=false, sprint=false, attack=false, block=false, aim=false, skill=false, toggleMap=false;
 };
 struct GameState {
     Player player;
@@ -54,6 +59,8 @@ struct GameState {
     std::vector<Enemy> enemies;
     std::vector<Projectile> projectiles;
     BossArena bossArena;
+    std::array<unsigned char,ExplorationMapCells> explored{};
+    bool mapOpen=false;
     int city=0, unlockedCity=0, quest=0, totalQuests=3, defeated=0;
     float danger=0, questTime=0, questLimit=110, beaconHoldTime=0;
     bool started=false, finished=false, bossUnlocked=false;
@@ -79,6 +86,8 @@ float QuestHoldDuration(int city,int quest);
 bool QuestRequiresSurvival(int city,int quest);
 float QuestSurvivalDuration(int city,int quest);
 bool UpdateQuestObjective(GameState& game,float dt);
+int ExplorationCellForPosition(Vector3 position);
+bool UpdateExploration(GameState& game,Vector3 position);
 float BossWindupDuration(int variant,bool enraged=false);
 float BossStrikeRange(int variant);
 bool BossArenaContains(const GameState& game,const Enemy& boss);
