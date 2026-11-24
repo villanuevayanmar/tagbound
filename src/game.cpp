@@ -228,6 +228,25 @@ float ClassMaxHealth(PlayerClass c) {
     static const float health[3]={125.0f,95.0f,115.0f};
     return health[std::clamp((int)c,0,2)];
 }
+float ClassMaxMana(PlayerClass c) {
+    static const float mana[3]={70.0f,90.0f,80.0f};
+    return mana[std::clamp((int)c,0,2)];
+}
+float PlayerMaxHealth(const Player& p) {
+    return ClassMaxHealth(p.playerClass)+std::clamp(p.vitality,0,MaxStatRank)*8.0f;
+}
+float PlayerMaxStamina(const Player& p) {
+    return ClassMaxStamina(p.playerClass)+std::clamp(p.endurance,0,MaxStatRank)*8.0f;
+}
+float PlayerMaxMana(const Player& p) {
+    return ClassMaxMana(p.playerClass)+std::clamp(p.focus,0,MaxStatRank)*12.0f;
+}
+float PlayerMeleeDamageMultiplier(const Player& p) {
+    return 1.0f+std::clamp(p.power,0,MaxStatRank)*0.04f;
+}
+float PlayerRangedDamageMultiplier(const Player& p) {
+    return 1.0f+std::clamp(p.precision,0,MaxStatRank)*0.04f;
+}
 
 bool FindReinforcementSpawn(const GameState& g,Vector3 origin,Vector3& spawn) {
     static const Vector2 directions[8]={
