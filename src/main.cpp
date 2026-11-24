@@ -184,9 +184,9 @@ KEEP float GetBeaconHoldProgress() { return game.beaconHoldTime; }
 KEEP float GetCurrentQuestHoldDuration() { return QuestHoldDuration(game.city,game.quest); }
 KEEP int IsCurrentQuestSurvivalObjective() { return QuestRequiresSurvival(game.city,game.quest)?1:0; }
 KEEP float GetCurrentQuestSurvivalDuration() { return QuestSurvivalDuration(game.city,game.quest); }
-KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() ? 1 : 0; }
+KEEP int IsGameUpdating() { return game.started && !game.finished && !isSettingsOpen() && game.player.pendingStatChoices==0 ? 1 : 0; }
 KEEP void ToggleMap() {
-    if(!game.started||game.finished||isSettingsOpen()) return;
+    if(!game.started||game.finished||isSettingsOpen()||game.player.pendingStatChoices>0) return;
     game.mapOpen=!game.mapOpen;
     if(game.mapOpen) game.mapFloor=game.currentFloor;
     SyncMapControls();
@@ -298,8 +298,9 @@ static void Frame() {
     float dt=std::min(GetFrameTime(),0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
-        if(!game.mapOpen) {
+        if(!game.mapOpen && game.player.pendingStatChoices==0) {
         game.player.blocking=controls.block;
+        const int previousLevel=game.player.level;
         float previousY=game.player.position.y;
         bool wasDashing=game.player.dashTime>0;
         float previousHealth=game.player.health;
@@ -308,6 +309,7 @@ static void Frame() {
         int previousTaggerWindups=TaggerWindupCount();
         if(controls.attack) playGameAudio(game.player.weapon==Weapon::Bow?1:0);
         UpdateMovement(game,controls,camera,dt);
+        RegenerateMana(game.player,dt);
         if(UpdateExploration(game,game.player.position)) SaveExploration();
         if(controls.jump&&game.player.position.y>previousY+0.01f) playGameAudio(3);
         if(!wasDashing&&game.player.dashTime>0) playGameAudio(2);
@@ -348,11 +350,13 @@ static void Frame() {
                 }
             }
         }
+        if(game.player.level!=previousLevel) Save();
         saveCooldown+=dt;
         if(saveCooldown>4.0f) { Save(); saveCooldown=0; }
         if(game.finished) { Save(); showEnding(); }
         }
     }
+    SyncProgressionUI();
     BeginDrawing();
     DrawGame(game,camera);
     if(!game.started) {
