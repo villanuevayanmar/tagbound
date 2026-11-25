@@ -1294,8 +1294,11 @@ jobs:
                   stack: new Error().stack?.split('\\n').slice(2, 7) || []
                 });
                 const patched = new Set();
-                for (let prototype = Object.getPrototypeOf(gl); prototype && prototype !== Object.prototype;
-                     prototype = Object.getPrototypeOf(prototype)) {
+                const glPrototypes = [
+                  window.WebGL2RenderingContext?.prototype,
+                  window.WebGLRenderingContext?.prototype
+                ].filter(prototype => prototype && prototype.isPrototypeOf(gl));
+                for (const prototype of glPrototypes) {
                   for (const name of Object.getOwnPropertyNames(prototype)) {
                     if (patched.has(name)) continue;
                     const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
