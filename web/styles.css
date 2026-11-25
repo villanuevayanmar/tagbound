@@ -164,6 +164,14 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
   .action svg{width:24px;height:24px}
 }
 @media(max-width:760px){
-  .game-settings{left:calc(50% - 98px);width:42px;height:42px;padding:7px}
+  .game-settings{width:42px;height:42px;padding:7px}
   .game-settings svg{width:24px;height:24px}
+}
+/* Keep the pause control in the clear gap between the objective and level HUDs. */
+@media(pointer:coarse) and (orientation:landscape){
+  .game-settings{left:calc(75% - 116px)}
+}
+/* Narrow landscape screens have no safe space in the top HUD row. */
+@media(pointer:coarse) and (orientation:landscape) and (max-width:700px) and (max-height:440px){
+  .game-settings{left:calc(50% - 21px);top:auto;bottom:calc(100px + 6vh)}
 }
