@@ -603,9 +603,9 @@ static void Frame() {
     EndDrawing();
 }
 
-KEEP int GetFrameRate() { return GetFPS(); }
-KEEP float GetFrameTimeMs() { return GetFrameTime()*1000.0f; }
-KEEP int GetSaveSchemaVersion() { return 3; }
+extern "C" KEEP int GetFrameRate() { return GetFPS(); }
+extern "C" KEEP float GetFrameTimeMs() { return GetFrameTime()*1000.0f; }
+extern "C" KEEP int GetSaveSchemaVersion() { return 3; }
 
 int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_VSYNC_HINT);
