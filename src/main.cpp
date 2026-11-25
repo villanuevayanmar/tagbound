@@ -431,6 +431,18 @@ KEEP void ConfirmSkillTarget() {
 KEEP void CancelSkillTarget() {
     CancelClassSkillTarget(game); SyncSkillTargetUI();
 }
+KEEP int GetCurrentCity() { return game.city; }
+KEEP int GetLivingEnemyCount() {
+    return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive;});
+}
+KEEP float GetBossHealth() {
+    for(const Enemy& e:game.enemies) if(e.alive&&e.boss) return e.hp;
+    return 0.0f;
+}
+KEEP float GetPlayerHealth() { return game.player.health; }
+KEEP float GetPlayerPositionX() { return game.player.position.x; }
+KEEP float GetPlayerPositionY() { return game.player.position.y; }
+KEEP float GetPlayerPositionZ() { return game.player.position.z; }
 KEEP int GetActiveBossCount() {
     return (int)std::count_if(game.enemies.begin(),game.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
 }
