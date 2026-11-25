@@ -1334,11 +1334,28 @@ jobs:
             });
             const stabilityResponse = await stabilityPage.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 45000 });
             if (!stabilityResponse?.ok()) throw new Error('M1 stability page did not return HTTP 200.');
-            await stabilityPage.waitForFunction(
-              () => document.querySelector('#loading')?.classList.contains('hidden'),
-              null,
-              { timeout: 45000 }
-            );
+            try {
+              await stabilityPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+            } catch (error) {
+              const startupState = await stabilityPage.evaluate(() => ({
+                loadingText: document.querySelector('#loading')?.textContent || null,
+                canvas: {
+                  width: document.querySelector('#canvas')?.width || 0,
+                  height: document.querySelector('#canvas')?.height || 0
+                },
+                trace: window.__TAGBOUND_GL_TRACE || null,
+                runtimeErrors: window.TagboundErrors?.list?.() || []
+              })).catch(() => null);
+              throw new Error('M1 stability WebAssembly startup failed: ' + JSON.stringify({
+                message: String(error),
+                pageErrors: stabilityPageErrors,
+                startupState
+              }));
+            }
             await stabilityPage.evaluate(() => localStorage.setItem('tagbound-save', JSON.stringify({
               schemaVersion: 3, city: 0, level: 5, xp: 0, unlocked: 0,
               klass: 1, weapon: 3, finished: 0, quest: 3, mana: 90,
