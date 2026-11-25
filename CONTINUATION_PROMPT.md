@@ -1,5 +1,55 @@
 # TAGBOUND — Current Continuation Checkpoint
 
+> **Authoritative checkpoint — 2026-11-25.** This section supersedes older status statements below when they conflict. The latest owner-provided TAGBOUND development prompt in the ChatGPT project is the governing specification. Do not treat the historical notes below as current verification.
+
+## Verified repository checkpoint
+
+- Repository: https://github.com/villanuevayanmar/tagbound
+- Development branch: `development/complete-game`
+- Last verified game-code/CI SHA: `1c51d4be821caf1688fa913131b990f4a3c20ccb`
+- Exact-head GitHub Actions run: [#432](https://github.com/villanuevayanmar/tagbound/actions/runs/45536564152), run ID `45536564152`; build and browser-smoke jobs both completed successfully on that SHA.
+- Run #432 passed WebAssembly configuration/compilation, C++ gameplay tests, PWA assembly/output validation, desktop Chromium, mobile-landscape Chromium, input/save/UI tests, Arrow Rain target confirmation, map/floor UI, service-worker cache/offline reload, portrait guidance, and forced WebGL context-loss recovery.
+- Desktop canvas smoke: 12 samples, minimum non-black ratio 0.9999. Mobile landscape: 12 samples, minimum non-black ratio 1.0000. These short samples are **not** M1's required three-minute stability run.
+- Run #432 visual artifact was inspected: desktop/mobile intro, desktop/mobile gameplay, and five mobile boss-gate images. No captured frame was fully black/blank in those artifacts. The five city environments still have prototype-like geometry; screenshots do not establish campaign completion or scripted boss fights.
+- The two prior browser failures were corrected at their causes: invalid Cleaving Arc SVG substring in the test; genuine 12 px Settings/HUD overlap in mobile CSS; and an incorrect mobile stamina screenshot sample window that read the Mana row rather than the Stamina label. No test threshold was weakened.
+- CI workflow listens to pushes on `main` and `development/complete-game`, plus pull requests targeting `main`. The `publish-dist` job runs only on pushes to `main`. Visual-review artifacts upload even on browser failure.
+
+## PR and release state
+
+- PR #17: open, draft, targets `main`, and remains unmerged. Its description records the M0 evidence and remaining milestones.
+- PR #19: closed without merging after M0 passed.
+- `main`: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`. Do not change it or merge PR #17.
+- Production `https://tagbound.vercel.app` was not touched. Last observed production deployment: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, runtime bundle `9115f13b4021f9052a95eea66ceaa1000f134978`.
+- No current Preview is available. The previously recorded Preview `https://tagbound-5v46rpzby-yanmar.vercel.app` came from an older artifact and must not be presented as current. Read-only Vercel cost/usage lookup returned no data, so free-tier deployment capacity is unverified. Do not deploy until capacity is verified; do not change SSO/protection/settings.
+- Do not use real player saves in test fixtures. No paid services, billing changes, or quota workarounds.
+
+## Approved campaign decisions (do not change without owner approval)
+
+- Campaign order and city names: Port Town → Merchant Tier → Clockwork Foundry → Imperial Capital → High Spire.
+- City layout is hybrid: interiors, streets, rooftops, vertical traversal, defensive walls. Floor counts vary per city and must follow actual navigable geometry.
+- Stamina and Mana are separate.
+- Each level grants one stat choice. Skill milestones offer one mutually exclusive choice: unlock a new skill or upgrade an owned skill; ranks are bounded.
+- Boss loot quality depends on combat performance. Each boss always guarantees its city key.
+- Keep C++17/raylib 5.5/Emscripten/WebAssembly/WebGL. Do not migrate engines.
+- Keep the project ₱0/$0 and phone-only for the owner. Never require a local terminal, laptop, or DevTools.
+
+## Next milestone — M1: diagnose rendering instability
+
+The M1 root cause is **not yet known**. Prior inspection found:
+- One Emscripten frame driver in `src/main.cpp`; one balanced `BeginDrawing`/`EndDrawing` pair and balanced `BeginMode3D`/`EndMode3D`.
+- No competing browser `requestAnimationFrame` loop in the inspected web shell.
+- No application textures, models, shaders, or render targets created/disposed each frame in the inspected C++ and web code.
+- `web/index.html` saves and reloads after WebGL context loss/restore. The forced recovery browser test passes, but a reload is a recovery symptom handler, not proof that the intermittent black flicker is fixed.
+- No measured baseline frame time or memory values and no three-minute scripted stability capture have been produced.
+
+M1 work must instrument the game, determine the cause rather than guess, and add a scripted browser run of at least three minutes covering movement, combat, abilities, enemy encounters, a city transition, and a boss fight. Sampled play frames must never be fully black/blank; there must be no uncaught errors or unexpected context loss. Record baseline frame time and memory in `DEVELOPMENT_STATUS.md`.
+
+After M1, continue M2–M8 in order with the exit gates in the owner-provided prompt. Do not jump ahead or label partial source implementations as complete.
+
+## Important current branch note
+
+The verified game-code SHA above was followed by documentation-only checkpoint commits in `README.md` and `DEVELOPMENT_STATUS.md`. Read the actual current branch head before editing, and run full CI on the final documentation head. The previous PR #17 body and PR state were verified; keep PR #17 draft/unmerged.
+
 Continue the existing TAGBOUND: The Five Cities project from its actual GitHub state. Do not restart, provide only a plan, or stop after one commit. Inspect current source and CI, implement the next verified gap, test it, checkpoint, and continue.
 
 ## Repository and architecture
