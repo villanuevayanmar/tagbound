@@ -606,10 +606,14 @@ jobs:
               report: window.TagboundDiagnostics?.getReport?.() || '',
               build: window.TagboundBuildInfo || null
             }));
-            if (!diagnostics.open || diagnostics.build?.commitSha !== process.env.GITHUB_SHA ||
+            if (!diagnostics.open || diagnostics.build?.commitSha !== process.env.TAGBOUND_SOURCE_SHA ||
+                diagnostics.build?.integrationSha !== process.env.GITHUB_SHA ||
+                !diagnostics.report.includes('Build SHA: ' + process.env.TAGBOUND_SOURCE_SHA) ||
                 !diagnostics.report.includes('Integration SHA: ' + process.env.GITHUB_SHA) ||
                 !diagnostics.report.includes('WASM SHA-256: ') ||
                 !diagnostics.report.includes('Save schema version: 3') ||
+                !diagnostics.report.includes('WebGL version: ') ||
+                !diagnostics.report.includes('GPU renderer: ') ||
                 !/Frame rate: [1-9][0-9]* FPS/.test(diagnostics.report) ||
                 !/Frame time: [0-9]+\.[0-9]{2} ms/.test(diagnostics.report) ||
                 diagnostics.report.includes('tagbound-save')) {
