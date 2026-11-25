@@ -327,11 +327,25 @@ function formatBytes(value){
  while(size>=1024&&index<units.length-1){size/=1024;index++}
  return size.toFixed(index===0?0:1)+' '+units[index];
 }
+function getWebGLDiagnostics(){
+ try{
+  const gl=canvas.getContext('webgl2')||canvas.getContext('webgl');
+  if(!gl)return {version:'unavailable',renderer:'unavailable'};
+  const rendererInfo=gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer=rendererInfo?gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+  const version=gl.getParameter(gl.VERSION);
+  return {
+   version:typeof version==='string'&&version.trim()?version.replace(/[\\r\\n]+/g,' ').slice(0,120):'unavailable',
+   renderer:typeof renderer==='string'&&renderer.trim()?renderer.replace(/[\\r\\n]+/g,' ').slice(0,160):'restricted by browser'
+  };
+ }catch(error){return {version:'unavailable',renderer:'restricted by browser'}}
+}
 function getDiagnosticsReport(){
  const fps=diagnosticCall('GetFrameRate',0);
  const frameTime=diagnosticCall('GetFrameTimeMs',0);
  const schema=diagnosticCall('GetSaveSchemaVersion',buildInfo.saveSchemaVersion||3);
  const graphics=window.TagboundGraphics||{};
+ const webgl=getWebGLDiagnostics();
  const wasmHeap=Module?.HEAPU8?.buffer?.byteLength||0;
  const jsHeap=performance?.memory?.usedJSHeapSize||0;
  const rect=canvas.getBoundingClientRect();
@@ -346,6 +360,8 @@ function getDiagnosticsReport(){
   'Frame time: '+(frameTime>0?frameTime.toFixed(2)+' ms':'unavailable'),
   'WebGL context losses: '+(graphics.contextLosses||0),
   'WebGL context restores: '+(graphics.contextRestores||0),
+  'WebGL version: '+webgl.version,
+  'GPU renderer: '+webgl.renderer,
   'WASM heap allocated: '+formatBytes(wasmHeap),
   'JS heap used: '+formatBytes(jsHeap),
   'Canvas viewport: '+Math.round(rect.width)+' × '+Math.round(rect.height),
