@@ -1329,7 +1329,7 @@ jobs:
                 return gl;
               };
             });
-            const stabilityResponse = await stabilityPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            const stabilityResponse = await stabilityPage.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 45000 });
             if (!stabilityResponse?.ok()) throw new Error('M1 stability page did not return HTTP 200.');
             await stabilityPage.waitForFunction(
               () => document.querySelector('#loading')?.classList.contains('hidden'),
