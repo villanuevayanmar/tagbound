@@ -1,5 +1,51 @@
 # TAGBOUND Development Status
 
+Last updated: 2026-11-25
+
+## Current verified checkpoint — M0 baseline — 2026-11-25
+
+**Verified source commit:** `1c51d4be821caf1688fa913131b990f4a3c20ccb`
+
+**GitHub Actions run:** [#432](https://github.com/villanuevayanmar/tagbound/actions/runs/45536564152), workflow run ID `45536564152`, tied to the exact source commit above.
+
+- Build job passed: Emscripten WebAssembly configuration and compile, C++ gameplay regression suite, static PWA assembly, and generated-output validation.
+- Browser job passed: Chromium desktop and mobile landscape, gameplay startup/input/save, class-skill UI, Arrow Rain confirmation, map/floor UI, mobile Settings controls, service-worker cache and offline reload, portrait guidance, and forced WebGL context-loss recovery.
+- Desktop canvas sampler: 12 samples, minimum non-black pixel ratio 0.9999. Mobile landscape sampler: 12 samples, minimum non-black pixel ratio 1.0000. These are short smoke samples, not the M1 three-minute run.
+- Browser log ended with the PASS line for WebAssembly runtime, WebGL, context-loss recovery, gameplay input/save, service-worker cache, offline reload, mobile landscape controls, and portrait rotation.
+- The visual artifact from run #432 (`tagbound-visual-review`, SHA-256 `d7893740230c06e45bdbd31230ef38ac05ca9f9fe05e785b1b93ffc2e2b997d8`) was downloaded and inspected: desktop/mobile intro, desktop/mobile gameplay, and mobile boss-gate screenshots for all five cities.
+- The mobile Settings control was moved out of the HUD's top-left overlap. The mobile stamina screenshot assertion was corrected to sample the renderer's actual Stamina text band at the same coordinates as desktop; its pixel threshold and green-overlap rule were preserved.
+
+### M0 root causes and workflow
+
+1. The Cleaving Arc browser test expected the invalid SVG substring `M19 5`; the rendered icon path begins `M4 20 19 5`. The test now checks the actual move-to/line-to sequence. The icon was not changed.
+2. At 844×390, the Settings button overlapped the left HUD by 12 pixels. Landscape CSS now places it between the objective and level panels; narrow landscape screens use a separate lower-center position.
+3. The mobile stamina test inspected x=108–126, y=56–69 (the Mana row/blank area), despite the renderer drawing Stamina at x=24, y=39. It now samples x=70–125, y=37–53, matching the desktop check and visible glyph band.
+4. The earlier PR #19 failure was from its temporary, older CI-only branch: it required touch controls while the intro screen was still visible. The current development workflow checks the intro and gameplay controls in their respective states; no production/gameplay behavior was changed to hide that test failure.
+5. CI triggers include pushes to `main` and `development/complete-game`, plus pull requests targeting `main`. The `publish-dist` job only runs on a push to `main`, preventing development CI from publishing generated files to the protected branch. Visual-review artifacts upload even when browser assertions fail.
+
+### Renderer / M1 investigation snapshot — not complete
+
+- `src/main.cpp` has one Emscripten main loop and one balanced `BeginDrawing` / `EndDrawing` pair. `src/render.cpp` balances `BeginMode3D` / `EndMode3D`.
+- No competing browser `requestAnimationFrame` driver was found in the inspected web shell. The inspected C++ and web sources do not create or dispose application textures, models, shaders, or render targets every frame.
+- The WebGL context-loss path in `web/index.html` saves and reloads the page on loss/restore. It passes the forced context-loss smoke test, but that is recovery behavior, not proof that the intermittent black flicker is fixed or that the underlying cause is known.
+- No root cause for the reported intermittent black/flickering frames has been established. No natural unexpected context loss was observed in the short CI samples. Baseline three-minute frame-time and memory measurements have not been collected.
+- M1 remains open until a scripted run of at least three minutes covers movement, combat, abilities, enemy encounters, a city transition, and a boss fight with sampled frames never black/blank and no uncaught errors or unexpected context loss.
+
+### PR, release, and owner-device state
+
+- PR #17 remains open and draft. PR #19 was closed without merging after the exact-head M0 run passed.
+- `main` remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`. Production was not touched; last observed production deployment is `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, with runtime bundle `9115f13b4021f9052a95eea66ceaa1000f134978`.
+- No new Preview was deployed. Previously recorded Preview `https://tagbound-5v46rpzby-yanmar.vercel.app` is stale. The available read-only Vercel usage endpoint returned no cost data, so free-tier capacity remains unverified and deployment is blocked.
+- No phone testing has occurred in this session. Chromium emulation is not physical Android verification.
+- No real player saves were accessed or committed; no paid services or quota workarounds were used.
+
+### Ordered next work
+
+1. Complete M1: instrument the in-game diagnostics panel and root-cause the intermittent WebGL black-frame behavior; then build the three-minute scripted stability scenario and capture baseline frame time/memory.
+2. M2: test containment and scripted fights for all five bosses, including every movement/attack state and arena collision.
+3. M3–M8: follow the owner-approved milestone sequence and exit gates. Do not claim a system complete merely because the source contains a partial implementation.
+4. After M0 documentation changes, verify the final documentation head with CI; then continue M1. Keep PR #17 draft/unmerged and do not deploy production without explicit approval.
+
 Last updated: 2026-11-24
 
 ## Class skill system implementation checkpoint — 2026-11-24
