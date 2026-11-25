@@ -11,6 +11,9 @@ concurrency:
   group: tagbound-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TAGBOUND_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
+
 permissions:
   contents: read
 
@@ -52,8 +55,8 @@ jobs:
       - name: Write per-build diagnostics metadata
         run: |
           WASM_SHA256="$(sha256sum dist/game.wasm | cut -d ' ' -f1)"
-          printf '{"commitSha":"%s","wasmSha256":"%s","saveSchemaVersion":3}\n' \
-            "$GITHUB_SHA" "$WASM_SHA256" > dist/build-info.json
+          printf '{"commitSha":"%s","integrationSha":"%s","wasmSha256":"%s","saveSchemaVersion":3}\n' \
+            "$TAGBOUND_SOURCE_SHA" "$GITHUB_SHA" "$WASM_SHA256" > dist/build-info.json
 
       - name: Validate generated output
         run: |
@@ -73,7 +76,8 @@ jobs:
           json.loads((root / 'manifest.json').read_text())
           metadata = json.loads((root / 'build-info.json').read_text())
           wasm_sha = hashlib.sha256((root / 'game.wasm').read_bytes()).hexdigest()
-          assert metadata.get('commitSha') == os.environ['GITHUB_SHA'], 'Build SHA metadata does not match the workflow commit.'
+          assert metadata.get('commitSha') == os.environ['TAGBOUND_SOURCE_SHA'], 'Build SHA metadata does not match the source branch commit.'
+          assert metadata.get('integrationSha') == os.environ['GITHUB_SHA'], 'Integration SHA metadata does not match the workflow commit.'
           assert metadata.get('wasmSha256') == wasm_sha, 'WASM hash metadata does not match the compiled artifact.'
           assert metadata.get('saveSchemaVersion') == 3, 'Unexpected campaign save schema version.'
           index = (root / 'index.html').read_text()
@@ -174,10 +178,11 @@ jobs:
               info: await fetch('/build-info.json').then(response => response.json()),
               label: document.querySelector('#build-label')?.textContent || ''
             }));
-            if (buildMetadata.info.commitSha !== process.env.GITHUB_SHA ||
+            if (buildMetadata.info.commitSha !== process.env.TAGBOUND_SOURCE_SHA ||
+                buildMetadata.info.integrationSha !== process.env.GITHUB_SHA ||
                 !/^[0-9a-f]{64}$/i.test(buildMetadata.info.wasmSha256 || '') ||
                 buildMetadata.info.saveSchemaVersion !== 3 ||
-                !buildMetadata.label.includes(process.env.GITHUB_SHA.slice(0, 12))) {
+                !buildMetadata.label.includes(process.env.TAGBOUND_SOURCE_SHA.slice(0, 12))) {
               throw new Error('Build identity metadata or title-screen label is incorrect: ' + JSON.stringify(buildMetadata));
             }
             await page.screenshot({ path: 'visual-review/desktop-intro.png', fullPage: true });
@@ -602,6 +607,7 @@ jobs:
               build: window.TagboundBuildInfo || null
             }));
             if (!diagnostics.open || diagnostics.build?.commitSha !== process.env.GITHUB_SHA ||
+                !diagnostics.report.includes('Integration SHA: ' + process.env.GITHUB_SHA) ||
                 !diagnostics.report.includes('WASM SHA-256: ') ||
                 !diagnostics.report.includes('Save schema version: 3') ||
                 !/Frame rate: [1-9][0-9]* FPS/.test(diagnostics.report) ||
@@ -611,7 +617,8 @@ jobs:
             }
             await page.locator('#diagnostics-copy').click();
             const copiedDiagnostics = await page.evaluate(() => navigator.clipboard.readText());
-            if (!copiedDiagnostics.includes('Build SHA: ' + process.env.GITHUB_SHA) ||
+            if (!copiedDiagnostics.includes('Build SHA: ' + process.env.TAGBOUND_SOURCE_SHA) ||
+                !copiedDiagnostics.includes('Integration SHA: ' + process.env.GITHUB_SHA) ||
                 copiedDiagnostics.includes('tagbound-save')) {
               throw new Error('Diagnostics Copy did not provide the safe build/runtime report.');
             }
@@ -856,8 +863,9 @@ jobs:
               info: await fetch('/build-info.json').then(response => response.json()),
               label: document.querySelector('#build-label')?.textContent || ''
             }));
-            if (offlineBuild.info.commitSha !== process.env.GITHUB_SHA ||
-                !offlineBuild.label.includes(process.env.GITHUB_SHA.slice(0, 12))) {
+            if (offlineBuild.info.commitSha !== process.env.TAGBOUND_SOURCE_SHA ||
+                offlineBuild.info.integrationSha !== process.env.GITHUB_SHA ||
+                !offlineBuild.label.includes(process.env.TAGBOUND_SOURCE_SHA.slice(0, 12))) {
               throw new Error('Offline launch did not retain the current build identity metadata.');
             }
             if (errors.length) throw new Error('Browser console errors: ' + errors.join(' | '));
