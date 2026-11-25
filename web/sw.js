@@ -1,5 +1,5 @@
-const VERSION='tagbound-v32';
-const CORE=['/','/styles.css','/pwa.js','/manifest.json','/icons/icon-192.png','/icons/icon-512.png','/game.js','/game.wasm'];
+const VERSION='tagbound-v33';
+const CORE=['/','/styles.css','/pwa.js','/manifest.json','/icons/icon-192.png','/icons/icon-512.png','/game.js','/game.wasm','/build-info.json'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==VERSION).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch',event=>{
