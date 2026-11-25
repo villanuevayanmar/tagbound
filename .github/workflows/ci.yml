@@ -1262,7 +1262,7 @@ jobs:
             }
             await portraitContext.close();
 
-            // M1 three-minute gameplay stability run: real controls, boss damage, city transition and frame sampling.
+            // M1 three-minute gameplay stability run: real controls, ranged boss fight, city transition and frame sampling.
             const stabilityContext = await browser.newContext({
               viewport: { width: 844, height: 390 },
               deviceScaleFactor: 1,
@@ -1281,10 +1281,10 @@ jobs:
             );
             await stabilityPage.evaluate(() => localStorage.setItem('tagbound-save', JSON.stringify({
               schemaVersion: 3, city: 0, level: 5, xp: 0, unlocked: 0,
-              klass: 0, weapon: 1, finished: 0, quest: 3, mana: 70,
-              vitality: 10, endurance: 0, focus: 0, power: 10, precision: 0,
-              pendingStatChoices: 0, skill0: 1, rank0: 1, skill1: 2, rank1: 1,
-              activeSkillSlot: 0, pendingSkillChoices: 0, skillMilestoneMask: 3
+              klass: 1, weapon: 3, finished: 0, quest: 3, mana: 90,
+              vitality: 10, endurance: 0, focus: 0, power: 0, precision: 10,
+              pendingStatChoices: 0, skill0: 3, rank0: 1, skill1: 4, rank1: 1,
+              activeSkillSlot: 1, pendingSkillChoices: 0, skillMilestoneMask: 3
             })));
             await stabilityPage.reload({ waitUntil: 'networkidle' });
             await stabilityPage.waitForFunction(
@@ -1346,7 +1346,7 @@ jobs:
             const bossDamaged = await stabilityPage.evaluate(() =>
               Module.ccall('GetBossHealth', 'number', [], [])
             );
-            const bossFightDeadline = Date.now() + 45000;
+            const bossFightDeadline = Date.now() + 60000;
             while (Date.now() < bossFightDeadline) {
               const city = await stabilityPage.evaluate(() =>
                 Module.ccall('GetCurrentCity', 'number', [], [])
@@ -1358,7 +1358,12 @@ jobs:
             const transitionState = await stabilityPage.evaluate(() => ({
               city: Module.ccall('GetCurrentCity', 'number', [], []),
               enemies: Module.ccall('GetLivingEnemyCount', 'number', [], []),
-              boss: Module.ccall('GetActiveBossCount', 'number', [], [])
+              boss: Module.ccall('GetActiveBossCount', 'number', [], []),
+              bossHealth: Module.ccall('GetBossHealth', 'number', [], []),
+              playerHealth: Module.ccall('GetPlayerHealth', 'number', [], []),
+              playerX: Module.ccall('GetPlayerPositionX', 'number', [], []),
+              playerY: Module.ccall('GetPlayerPositionY', 'number', [], []),
+              playerZ: Module.ccall('GetPlayerPositionZ', 'number', [], [])
             }));
             if (transitionState.city !== 1 || transitionState.enemies < 1 || transitionState.boss !== 0) {
               throw new Error('M1 stability scenario did not complete the Port Town boss and enter Merchant Tier: ' +
