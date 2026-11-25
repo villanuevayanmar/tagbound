@@ -1291,7 +1291,7 @@ jobs:
                     if (value && typeof value === 'object') return value.constructor?.name || 'object';
                     return typeof value;
                   }),
-                  stack: new Error().stack?.split('\\n').slice(2, 7) || []
+                  stack: new Error().stack?.split('\n').slice(2, 7) || []
                 });
                 for (const name of ['vertexAttribPointer', 'enableVertexAttribArray']) {
                   let prototype = Object.getPrototypeOf(gl);
