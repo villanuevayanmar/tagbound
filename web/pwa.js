@@ -350,7 +350,7 @@ function getDiagnosticsReport(){
   'Canvas viewport: '+Math.round(rect.width)+' × '+Math.round(rect.height),
   'Recent errors:',
   ...(errors.length?errors.map((error,index)=>(index+1)+'. '+error):['None recorded'])
- ].join('\\n');
+ ].join('\n');
 }
 window.TagboundDiagnostics={
  getReport:getDiagnosticsReport,
