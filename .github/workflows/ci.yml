@@ -1291,37 +1291,34 @@ jobs:
                     if (value && typeof value === 'object') return value.constructor?.name || 'object';
                     return typeof value;
                   }),
-                  stack: new Error().stack?.split('\n').slice(2, 7) || []
+                  stack: new Error().stack?.split('\\n').slice(2, 7) || []
                 });
-                const patched = new Set();
-                const glPrototypes = [
-                  window.WebGL2RenderingContext?.prototype,
-                  window.WebGLRenderingContext?.prototype
-                ].filter(prototype => prototype && prototype.isPrototypeOf(gl));
-                for (const prototype of glPrototypes) {
-                  for (const name of Object.getOwnPropertyNames(prototype)) {
-                    if (patched.has(name)) continue;
+                for (const name of ['vertexAttribPointer', 'enableVertexAttribArray']) {
+                  let prototype = Object.getPrototypeOf(gl);
+                  while (prototype) {
                     const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
-                    if (typeof descriptor?.value !== 'function' || name === 'getError') continue;
-                    patched.add(name);
-                    const original = descriptor.value;
-                    try {
-                      Object.defineProperty(prototype, name, {
-                        ...descriptor,
-                        value: function(...values) {
-                          const result = Reflect.apply(original, this, values);
-                          trace.calls++;
-                          for (let i = 0; i < 8; i++) {
-                            const code = nativeGetError();
-                            if (code === gl.NO_ERROR) break;
-                            record(name, code, values);
+                    if (typeof descriptor?.value === 'function') {
+                      const original = descriptor.value;
+                      try {
+                        Object.defineProperty(prototype, name, {
+                          ...descriptor,
+                          value: function(...values) {
+                            const result = Reflect.apply(original, this, values);
+                            trace.calls++;
+                            for (let i = 0; i < 8; i++) {
+                              const code = nativeGetError();
+                              if (code === gl.NO_ERROR) break;
+                              record(name, code, values);
+                            }
+                            return result;
                           }
-                          return result;
-                        }
-                      });
-                    } catch (error) {
-                      trace.installFailures.push(name + ': ' + String(error));
+                        });
+                      } catch (error) {
+                        trace.installFailures.push(name + ': ' + String(error));
+                      }
+                      break;
                     }
+                    prototype = Object.getPrototypeOf(prototype);
                   }
                 }
                 for (let i = 0; i < 8; i++) {
@@ -1341,15 +1338,31 @@ jobs:
                 { timeout: 45000 }
               );
             } catch (error) {
-              const startupState = await stabilityPage.evaluate(() => ({
-                loadingText: document.querySelector('#loading')?.textContent || null,
-                canvas: {
-                  width: document.querySelector('#canvas')?.width || 0,
-                  height: document.querySelector('#canvas')?.height || 0
-                },
-                trace: window.__TAGBOUND_GL_TRACE || null,
-                runtimeErrors: window.TagboundErrors?.list?.() || []
-              })).catch(() => null);
+              const startupState = await stabilityPage.evaluate(() => {
+                const loading = document.querySelector('#loading');
+                const canvas = document.querySelector('#canvas');
+                const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+                const pendingWebglErrors = [];
+                if (gl && !gl.isContextLost()) {
+                  for (let i = 0; i < 8; i++) {
+                    const code = gl.getError();
+                    if (code === gl.NO_ERROR) break;
+                    pendingWebglErrors.push(code);
+                  }
+                }
+                return {
+                  loadingExists: !!loading,
+                  loadingClass: loading?.className || null,
+                  loadingText: loading?.textContent || null,
+                  moduleCcall: typeof Module?.ccall === 'function',
+                  moduleCalledRun: Module?.calledRun ?? null,
+                  moduleRuntimeInitialized: Module?.runtimeInitialized ?? null,
+                  canvas: { width: canvas?.width || 0, height: canvas?.height || 0 },
+                  pendingWebglErrors,
+                  trace: window.__TAGBOUND_GL_TRACE || null,
+                  runtimeErrors: window.TagboundErrors?.list?.() || []
+                };
+              }).catch(() => null);
               throw new Error('M1 stability WebAssembly startup failed: ' + JSON.stringify({
                 message: String(error),
                 pageErrors: stabilityPageErrors,
