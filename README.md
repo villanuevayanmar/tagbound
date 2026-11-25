@@ -1,5 +1,14 @@
 # TAGBOUND: The Five Cities
 
+## Development checkpoint — 2026-11-25
+
+- Development branch head: `1c51d4be821caf1688fa913131b990f4a3c20ccb`.
+- M0 CI baseline passed on GitHub Actions run [#432](https://github.com/villanuevayanmar/tagbound/actions/runs/45536564152): WebAssembly build, C++ gameplay tests, PWA validation, desktop Chromium, and mobile-landscape Chromium.
+- The CI workflow listens for pushes to `main` and `development/complete-game`, and pull requests targeting `main`. Distribution publishing is restricted to pushes on `main`.
+- PR #17 remains draft and unmerged. Temporary CI-only PR #19 is closed without merging.
+- M1 rendering stability and M2–M8 campaign completion are still in progress. In particular, the 12-frame CI canvas samples do not meet the three-minute stability requirement.
+- No Preview was published. The earlier Preview is stale; current Vercel free-tier capacity could not be verified through the read-only usage endpoint. Production and `main` were not changed.
+
 A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D renderer are C++17 compiled to WebAssembly with Emscripten and raylib. The browser layer supplies touch controls, PWA installation, offline caching and the opening story.
 
 ## Current playable scope
