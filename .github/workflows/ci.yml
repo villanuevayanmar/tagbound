@@ -1262,6 +1262,251 @@ jobs:
             }
             await portraitContext.close();
 
+            // M1 three-minute gameplay stability run: real controls, boss damage, city transition and frame sampling.
+            const stabilityContext = await browser.newContext({
+              viewport: { width: 844, height: 390 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const stabilityPage = await stabilityContext.newPage();
+            const stabilityPageErrors = [];
+            stabilityPage.on('pageerror', error => stabilityPageErrors.push(error.message));
+            const stabilityResponse = await stabilityPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!stabilityResponse?.ok()) throw new Error('M1 stability page did not return HTTP 200.');
+            await stabilityPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            await stabilityPage.evaluate(() => localStorage.setItem('tagbound-save', JSON.stringify({
+              schemaVersion: 3, city: 0, level: 5, xp: 0, unlocked: 0,
+              klass: 0, weapon: 1, finished: 0, quest: 3, mana: 70,
+              vitality: 10, endurance: 0, focus: 0, power: 10, precision: 0,
+              pendingStatChoices: 0, skill0: 1, rank0: 1, skill1: 2, rank1: 1,
+              activeSkillSlot: 0, pendingSkillChoices: 0, skillMilestoneMask: 3
+            })));
+            await stabilityPage.reload({ waitUntil: 'networkidle' });
+            await stabilityPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            await stabilityPage.locator('#start').click();
+            await stabilityPage.waitForFunction(
+              () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                Module.ccall('GetCurrentCity', 'number', [], []) === 0 &&
+                Module.ccall('GetActiveBossCount', 'number', [], []) === 1 &&
+                Module.ccall('IsBossArenaContained', 'number', [], []) === 1,
+              null,
+              { timeout: 10000 }
+            );
+            const bossStart = await stabilityPage.evaluate(() => ({
+              health: Module.ccall('GetBossHealth', 'number', [], []),
+              mana: Module.ccall('GetPlayerMana', 'number', [], []),
+              x: Module.ccall('GetPlayerPositionX', 'number', [], []),
+              z: Module.ccall('GetPlayerPositionZ', 'number', [], [])
+            }));
+            if (bossStart.health <= 0 || bossStart.mana < 24) {
+              throw new Error('M1 boss/skill fixture did not load: ' + JSON.stringify(bossStart));
+            }
+            const stabilityTouch = (x, y, buttons) => stabilityPage.evaluate(
+              ([moveX, moveY, bits]) => Module.ccall(
+                'SetTouch', 'null', ['number', 'number', 'number'], [moveX, moveY, bits]
+              ),
+              [x, y, buttons]
+            );
+            await stabilityTouch(0, -0.35, 68);
+            await stabilityPage.waitForTimeout(1200);
+            await stabilityTouch(0, -0.35, 69);
+            await stabilityPage.waitForTimeout(120);
+            await stabilityTouch(0, -0.35, 68);
+            await stabilityPage.waitForTimeout(850);
+            const movementState = await stabilityPage.evaluate(() => ({
+              x: Module.ccall('GetPlayerPositionX', 'number', [], []),
+              z: Module.ccall('GetPlayerPositionZ', 'number', [], [])
+            }));
+            if (Math.hypot(movementState.x - bossStart.x, movementState.z - bossStart.z) < 1) {
+              throw new Error('M1 stability scenario did not move the player through the real touch controls.');
+            }
+            await stabilityPage.evaluate(() => Module.ccall('UseClassSkill', 'null', [], []));
+            await stabilityPage.waitForTimeout(150);
+            const manaAfterSkill = await stabilityPage.evaluate(() =>
+              Module.ccall('GetPlayerMana', 'number', [], [])
+            );
+            if (manaAfterSkill >= bossStart.mana) {
+              throw new Error('M1 stability scenario did not activate the equipped class skill.');
+            }
+            await stabilityTouch(0, 0, 4);
+            await stabilityPage.waitForFunction(
+              (initialHealth) => Module.ccall('GetBossHealth', 'number', [], []) < initialHealth,
+              bossStart.health,
+              { timeout: 15000 }
+            );
+            const bossDamaged = await stabilityPage.evaluate(() =>
+              Module.ccall('GetBossHealth', 'number', [], [])
+            );
+            const bossFightDeadline = Date.now() + 45000;
+            while (Date.now() < bossFightDeadline) {
+              const city = await stabilityPage.evaluate(() =>
+                Module.ccall('GetCurrentCity', 'number', [], [])
+              );
+              if (city === 1) break;
+              await stabilityTouch(0, -0.18, 68);
+              await stabilityPage.waitForTimeout(700);
+            }
+            const transitionState = await stabilityPage.evaluate(() => ({
+              city: Module.ccall('GetCurrentCity', 'number', [], []),
+              enemies: Module.ccall('GetLivingEnemyCount', 'number', [], []),
+              boss: Module.ccall('GetActiveBossCount', 'number', [], [])
+            }));
+            if (transitionState.city !== 1 || transitionState.enemies < 1 || transitionState.boss !== 0) {
+              throw new Error('M1 stability scenario did not complete the Port Town boss and enter Merchant Tier: ' +
+                JSON.stringify({ bossStart, bossDamaged, movementState, transitionState }));
+            }
+            await stabilityTouch(0, 0, 0);
+            const stabilityInitial = await stabilityPage.evaluate(() => ({
+              contextLosses: window.TagboundGraphics?.contextLosses || 0,
+              contextRestores: window.TagboundGraphics?.contextRestores || 0,
+              jsHeap: performance.memory?.usedJSHeapSize || 0,
+              wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0,
+              visibility: document.visibilityState
+            }));
+            const stabilityStartImage = await stabilityPage.locator('#canvas').screenshot();
+            require('fs').writeFileSync('visual-review/m1-stability-start.png', stabilityStartImage);
+            const backgroundPage = await stabilityContext.newPage();
+            await backgroundPage.goto('about:blank');
+            const stabilityStartedAt = Date.now();
+            const frameRates = [];
+            const frameTimes = [];
+            const jsHeapSamples = [];
+            const wasmHeapSamples = [];
+            let minimumVisibleRatio = 1;
+            let webglErrorSamples = [];
+            let backgroundHiddenObserved = false;
+            for (let sampleIndex = 0; sampleIndex < 180; sampleIndex++) {
+              if (sampleIndex % 18 === 0) await stabilityTouch(0, -0.3, 68);
+              else if (sampleIndex % 18 === 6) await stabilityTouch(0.25, 0, 68);
+              else if (sampleIndex % 18 === 12) await stabilityTouch(0, 0, 4);
+              if (sampleIndex % 24 === 8) {
+                await stabilityTouch(0, -0.2, 69);
+                await stabilityPage.waitForTimeout(90);
+                await stabilityTouch(0, -0.2, 68);
+              }
+              if (sampleIndex % 15 === 5) {
+                await stabilityPage.evaluate(() => {
+                  if (Module.ccall('GetTechniqueCooldownTenths', 'number', [], []) === 0 &&
+                      Module.ccall('GetPlayerMana', 'number', [], []) >= 24) {
+                    Module.ccall('UseClassSkill', 'null', [], []);
+                  }
+                });
+              }
+              if (sampleIndex === 89) {
+                await backgroundPage.bringToFront();
+                await stabilityPage.waitForTimeout(1200);
+                backgroundHiddenObserved = await stabilityPage.evaluate(() => document.visibilityState === 'hidden');
+                await stabilityPage.bringToFront();
+                await stabilityPage.waitForTimeout(1200);
+              }
+              await stabilityPage.waitForTimeout(1000);
+              const frameBuffer = await stabilityPage.locator('#canvas').screenshot();
+              const frameImage = PNG.sync.read(frameBuffer);
+              let visiblePixels = 0;
+              let sampledPixels = 0;
+              for (let pixel = 0; pixel < frameImage.data.length; pixel += 16) {
+                if (frameImage.data[pixel] + frameImage.data[pixel + 1] + frameImage.data[pixel + 2] > 30) {
+                  visiblePixels++;
+                }
+                sampledPixels++;
+              }
+              const visibleRatio = visiblePixels / sampledPixels;
+              minimumVisibleRatio = Math.min(minimumVisibleRatio, visibleRatio);
+              if (visibleRatio < 0.97) {
+                throw new Error('M1 stability frame was black/blank at sample ' + sampleIndex +
+                  ': visible pixel ratio ' + visibleRatio);
+              }
+              const frameState = await stabilityPage.evaluate(() => {
+                const canvas = document.querySelector('#canvas');
+                const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+                const webglErrors = [];
+                if (gl && !gl.isContextLost()) {
+                  for (let i = 0; i < 8; i++) {
+                    const error = gl.getError();
+                    if (error === gl.NO_ERROR) break;
+                    webglErrors.push(error);
+                  }
+                }
+                return {
+                  fps: Module.ccall('GetFrameRate', 'number', [], []),
+                  frameTimeMs: Module.ccall('GetFrameTimeMs', 'number', [], []),
+                  contextLosses: window.TagboundGraphics?.contextLosses || 0,
+                  contextRestores: window.TagboundGraphics?.contextRestores || 0,
+                  contextLost: !!gl?.isContextLost?.(),
+                  webglErrors,
+                  errors: window.TagboundErrors?.list?.() || [],
+                  jsHeap: performance.memory?.usedJSHeapSize || 0,
+                  wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0
+                };
+              });
+              if (frameState.contextLost || frameState.contextLosses !== stabilityInitial.contextLosses ||
+                  frameState.webglErrors.length || frameState.errors.length ||
+                  !Number.isFinite(frameState.fps) || frameState.fps < 1 ||
+                  !Number.isFinite(frameState.frameTimeMs) || frameState.frameTimeMs <= 0) {
+                throw new Error('M1 stability runtime diagnostics failed at sample ' + sampleIndex + ': ' +
+                  JSON.stringify(frameState));
+              }
+              frameRates.push(frameState.fps);
+              frameTimes.push(frameState.frameTimeMs);
+              if (frameState.jsHeap > 0) jsHeapSamples.push(frameState.jsHeap);
+              if (frameState.wasmHeap > 0) wasmHeapSamples.push(frameState.wasmHeap);
+              if (frameState.webglErrors.length) webglErrorSamples.push(...frameState.webglErrors);
+            }
+            const stabilityDurationMs = Date.now() - stabilityStartedAt;
+            await stabilityTouch(0, 0, 0);
+            const stabilityFinal = await stabilityPage.evaluate(() => ({
+              city: Module.ccall('GetCurrentCity', 'number', [], []),
+              contextLosses: window.TagboundGraphics?.contextLosses || 0,
+              contextRestores: window.TagboundGraphics?.contextRestores || 0,
+              errors: window.TagboundErrors?.list?.() || [],
+              jsHeap: performance.memory?.usedJSHeapSize || 0,
+              wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0
+            }));
+            if (stabilityDurationMs < 180000 || frameRates.length !== 180 ||
+                stabilityFinal.contextLosses !== stabilityInitial.contextLosses ||
+                stabilityFinal.contextRestores !== stabilityInitial.contextRestores ||
+                stabilityFinal.errors.length || stabilityPageErrors.length ||
+                webglErrorSamples.length || stabilityFinal.city !== 1) {
+              throw new Error('M1 three-minute stability exit gate failed: ' + JSON.stringify({
+                durationMs: stabilityDurationMs, samples: frameRates.length, stabilityInitial,
+                stabilityFinal, stabilityPageErrors, webglErrorSamples
+              }));
+            }
+            const average = values => values.length
+              ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+            const m1StabilityReport = {
+              durationMs: stabilityDurationMs,
+              samples: frameRates.length,
+              cityAfterBoss: transitionState.city,
+              bossHealthBefore: bossStart.health,
+              bossHealthAfterDamage: bossDamaged,
+              manaBeforeSkill: bossStart.mana,
+              manaAfterSkill,
+              minimumVisibleRatio,
+              averageFps: average(frameRates),
+              averageFrameTimeMs: average(frameTimes),
+              maximumFrameTimeMs: Math.max(...frameTimes),
+              jsHeapStart: stabilityInitial.jsHeap || null,
+              jsHeapEnd: stabilityFinal.jsHeap || null,
+              wasmHeapStart: stabilityInitial.wasmHeap || null,
+              wasmHeapEnd: stabilityFinal.wasmHeap || null,
+              backgroundHiddenObserved
+            };
+            console.log('M1 STABILITY BASELINE: ' + JSON.stringify(m1StabilityReport));
+            const stabilityEndImage = await stabilityPage.locator('#canvas').screenshot();
+            require('fs').writeFileSync('visual-review/m1-stability-end.png', stabilityEndImage);
+            await backgroundPage.close();
+            await stabilityContext.close();
+
             // Force a real WebGL context loss in an isolated session and verify recovery reloads raylib.
             const recoveryContext = await browser.newContext({
               viewport: { width: 844, height: 390 },
