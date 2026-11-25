@@ -65,14 +65,17 @@ EM_JS(void, setProgressionChoiceState, (int pending,int vitality,int endurance,i
   document.getElementById("touch-controls")?.classList.toggle("hidden",open||settingsVisible);
   document.getElementById("settings-open")?.classList.toggle("hidden",open||!gameReady||settingsVisible);
   const count=document.getElementById("level-up-count");
-  if(count) count.textContent="STAT CHOICES REMAINING: "+pending;
+  const countText="STAT CHOICES REMAINING: "+pending;
+  if(count&&count.textContent!==countText) count.textContent=countText;
   const ranks=[vitality,endurance,focus,power,precision];
   document.querySelectorAll("[data-stat-choice]").forEach(button=>{
     const stat=Number(button.dataset.statChoice);
     const rank=ranks[stat]||0;
-    button.disabled=rank>=10;
+    const disabled=rank>=10;
+    if(button.disabled!==disabled) button.disabled=disabled;
     const value=button.querySelector("[data-stat-rank]");
-    if(value) value.textContent="RANK "+rank+"/10";
+    const rankText="RANK "+rank+"/10";
+    if(value&&value.textContent!==rankText) value.textContent=rankText;
   });
 });
 
@@ -103,18 +106,23 @@ EM_JS(void, setSkillChoiceState, (int pending,int pendingStats,int playerClass,i
     }
   }
   const count=document.getElementById("skill-choice-count");
-  if(count) count.textContent="SKILL MILESTONE — CHOOSE ONE ("+pending+" REMAINING)";
+  const countText="SKILL MILESTONE — CHOOSE ONE ("+pending+" REMAINING)";
+  if(count&&count.textContent!==countText) count.textContent=countText;
   for(let index=0;index<2;index++) {
     const button=document.getElementById("skill-option-"+index);
     if(!button) continue;
     const option=options[index];
-    button.classList.toggle("hidden",!option);
-    button.disabled=!option;
+    const hidden=!option;
+    if(button.classList.contains("hidden")!==hidden) button.classList.toggle("hidden",hidden);
+    if(button.disabled===!!option) button.disabled=!option;
     if(option) {
-      button.dataset.skillId=String(option.id);
-      button.dataset.upgrade=String(option.upgrade);
-      button.querySelector("[data-skill-title]").textContent=option.title;
-      button.querySelector("[data-skill-detail]").textContent=option.detail;
+      const skillId=String(option.id),upgrade=String(option.upgrade);
+      if(button.dataset.skillId!==skillId) button.dataset.skillId=skillId;
+      if(button.dataset.upgrade!==upgrade) button.dataset.upgrade=upgrade;
+      const title=button.querySelector("[data-skill-title]");
+      const detail=button.querySelector("[data-skill-detail]");
+      if(title&&title.textContent!==option.title) title.textContent=option.title;
+      if(detail&&detail.textContent!==option.detail) detail.textContent=option.detail;
     }
   }
 });
@@ -125,11 +133,15 @@ EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int
     const label=document.getElementById("skill-slot-"+slot+"-name");
     const skill=slot===0?skill0:skill1,rank=slot===0?rank0:rank1;
     if(button) {
-      button.disabled=skill===0;
-      button.classList.toggle("selected",activeSlot===slot&&skill!==0);
-      button.setAttribute("aria-label",skill===0?"Empty skill slot "+(slot+1):"Equip "+names[skill]+" in skill slot "+(slot+1));
+      const disabled=skill===0;
+      if(button.disabled!==disabled) button.disabled=disabled;
+      const selected=activeSlot===slot&&skill!==0;
+      if(button.classList.contains("selected")!==selected) button.classList.toggle("selected",selected);
+      const ariaLabel=skill===0?"Empty skill slot "+(slot+1):"Equip "+names[skill]+" in skill slot "+(slot+1);
+      if(button.getAttribute("aria-label")!==ariaLabel) button.setAttribute("aria-label",ariaLabel);
     }
-    if(label) label.textContent=skill===0?"EMPTY":names[skill]+" · R"+rank;
+    const slotLabel=skill===0?"EMPTY":names[skill]+" · R"+rank;
+    if(label&&label.textContent!==slotLabel) label.textContent=slotLabel;
   }
   const skill=activeSlot===0?skill0:skill1;
   const rank=activeSlot===0?rank0:rank1;
@@ -149,15 +161,21 @@ EM_JS(void, setSkillLoadoutState, (int skill0,int rank0,int skill1,int rank1,int
   const cooldown=cooldownTenths/10;
   if(technique) {
     const ready=skill!==0&&mana>=cost&&cooldown<=0;
-    technique.disabled=skill===0||!ready;
-    technique.dataset.cost=cost?cost+"M":"";
-    technique.dataset.cooldown=cooldown>0?cooldown.toFixed(1)+"s":"";
-    technique.classList.toggle("no-mana",skill!==0&&mana<cost&&cooldown<=0);
-    technique.classList.toggle("cooling",cooldown>0);
-    technique.setAttribute("aria-label",skill===0?"No equipped technique":
-      "Use "+name+" rank "+rank+", costs "+cost+" Mana, "+(cooldown>0?"cooldown "+cooldown.toFixed(1)+" seconds":mana<cost?"not enough Mana":"ready"));
+    const disabled=skill===0||!ready;
+    if(technique.disabled!==disabled) technique.disabled=disabled;
+    const costLabel=cost?cost+"M":"";
+    const cooldownLabel=cooldown>0?cooldown.toFixed(1)+"s":"";
+    if(technique.dataset.cost!==costLabel) technique.dataset.cost=costLabel;
+    if(technique.dataset.cooldown!==cooldownLabel) technique.dataset.cooldown=cooldownLabel;
+    const noMana=skill!==0&&mana<cost&&cooldown<=0;
+    if(technique.classList.contains("no-mana")!==noMana) technique.classList.toggle("no-mana",noMana);
+    const cooling=cooldown>0;
+    if(technique.classList.contains("cooling")!==cooling) technique.classList.toggle("cooling",cooling);
+    const ariaLabel=skill===0?"No equipped technique":
+      "Use "+name+" rank "+rank+", costs "+cost+" Mana, "+(cooldown>0?"cooldown "+cooldown.toFixed(1)+" seconds":mana<cost?"not enough Mana":"ready");
+    if(technique.getAttribute("aria-label")!==ariaLabel) technique.setAttribute("aria-label",ariaLabel);
     const svg=technique.querySelector("svg");
-    if(svg&&skill>0) svg.innerHTML=icons[skill];
+    if(svg&&skill>0&&svg.innerHTML!==icons[skill]) svg.innerHTML=icons[skill];
   }
 });
 EM_JS(void, setSkillTargetState, (int active,int valid), {
@@ -170,9 +188,10 @@ EM_JS(void, setSkillTargetState, (int active,int valid), {
     !document.getElementById("intro")?.classList.contains("hidden")||
     !document.getElementById("ending")?.classList.contains("hidden"));
   const confirm=document.getElementById("skill-target-confirm");
-  if(confirm) confirm.disabled=!valid;
+  if(confirm&&confirm.disabled===!!valid) confirm.disabled=!valid;
   const label=document.getElementById("skill-target-status");
-  if(label) label.textContent=valid?"TARGET VALID":"MOVE THE MARKER TO A CLEAR AREA";
+  const status=valid?"TARGET VALID":"MOVE THE MARKER TO A CLEAR AREA";
+  if(label&&label.textContent!==status) label.textContent=status;
 });
 
 EM_JS(void, hideIntro, (), { document.getElementById("intro")?.classList.add("hidden"); });
