@@ -1382,7 +1382,45 @@ jobs:
               null,
               { timeout: 45000 }
             );
-            await stabilityPage.locator('#start').click();
+            try {
+              await stabilityPage.locator('#start').click({ timeout: 8000 });
+            } catch (error) {
+              const clickState = await stabilityPage.evaluate(async () => {
+                const button = document.querySelector('#start');
+                const intro = document.querySelector('#intro');
+                const loading = document.querySelector('#loading');
+                const panel = button?.closest('.panel');
+                const rectOf = element => {
+                  if (!element) return null;
+                  const rect = element.getBoundingClientRect();
+                  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+                };
+                const samples = [];
+                for (let i = 0; i < 8; i++) {
+                  await new Promise(requestAnimationFrame);
+                  samples.push(rectOf(button));
+                }
+                const rect = button?.getBoundingClientRect();
+                const hit = rect && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                const style = button ? getComputedStyle(button) : null;
+                return {
+                  viewport: { innerWidth, innerHeight, clientWidth: document.documentElement.clientWidth, clientHeight: document.documentElement.clientHeight },
+                  loadingClass: loading?.className || null,
+                  introClass: intro?.className || null,
+                  introRect: rectOf(intro),
+                  buttonRect: rectOf(button),
+                  buttonDisabled: button?.disabled ?? null,
+                  buttonStyle: style ? { display: style.display, visibility: style.visibility, opacity: style.opacity, pointerEvents: style.pointerEvents, position: style.position, transform: style.transform, transition: style.transition, animation: style.animation } : null,
+                  panelScroll: panel ? { top: panel.scrollTop, height: panel.clientHeight, scrollHeight: panel.scrollHeight } : null,
+                  centerHit: hit ? { tag: hit.tagName, id: hit.id, className: typeof hit.className === 'string' ? hit.className : '' } : null,
+                  activeAnimations: document.getAnimations().map(animation => ({ state: animation.playState, currentTime: animation.currentTime, target: animation.effect?.target?.id || animation.effect?.target?.className || null })),
+                  rectSamples: samples
+                };
+              }).catch(diagnosticError => ({ diagnosticError: String(diagnosticError) }));
+              const screenshot = await stabilityPage.screenshot({ fullPage: true }).catch(() => null);
+              if (screenshot) writeFileSync('visual-review/m1-start-actionability-failure.png', screenshot);
+              throw new Error('M1 stability start control was not actionable: ' + JSON.stringify({ message: String(error), clickState }));
+            }
             await stabilityPage.waitForFunction(
               () => document.querySelector('#intro')?.classList.contains('hidden') &&
                 Module.ccall('GetCurrentCity', 'number', [], []) === 0 &&
