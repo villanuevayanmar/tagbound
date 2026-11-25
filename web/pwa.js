@@ -305,7 +305,7 @@ canvas.addEventListener('pointermove',e=>{
  const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;lastLook={x:e.clientX,y:e.clientY,id:e.pointerId};call('SetLook',dx,dy);
 });
 ['pointerup','pointercancel','pointerleave'].forEach(n=>canvas.addEventListener(n,e=>{if(lastLook&&lastLook.id===e.pointerId)lastLook=null}));
-let buildInfo={commitSha:'UNAVAILABLE',wasmSha256:'UNAVAILABLE',saveSchemaVersion:3};
+let buildInfo={commitSha:'UNAVAILABLE',integrationSha:'UNAVAILABLE',wasmSha256:'UNAVAILABLE',saveSchemaVersion:3};
 const buildLabel=document.getElementById('build-label');
 fetch('/build-info.json').then(response=>{
  if(!response.ok)throw new Error('Build metadata request returned '+response.status);
@@ -339,6 +339,7 @@ function getDiagnosticsReport(){
  return [
   'TAGBOUND RUNTIME DIAGNOSTICS',
   'Build SHA: '+(buildInfo.commitSha||'UNAVAILABLE'),
+  'Integration SHA: '+(buildInfo.integrationSha||'UNAVAILABLE'),
   'WASM SHA-256: '+(buildInfo.wasmSha256||'UNAVAILABLE'),
   'Save schema version: '+schema,
   'Frame rate: '+(fps>0?fps+' FPS':'unavailable'),
