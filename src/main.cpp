@@ -603,6 +603,10 @@ static void Frame() {
     EndDrawing();
 }
 
+KEEP int GetFrameRate() { return GetFPS(); }
+KEEP float GetFrameTimeMs() { return GetFrameTime()*1000.0f; }
+KEEP int GetSaveSchemaVersion() { return 3; }
+
 int main() {
     SetConfigFlags(FLAG_WINDOW_RESIZABLE|FLAG_VSYNC_HINT);
     InitWindow(1280,720,"TAGBOUND - The Five Cities");
