@@ -2,14 +2,13 @@
 
 ## Development checkpoint — 2026-11-25
 
-- Development branch head: `1c51d4be821caf1688fa913131b990f4a3c20ccb`.
-- M0 CI baseline passed on GitHub Actions run [#432](https://github.com/villanuevayanmar/tagbound/actions/runs/45536564152): WebAssembly build, C++ gameplay tests, PWA validation, desktop Chromium, and mobile-landscape Chromium.
-- The CI workflow listens for pushes to `main` and `development/complete-game`, and pull requests targeting `main`. Distribution publishing is restricted to pushes on `main`.
-- PR #17 remains draft and unmerged. Temporary CI-only PR #19 is closed without merging.
-- M1 rendering stability and M2–M8 campaign completion are still in progress. In particular, the 12-frame CI canvas samples do not meet the three-minute stability requirement.
-- No Preview was published. The earlier Preview is stale; current Vercel free-tier capacity could not be verified through the read-only usage endpoint. Production and `main` were not changed.
-
-A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D renderer are C++17 compiled to WebAssembly with Emscripten and raylib. The browser layer supplies touch controls, PWA installation, offline caching and the opening story.
+- Development branch: `development/complete-game`.
+- Exact verified head: `d3722be3dbcf1b008bfbbe7a49e7f3dba40ce088`.
+- M0 passed exact-head GitHub Actions run [#475](https://github.com/villanuevayanmar/tagbound/actions/runs/45594604642): WebAssembly build, C++ gameplay tests, PWA validation, desktop Chromium, and mobile-landscape Chromium.
+- PR #17 remains open, draft, and unmerged. Temporary PRs #18 and #19 are closed without merging.
+- M1 is still open. The short canvas checks passed (desktop minimum non-black ratio 0.9999; mobile 1.0000 across 12 samples), but the intermittent black/flickering-frame root cause is not established and the required three-minute scripted test has not passed.
+- The 14 full-resolution desktop/mobile screenshots from run #475 were inspected. The current five-city environments still show prototype/blockout geometry; boss-gate screenshots are not complete boss-fight evidence.
+- No new Preview was published. Vercel free-tier deployment capacity could not be verified. `main` and production were not changed.
 
 ## Current playable scope
 
