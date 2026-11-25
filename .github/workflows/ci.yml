@@ -170,6 +170,16 @@ jobs:
               const loading = document.querySelector('#loading');
               return loading && loading.classList.contains('hidden');
             }, { timeout: 45000 });
+            const buildMetadata = await page.evaluate(async () => ({
+              info: await fetch('/build-info.json').then(response => response.json()),
+              label: document.querySelector('#build-label')?.textContent || ''
+            }));
+            if (buildMetadata.info.commitSha !== process.env.GITHUB_SHA ||
+                !/^[0-9a-f]{64}$/i.test(buildMetadata.info.wasmSha256 || '') ||
+                buildMetadata.info.saveSchemaVersion !== 3 ||
+                !buildMetadata.label.includes(process.env.GITHUB_SHA.slice(0, 12))) {
+              throw new Error('Build identity metadata or title-screen label is incorrect: ' + JSON.stringify(buildMetadata));
+            }
             await page.screenshot({ path: 'visual-review/desktop-intro.png', fullPage: true });
 
             const iconOnlyUi = await page.evaluate(() => {
@@ -582,6 +592,30 @@ jobs:
             if (!settingsVisible.open || !settingsVisible.installVisible || !settingsVisible.homeInstallHidden) {
               throw new Error('Settings screen or install placement failed: ' + JSON.stringify(settingsVisible));
             }
+            const debugPanelInitiallyHidden = await page.locator('#diagnostics-panel').evaluate(element => element.classList.contains('hidden'));
+            if (!debugPanelInitiallyHidden) throw new Error('Debug diagnostics panel must be hidden by default.');
+            await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+            await page.locator('#diagnostics-toggle').click();
+            const diagnostics = await page.evaluate(() => ({
+              open: !document.querySelector('#diagnostics-panel').classList.contains('hidden'),
+              report: window.TagboundDiagnostics?.getReport?.() || '',
+              build: window.TagboundBuildInfo || null
+            }));
+            if (!diagnostics.open || diagnostics.build?.commitSha !== process.env.GITHUB_SHA ||
+                !diagnostics.report.includes('WASM SHA-256: ') ||
+                !diagnostics.report.includes('Save schema version: 3') ||
+                !/Frame rate: [1-9][0-9]* FPS/.test(diagnostics.report) ||
+                !/Frame time: [0-9]+\\.[0-9]{2} ms/.test(diagnostics.report) ||
+                diagnostics.report.includes('tagbound-save')) {
+              throw new Error('Phone diagnostics panel is incomplete or exposes save content: ' + JSON.stringify(diagnostics));
+            }
+            await page.locator('#diagnostics-copy').click();
+            const copiedDiagnostics = await page.evaluate(() => navigator.clipboard.readText());
+            if (!copiedDiagnostics.includes('Build SHA: ' + process.env.GITHUB_SHA) ||
+                copiedDiagnostics.includes('tagbound-save')) {
+              throw new Error('Diagnostics Copy did not provide the safe build/runtime report.');
+            }
+            await page.locator('#diagnostics-toggle').click();
             await page.locator('#settings-sound').click();
             const settingsMuted = await page.evaluate(() => {
               const button = document.querySelector('#settings-sound');
@@ -804,13 +838,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v32');
+              const cache = await caches.open('tagbound-v33');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
-                '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
+                '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm', '/build-info.json'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v32') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v33') || cacheState.keys.includes('tagbound-v32') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -818,6 +852,11 @@ jobs:
             await context.setOffline(true);
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 30000 });
+            const offlineBuildInfo = await page.evaluate(async () => fetch('/build-info.json').then(response => response.json()));
+            if (offlineBuildInfo.commitSha !== process.env.GITHUB_SHA ||
+                !document.querySelector('#build-label')?.textContent.includes(process.env.GITHUB_SHA.slice(0, 12))) {
+              throw new Error('Offline launch did not retain the current build identity metadata.');
+            }
             if (errors.length) throw new Error('Browser console errors: ' + errors.join(' | '));
 
             const mobileContext = await browser.newContext({
