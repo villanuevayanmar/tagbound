@@ -1116,14 +1116,16 @@ jobs:
             const mobileStaminaRegion = PNG.sync.read(mobileGameplayImage);
             let mobileStaminaDigitPixels = 0;
             let mobileStaminaOverlapGreenPixels = 0;
-            for (let y = 56; y < 70; y++) {
-              for (let x = 108; x < 127; x++) {
+            // The C++ HUD draws STAMINA at x=24, y=39 on both desktop and mobile.
+            // Sample the same digit band as the desktop assertion, not the lower MANA row.
+            for (let y = 37; y < 54; y++) {
+              for (let x = 70; x < 126; x++) {
                 const pixel = (y * mobileStaminaRegion.width + x) * 4;
                 const red = mobileStaminaRegion.data[pixel];
                 const green = mobileStaminaRegion.data[pixel + 1];
                 const blue = mobileStaminaRegion.data[pixel + 2];
                 if (red > 170 && green > 170 && blue > 170) mobileStaminaDigitPixels++;
-                if (y >= 60 && y < 67 && green > 100 && green > red + 30 && green > blue + 30) mobileStaminaOverlapGreenPixels++;
+                if (y >= 43 && y < 51 && green > 100 && green > red + 30 && green > blue + 30) mobileStaminaOverlapGreenPixels++;
               }
             }
             if (mobileStaminaDigitPixels < 5 || mobileStaminaOverlapGreenPixels !== 0) {
