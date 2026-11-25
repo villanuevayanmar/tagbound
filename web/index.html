@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#111722">
 <meta name="description" content="A fantasy rooftop chase through five dangerous cities.">
-<meta name="application-version" content="tagbound-v32">
+<meta name="application-version" content="tagbound-v33">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="TAGBOUND">
@@ -17,7 +17,7 @@
 <main id="game-shell">
 <canvas id="canvas" oncontextmenu="event.preventDefault()" tabindex="0"></canvas>
 <section id="intro" class="overlay"><div class="story panel">
-<p class="eyebrow">A FIVE-CITY FUGITIVE TALE</p><h1>TAG<span>BOUND</span></h1>
+<p class="eyebrow">A FIVE-CITY FUGITIVE TALE</p><p id="build-label" class="build-label">BUILD SHA UNAVAILABLE</p><h1>TAG<span>BOUND</span></h1>
 <p class="story-copy">The city bells rang before dawn. A royal seal was found in your hands, and the wardens named you traitor. Bounty hunters now patrol every roof and bridge. The gates ahead will open only when each city’s champion falls.</p>
 <p class="muted">You wake in an abandoned rooftop loft. Footsteps pass beneath the broken shutters.</p>
 <h2>CHOOSE YOUR CLASS</h2>
@@ -59,6 +59,12 @@
 </div>
 </div>
 </div>
+<button id="diagnostics-toggle" class="secondary diagnostics-toggle" type="button" aria-controls="diagnostics-panel" aria-expanded="false">SHOW DEBUG PANEL</button>
+<section id="diagnostics-panel" class="diagnostics-panel hidden" aria-labelledby="diagnostics-title">
+<h2 id="diagnostics-title">RUNTIME DIAGNOSTICS</h2>
+<pre id="diagnostics-output">Loading build and runtime information…</pre>
+<button id="diagnostics-copy" class="secondary" type="button">COPY DIAGNOSTICS</button>
+</section>
 <button id="resume" class="primary resume-icon" type="button" aria-label="Resume game">
 <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m9 5 10 7-10 7z"/></svg>
 </button>
@@ -146,7 +152,36 @@ var Module={
 const graphicsRecoveryKey='tagbound-webgl-recovery-at';
 let graphicsRecoveryAttempted=false;
 try{graphicsRecoveryAttempted=!!sessionStorage.getItem(graphicsRecoveryKey);}catch(error){}
-window.TagboundGraphics={contextLosses:0,contextRestores:0,recoveryAttempted:graphicsRecoveryAttempted};
+const runtimeErrorKey='tagbound-runtime-errors';
+const contextLossKey='tagbound-webgl-context-losses';
+const contextRestoreKey='tagbound-webgl-context-restores';
+function readSessionNumber(key){try{return Math.max(0,Number(sessionStorage.getItem(key)||0)||0)}catch(error){return 0}}
+function writeSessionNumber(key,value){try{sessionStorage.setItem(key,String(value))}catch(error){}}
+let recentRuntimeErrors=[];
+try{const savedErrors=JSON.parse(sessionStorage.getItem(runtimeErrorKey)||'[]');if(Array.isArray(savedErrors))recentRuntimeErrors=savedErrors.filter(x=>typeof x==='string').slice(-5)}catch(error){}
+function recordRuntimeError(message){
+ const clean=String(message||'Runtime error').replace(/[\\r\\n]+/g,' ').slice(0,240);
+ recentRuntimeErrors.push(clean);recentRuntimeErrors=recentRuntimeErrors.slice(-5);
+ try{sessionStorage.setItem(runtimeErrorKey,JSON.stringify(recentRuntimeErrors))}catch(error){}
+}
+window.TagboundErrors={record:recordRuntimeError,list:()=>recentRuntimeErrors.slice()};
+window.addEventListener('error',event=>recordRuntimeError(event.message||'Uncaught browser error'));
+window.addEventListener('unhandledrejection',event=>recordRuntimeError(event.reason instanceof Error?event.reason.name+': '+event.reason.message:'Unhandled promise rejection'));
+const originalConsoleError=console.error.bind(console);
+console.error=(...args)=>{
+ const summary=args.map(value=>value instanceof Error?value.name+': '+value.message:typeof value==='string'?value:'').filter(Boolean).join(' ');
+ if(summary)recordRuntimeError(summary);
+ originalConsoleError(...args);
+};
+window.TagboundGraphics={
+ contextLosses:readSessionNumber(contextLossKey),
+ contextRestores:readSessionNumber(contextRestoreKey),
+ recoveryAttempted:graphicsRecoveryAttempted
+};
+function incrementGraphicsCounter(name,key){
+ window.TagboundGraphics[name]++;
+ writeSessionNumber(key,window.TagboundGraphics[name]);
+}
 let graphicsRecoveryTimer=0,graphicsRecoveryStarted=false;
 function showGraphicsRecoveryError(message){
  const loading=document.getElementById('loading');
@@ -170,7 +205,7 @@ function recoverGraphicsContext(){
 }
 Module.canvas.addEventListener('webglcontextlost',event=>{
  event.preventDefault();
- window.TagboundGraphics.contextLosses++;
+ incrementGraphicsCounter('contextLosses',contextLossKey);
  const loading=document.getElementById('loading');
  loading.textContent='RESTORING GRAPHICS…';
  loading.classList.remove('hidden');
@@ -181,7 +216,7 @@ Module.canvas.addEventListener('webglcontextlost',event=>{
  graphicsRecoveryTimer=window.setTimeout(recoverGraphicsContext,8000);
 },false);
 Module.canvas.addEventListener('webglcontextrestored',()=>{
- window.TagboundGraphics.contextRestores++;
+ incrementGraphicsCounter('contextRestores',contextRestoreKey);
  window.clearTimeout(graphicsRecoveryTimer);
  recoverGraphicsContext();
 },false);
