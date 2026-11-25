@@ -1,56 +1,71 @@
 # TAGBOUND — Current Continuation Checkpoint
 
-> **Authoritative checkpoint — 2026-11-25.** This section supersedes older status statements below when they conflict. The latest owner-provided TAGBOUND development prompt in the ChatGPT project is the governing specification. Do not treat the historical notes below as current verification.
+> **Authoritative checkpoint — 2026-11-25.** The owner's `TAGBOUND_Prompt_v2.docx` is the governing specification. This section supersedes conflicting historical notes below. Keep implementing the existing game; do not restart the architecture or return a plan instead of work.
 
-## Verified repository checkpoint
+## Verified repository and CI state
 
 - Repository: https://github.com/villanuevayanmar/tagbound
 - Development branch: `development/complete-game`
-- Last verified game-code/CI SHA: `1c51d4be821caf1688fa913131b990f4a3c20ccb`
-- Exact-head GitHub Actions run: [#432](https://github.com/villanuevayanmar/tagbound/actions/runs/45536564152), run ID `45536564152`; build and browser-smoke jobs both completed successfully on that SHA.
-- Run #432 passed WebAssembly configuration/compilation, C++ gameplay tests, PWA assembly/output validation, desktop Chromium, mobile-landscape Chromium, input/save/UI tests, Arrow Rain target confirmation, map/floor UI, service-worker cache/offline reload, portrait guidance, and forced WebGL context-loss recovery.
-- Desktop canvas smoke: 12 samples, minimum non-black ratio 0.9999. Mobile landscape: 12 samples, minimum non-black ratio 1.0000. These short samples are **not** M1's required three-minute stability run.
-- Run #432 visual artifact was inspected: desktop/mobile intro, desktop/mobile gameplay, and five mobile boss-gate images. No captured frame was fully black/blank in those artifacts. The five city environments still have prototype-like geometry; screenshots do not establish campaign completion or scripted boss fights.
-- The two prior browser failures were corrected at their causes: invalid Cleaving Arc SVG substring in the test; genuine 12 px Settings/HUD overlap in mobile CSS; and an incorrect mobile stamina screenshot sample window that read the Mana row rather than the Stamina label. No test threshold was weakened.
-- CI workflow listens to pushes on `main` and `development/complete-game`, plus pull requests targeting `main`. The `publish-dist` job runs only on pushes to `main`. Visual-review artifacts upload even on browser failure.
+- Last exact-head source commit that passed full CI: `d3722be3dbcf1b008bfbbe7a49e7f3dba40ce088`
+- GitHub Actions [run #475](https://github.com/villanuevayanmar/tagbound/actions/runs/45594604642), run ID `45594604642`, passed both `build` and `browser-smoke` on that exact source commit.
+- The run passed Emscripten/WebAssembly build, C++ gameplay regression tests, PWA build-output checks, desktop and mobile-landscape Chromium, build identity checks, gameplay input/save, current class-skill/map UI checks, offline cache/reload, portrait guidance, and forced WebGL context-loss recovery.
+- Desktop canvas: 12 samples, minimum non-black pixel ratio 0.9999. Mobile landscape: 12 samples, minimum ratio 1.0000. These short checks do **not** satisfy M1's three-minute stability gate.
+- The `tagbound-visual-review` artifact from run #475 (SHA-256 `cccd374cf75ff6528eebf79321ac18931974ca9f6f351bbe3327510e3471ca4b`) contains 14 full-resolution screenshots: desktop/mobile intro and gameplay plus five-city desktop/mobile boss-gate views. All 14 were inspected. Current city art is still repetitive low-poly blockout geometry; boss-gate views are not complete boss-fight or city-completion evidence.
+- The M0 CI defect was an incorrect comparison between the build source SHA and GitHub's synthetic PR integration SHA. The browser test now checks source identity against `TAGBOUND_SOURCE_SHA` and integration identity against `GITHUB_SHA`; the test was not weakened.
+- The runtime diagnostics report includes source/integration build identity, WASM hash, save schema, frame rate/time, WebGL context counters, WebGL version, GPU renderer where exposed, memory values when available, canvas viewport, and recent JavaScript errors. The Copy action does not include save contents.
+- PR #17 remains open, draft, targets `main`, and is unmerged. PRs #18 and #19 are closed without merging.
+- **Documentation commits after the tested code head:** the current branch head is newer than `d3722be3` because `DEVELOPMENT_STATUS.md` and `README.md` were updated after run #475. Those documentation changes still require one exact-head full CI run; verify the current branch SHA and its run before calling the documentation head green.
 
-## PR and release state
+## PR, main, and release state
 
-- PR #17: open, draft, targets `main`, and remains unmerged. Its description records the M0 evidence and remaining milestones.
-- PR #19: closed without merging after M0 passed.
-- `main`: `a18e39e9eca221a15d75c4070de9d06ef94abc3e`. Do not change it or merge PR #17.
+- `main` remains `a18e39e9eca221a15d75c4070de9d06ef94abc3e`. Do not merge PR #17 or change `main` without explicit owner authorization.
 - Production `https://tagbound.vercel.app` was not touched. Last observed production deployment: `dpl_GELuDKX6B4NragFQ6DSWjSNwFHAJ`, runtime bundle `9115f13b4021f9052a95eea66ceaa1000f134978`.
-- No current Preview is available. The previously recorded Preview `https://tagbound-5v46rpzby-yanmar.vercel.app` came from an older artifact and must not be presented as current. Read-only Vercel cost/usage lookup returned no data, so free-tier deployment capacity is unverified. Do not deploy until capacity is verified; do not change SSO/protection/settings.
-- Do not use real player saves in test fixtures. No paid services, billing changes, or quota workarounds.
+- No new Preview is available. The prior recorded Preview `https://tagbound-5v46rpzby-yanmar.vercel.app` was built from an older artifact and must not be presented as current.
+- Vercel project remains on Hobby/free with deployment protection/SSO enabled. The read-only usage lookup did not return current quota data; free-tier Preview capacity is unverified. Do not deploy until it is verified. Do not change Vercel settings or disable SSO.
+- Do not use real player saves in tests or commit them. No paid services, billing changes, upgrades, or quota workarounds.
 
-## Approved campaign decisions (do not change without owner approval)
+## Approved campaign decisions — do not change without owner approval
 
-- Campaign order and city names: Port Town → Merchant Tier → Clockwork Foundry → Imperial Capital → High Spire.
-- City layout is hybrid: interiors, streets, rooftops, vertical traversal, defensive walls. Floor counts vary per city and must follow actual navigable geometry.
+- Campaign order: Port Town → Merchant Tier → Clockwork Foundry → Imperial Capital → High Spire.
+- City layout is hybrid: interiors, streets, rooftops, vertical traversal, and defensive walls.
+- Floor count is flexible by city and must follow actual geometry/gameplay.
 - Stamina and Mana are separate.
-- Each level grants one stat choice. Skill milestones offer one mutually exclusive choice: unlock a new skill or upgrade an owned skill; ranks are bounded.
-- Boss loot quality depends on combat performance. Each boss always guarantees its city key.
-- Keep C++17/raylib 5.5/Emscripten/WebAssembly/WebGL. Do not migrate engines.
-- Keep the project ₱0/$0 and phone-only for the owner. Never require a local terminal, laptop, or DevTools.
+- Each level grants one stat choice. Skill milestones grant one mutually exclusive choice: unlock a new skill or upgrade an owned skill; ranks are bounded.
+- Each boss guarantees its city key. Randomized item quality depends on measurable combat performance.
+- Keep C++17, raylib 5.5, Emscripten, WebAssembly, WebGL, JS/HTML/CSS, and the current PWA. Do not migrate to another engine.
+- User works from Android through ChatGPT/cloud tools and has no laptop. Do not require local terminal, PowerShell, VS Code, local builds, or manual Git.
+- Budget stays ₱0 / $0.
 
 ## Next milestone — M1: diagnose rendering instability
 
-The M1 root cause is **not yet known**. Prior inspection found:
-- One Emscripten frame driver in `src/main.cpp`; one balanced `BeginDrawing`/`EndDrawing` pair and balanced `BeginMode3D`/`EndMode3D`.
-- No competing browser `requestAnimationFrame` loop in the inspected web shell.
-- No application textures, models, shaders, or render targets created/disposed each frame in the inspected C++ and web code.
-- `web/index.html` saves and reloads after WebGL context loss/restore. The forced recovery browser test passes, but a reload is a recovery symptom handler, not proof that the intermittent black flicker is fixed.
-- No measured baseline frame time or memory values and no three-minute scripted stability capture have been produced.
+**The reported black/flickering-frame root cause is not known and is not fixed.**
 
-M1 work must instrument the game, determine the cause rather than guess, and add a scripted browser run of at least three minutes covering movement, combat, abilities, enemy encounters, a city transition, and a boss fight. Sampled play frames must never be fully black/blank; there must be no uncaught errors or unexpected context loss. Record baseline frame time and memory in `DEVELOPMENT_STATUS.md`.
+Inspection of the current renderer found:
+- One Emscripten frame driver in `src/main.cpp`, one balanced `BeginDrawing` / `EndDrawing` pair, and a balanced `BeginMode3D` / `EndMode3D` pass.
+- No competing application `requestAnimationFrame` loop in the inspected web shell.
+- No application textures, models, shaders, or render targets created/disposed every frame in the inspected renderer.
+- The context-loss reload in `web/index.html` is recovery behavior. The forced context-loss test passing does not identify the natural flicker cause.
+- Short Chromium canvas samples showed no fully black frames and no natural unexpected context loss. No three-minute run or sustained frame-time/memory baseline has been collected.
 
-After M1, continue M2–M8 in order with the exit gates in the owner-provided prompt. Do not jump ahead or label partial source implementations as complete.
+Continue M1 in this order:
+1. Inspect full renderer/platform lifecycle and instrument actual WebGL errors, context losses/restores, frame timing, and memory without changing gameplay or masking errors.
+2. Reproduce the issue or add a regression scenario that can fail for the condition.
+3. Only then make the smallest root-cause correction and test it.
+4. Add a scripted run of at least three minutes covering movement, combat, abilities, enemy encounters, a city transition, a boss fight, and a background/return cycle where automation supports it. Sampled gameplay frames must never be fully black/blank, with no uncaught errors, WebGL errors, or unexpected context loss.
+5. Record the root cause and measured frame-time/memory baseline in `DEVELOPMENT_STATUS.md`.
+6. Keep anything not physically verified on the owner's Android phone marked unverified.
 
-## Important current branch note
+## Remaining milestones — follow the owner's prompt in order
 
-The verified game-code SHA above was followed by documentation-only checkpoint commits in `README.md` and `DEVELOPMENT_STATUS.md`. Read the actual current branch head before editing, and run full CI on the final documentation head. The previous PR #17 body and PR state were verified; keep PR #17 draft/unmerged.
+- M2: all five bosses contained by visible/collision arena boundaries through pursuit, navigation, knockback, stun, charge, enrage, recovery, and grounding; automated checks and one scripted fight per boss.
+- M3: responsive camera-relative movement, facing, camera follow/collision, parkour, and multi-touch (two or more touches simultaneously); remove accidental page scroll/zoom/pull-to-refresh.
+- M4: verify all three class skills, costs/cooldowns/readiness, Arrow Rain targeting/cancel/telegraph/waves/damage, stat/skill milestone choice rules, caps, save persistence, and visible build.
+- M5: test legacy and schema v1/v2/v3 saves, malformed/partial fixtures, pending choices, exploration, city progression, idempotent migration, death/restart/ending.
+- M6: verify the five discovery layers against real navigable geometry in every city; explore-only reveal, floor separation, landmarks/objectives, persistence, and inspected per-city screenshots.
+- M7: guarantee keys, grade-bound randomized loot, coherent inventory/equipment/stat effects, persistence without loss/duplication, and end-to-end campaign unlock.
+- M8: finish the five distinct fortified cities in campaign order with real floors/zones, supported elevated surfaces, collision that matches visible geometry, fair enemy archetypes/telegraphs/counterplay, and inspected city screenshots.
 
-Continue the existing TAGBOUND: The Five Cities project from its actual GitHub state. Do not restart, provide only a plan, or stop after one commit. Inspect current source and CI, implement the next verified gap, test it, checkpoint, and continue.
+Do not mark a milestone complete from source presence alone. Pass its exit gate on the exact commit, update the docs, and continue to the next milestone. Stop only at the owner's explicit authorization gate, a verified Preview ready for phone testing, a genuine blocker after completing all unblocked work, or full production completion with explicit deployment authorization.
 
 ## Repository and architecture
 - Repository: https://github.com/villanuevayanmar/tagbound
