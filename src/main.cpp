@@ -228,6 +228,22 @@ static int selectedClass=0, touchButtons=0;
 static float touchX=0,touchY=0,lookX=0,lookY=0,attackCooldown=0,saveCooldown=0;
 static bool skillWasDown=false,jumpWasDown=false,classChosen=false;
 static int savedCity=-1;
+static std::array<float,30> diagnosticFrameTimes{};
+static int diagnosticFrameTimeCount=0,diagnosticFrameTimeCursor=0;
+static int diagnosticFrameRate=0;
+static float diagnosticFrameTimeMs=0.0f;
+
+static void SampleRuntimeFrameMetrics(float frameTime) {
+    if(!std::isfinite(frameTime)||frameTime<=0.0f) return;
+    diagnosticFrameTimes[diagnosticFrameTimeCursor]=frameTime*1000.0f;
+    diagnosticFrameTimeCursor=(diagnosticFrameTimeCursor+1)%(int)diagnosticFrameTimes.size();
+    diagnosticFrameTimeCount=std::min(diagnosticFrameTimeCount+1,(int)diagnosticFrameTimes.size());
+    if(diagnosticFrameTimeCount<(int)diagnosticFrameTimes.size()) return;
+    float total=0.0f;
+    for(float sample:diagnosticFrameTimes) total+=sample;
+    diagnosticFrameTimeMs=total/(float)diagnosticFrameTimes.size();
+    diagnosticFrameRate=(int)std::lround(1000.0f/diagnosticFrameTimeMs);
+}
 
 static void Save() {
     const Player& p=game.player;
@@ -536,7 +552,9 @@ KEEP unsigned int GetBossWindupMask() { return BossWindupMask(); }
 }
 
 static void Frame() {
-    float dt=std::min(GetFrameTime(),0.04f);
+    const float frameTime=GetFrameTime();
+    SampleRuntimeFrameMetrics(frameTime);
+    float dt=std::min(frameTime,0.04f);
     if(game.started && !game.finished && !isSettingsOpen()) {
         Controls controls=ReadControls();
         if(!game.mapOpen && game.player.pendingStatChoices==0 && game.player.pendingSkillChoices==0) {
@@ -615,8 +633,8 @@ static void Frame() {
     EndDrawing();
 }
 
-extern "C" KEEP int GetFrameRate() { return GetFPS(); }
-extern "C" KEEP float GetFrameTimeMs() { return GetFrameTime()*1000.0f; }
+extern "C" KEEP int GetFrameRate() { return diagnosticFrameRate; }
+extern "C" KEEP float GetFrameTimeMs() { return diagnosticFrameTimeMs; }
 extern "C" KEEP int GetSaveSchemaVersion() { return 3; }
 
 int main() {
