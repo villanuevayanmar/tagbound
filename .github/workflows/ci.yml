@@ -374,6 +374,35 @@ jobs:
             await page.locator('[data-class="1"]').click();
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const idleUiMutations = await page.evaluate(async () => {
+              const targets = [
+                '#level-up-count',
+                '#skill-choice-count',
+                '#skill-target-status',
+                '#skill-slot-0-name',
+                '.action.technique'
+              ].map(selector => document.querySelector(selector));
+              if (targets.some(target => !target)) {
+                throw new Error('The idle HUD mutation regression targets are missing.');
+              }
+              let mutations = 0;
+              const observer = new MutationObserver(records => { mutations += records.length; });
+              for (const target of targets) {
+                observer.observe(target, {
+                  attributes: true,
+                  childList: true,
+                  characterData: true,
+                  subtree: true
+                });
+              }
+              await new Promise(resolve => setTimeout(resolve, 800));
+              observer.disconnect();
+              return mutations;
+            });
+            if (idleUiMutations !== 0) {
+              throw new Error('Idle gameplay rewrote unchanged HUD/skill DOM ' + idleUiMutations +
+                ' times in 800 ms; frame-synchronous UI writes must be state-gated.');
+            }
             await page.keyboard.press('m');
             await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
             const exploredMap = await page.evaluate(() => ({
