@@ -305,6 +305,102 @@ canvas.addEventListener('pointermove',e=>{
  const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;lastLook={x:e.clientX,y:e.clientY,id:e.pointerId};call('SetLook',dx,dy);
 });
 ['pointerup','pointercancel','pointerleave'].forEach(n=>canvas.addEventListener(n,e=>{if(lastLook&&lastLook.id===e.pointerId)lastLook=null}));
+let buildInfo={commitSha:'UNAVAILABLE',wasmSha256:'UNAVAILABLE',saveSchemaVersion:3};
+const buildLabel=document.getElementById('build-label');
+fetch('/build-info.json').then(response=>{
+ if(!response.ok)throw new Error('Build metadata request returned '+response.status);
+ return response.json();
+}).then(info=>{
+ if(!/^[0-9a-f]{40}$/i.test(info.commitSha||'')||!/^[0-9a-f]{64}$/i.test(info.wasmSha256||'')||
+    !Number.isInteger(info.saveSchemaVersion))throw new Error('Build metadata is incomplete or invalid.');
+ buildInfo=info;
+ window.TagboundBuildInfo=buildInfo;
+ if(buildLabel)buildLabel.textContent='BUILD '+info.commitSha.slice(0,12);
+ updateDiagnostics();
+}).catch(()=>{if(buildLabel)buildLabel.textContent='BUILD SHA UNAVAILABLE';});
+function diagnosticCall(name,fallback){
+ try{return typeof Module?.ccall==='function'?Module.ccall(name,'number',[],[]):fallback}catch(error){return fallback}
+}
+function formatBytes(value){
+ if(!Number.isFinite(value)||value<=0)return 'unavailable';
+ const units=['B','KB','MB','GB'];let size=value,index=0;
+ while(size>=1024&&index<units.length-1){size/=1024;index++}
+ return size.toFixed(index===0?0:1)+' '+units[index];
+}
+function getDiagnosticsReport(){
+ const fps=diagnosticCall('GetFrameRate',0);
+ const frameTime=diagnosticCall('GetFrameTimeMs',0);
+ const schema=diagnosticCall('GetSaveSchemaVersion',buildInfo.saveSchemaVersion||3);
+ const graphics=window.TagboundGraphics||{};
+ const wasmHeap=Module?.HEAPU8?.buffer?.byteLength||0;
+ const jsHeap=performance?.memory?.usedJSHeapSize||0;
+ const rect=canvas.getBoundingClientRect();
+ const errors=window.TagboundErrors?.list?.()||[];
+ return [
+  'TAGBOUND RUNTIME DIAGNOSTICS',
+  'Build SHA: '+(buildInfo.commitSha||'UNAVAILABLE'),
+  'WASM SHA-256: '+(buildInfo.wasmSha256||'UNAVAILABLE'),
+  'Save schema version: '+schema,
+  'Frame rate: '+(fps>0?fps+' FPS':'unavailable'),
+  'Frame time: '+(frameTime>0?frameTime.toFixed(2)+' ms':'unavailable'),
+  'WebGL context losses: '+(graphics.contextLosses||0),
+  'WebGL context restores: '+(graphics.contextRestores||0),
+  'WASM heap allocated: '+formatBytes(wasmHeap),
+  'JS heap used: '+formatBytes(jsHeap),
+  'Canvas viewport: '+Math.round(rect.width)+' × '+Math.round(rect.height),
+  'Recent errors:',
+  ...(errors.length?errors.map((error,index)=>(index+1)+'. '+error):['None recorded'])
+ ].join('\\n');
+}
+window.TagboundDiagnostics={
+ getReport:getDiagnosticsReport,
+ getBuildInfo:()=>({...buildInfo})
+};
+const diagnosticsPanel=document.getElementById('diagnostics-panel');
+const diagnosticsToggle=document.getElementById('diagnostics-toggle');
+const diagnosticsOutput=document.getElementById('diagnostics-output');
+const diagnosticsCopy=document.getElementById('diagnostics-copy');
+let diagnosticsTimer=null;
+function updateDiagnostics(){
+ if(!diagnosticsPanel||diagnosticsPanel.classList.contains('hidden'))return;
+ const report=getDiagnosticsReport();
+ if(diagnosticsOutput&&diagnosticsOutput.textContent!==report)diagnosticsOutput.textContent=report;
+}
+function closeDiagnostics(){
+ if(!diagnosticsPanel||!diagnosticsToggle)return;
+ diagnosticsPanel.classList.add('hidden');
+ diagnosticsToggle.textContent='SHOW DEBUG PANEL';
+ diagnosticsToggle.setAttribute('aria-expanded','false');
+ if(diagnosticsTimer!==null){clearInterval(diagnosticsTimer);diagnosticsTimer=null}
+}
+diagnosticsToggle?.addEventListener('click',()=>{
+ const open=diagnosticsPanel?.classList.contains('hidden');
+ if(!diagnosticsPanel||!diagnosticsToggle)return;
+ diagnosticsPanel.classList.toggle('hidden',!open);
+ diagnosticsToggle.textContent=open?'HIDE DEBUG PANEL':'SHOW DEBUG PANEL';
+ diagnosticsToggle.setAttribute('aria-expanded',String(!!open));
+ if(open){updateDiagnostics();if(diagnosticsTimer===null)diagnosticsTimer=window.setInterval(updateDiagnostics,750)}
+ else if(diagnosticsTimer!==null){clearInterval(diagnosticsTimer);diagnosticsTimer=null}
+});
+diagnosticsCopy?.addEventListener('click',async()=>{
+ const text=getDiagnosticsReport();
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
+  else {
+   const field=document.createElement('textarea');field.value=text;
+   field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';
+   document.body.appendChild(field);field.select();
+   const copied=document.execCommand('copy');field.remove();
+   if(!copied)throw new Error('Clipboard copy is unavailable.');
+  }
+  diagnosticsCopy.textContent='COPIED';
+ }catch(error){
+  diagnosticsCopy.textContent='COPY UNAVAILABLE';
+  window.TagboundErrors?.record?.('Diagnostics clipboard copy failed');
+ }
+ window.setTimeout(()=>{if(diagnosticsCopy)diagnosticsCopy.textContent='COPY DIAGNOSTICS'},1800);
+});
+resumeButton.addEventListener('click',closeDiagnostics);
 let installEvent=null;
 const installButtons=[document.getElementById('install'),document.getElementById('settings-install')].filter(Boolean);
 function updateInstallButtons(){
