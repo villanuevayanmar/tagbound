@@ -1273,6 +1273,62 @@ jobs:
             const stabilityPage = await stabilityContext.newPage();
             const stabilityPageErrors = [];
             stabilityPage.on('pageerror', error => stabilityPageErrors.push(error.message));
+            await stabilityPage.addInitScript(() => {
+              const trace = { calls: 0, errors: [], installFailures: [] };
+              Object.defineProperty(window, '__TAGBOUND_GL_TRACE', { value: trace });
+              const originalGetContext = HTMLCanvasElement.prototype.getContext;
+              HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+                const gl = Reflect.apply(originalGetContext, this, [type, ...args]);
+                if (!gl || !/^webgl2?$/.test(type) || gl.__tagboundTraceInstalled) return gl;
+                Object.defineProperty(gl, '__tagboundTraceInstalled', { value: true });
+                const nativeGetError = gl.getError.bind(gl);
+                const record = (method, code, values) => trace.errors.push({
+                  method,
+                  code,
+                  args: values.map(value => {
+                    if (value === null || ['number', 'string', 'boolean'].includes(typeof value)) return value;
+                    if (ArrayBuffer.isView(value)) return value.constructor.name + '[' + value.length + ']';
+                    if (value && typeof value === 'object') return value.constructor?.name || 'object';
+                    return typeof value;
+                  }),
+                  stack: new Error().stack?.split('\\n').slice(2, 7) || []
+                });
+                const patched = new Set();
+                for (let prototype = Object.getPrototypeOf(gl); prototype && prototype !== Object.prototype;
+                     prototype = Object.getPrototypeOf(prototype)) {
+                  for (const name of Object.getOwnPropertyNames(prototype)) {
+                    if (patched.has(name)) continue;
+                    const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+                    if (typeof descriptor?.value !== 'function' || name === 'getError') continue;
+                    patched.add(name);
+                    const original = descriptor.value;
+                    try {
+                      Object.defineProperty(prototype, name, {
+                        ...descriptor,
+                        value: function(...values) {
+                          const result = Reflect.apply(original, this, values);
+                          trace.calls++;
+                          for (let i = 0; i < 8; i++) {
+                            const code = nativeGetError();
+                            if (code === gl.NO_ERROR) break;
+                            record(name, code, values);
+                          }
+                          return result;
+                        }
+                      });
+                    } catch (error) {
+                      trace.installFailures.push(name + ': ' + String(error));
+                    }
+                  }
+                }
+                for (let i = 0; i < 8; i++) {
+                  const code = nativeGetError();
+                  if (code === gl.NO_ERROR) break;
+                  record('context-created', code, []);
+                }
+                return gl;
+              };
+            });
             const stabilityResponse = await stabilityPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
             if (!stabilityResponse?.ok()) throw new Error('M1 stability page did not return HTTP 200.');
             await stabilityPage.waitForFunction(
@@ -1448,7 +1504,12 @@ jobs:
                   contextLosses: window.TagboundGraphics?.contextLosses || 0,
                   contextRestores: window.TagboundGraphics?.contextRestores || 0,
                   contextLost: !!gl?.isContextLost?.(),
-                  webglErrors,
+                  webglErrors: [
+                    ...(window.__TAGBOUND_GL_TRACE?.errors || []).slice(0, 12),
+                    ...webglErrors.map(code => ({ method: 'untraced-pending-error', code, args: [], stack: [] }))
+                  ],
+                  glTraceCalls: window.__TAGBOUND_GL_TRACE?.calls || 0,
+                  glTraceInstallFailures: window.__TAGBOUND_GL_TRACE?.installFailures || [],
                   errors: window.TagboundErrors?.list?.() || [],
                   jsHeap: performance.memory?.usedJSHeapSize || 0,
                   wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0
@@ -1456,6 +1517,7 @@ jobs:
               });
               if (frameState.contextLost || frameState.contextLosses !== stabilityInitial.contextLosses ||
                   frameState.webglErrors.length || frameState.errors.length ||
+                  frameState.glTraceInstallFailures.length ||
                   !Number.isFinite(frameState.fps) || frameState.fps < 1 ||
                   !Number.isFinite(frameState.frameTimeMs) || frameState.frameTimeMs <= 0) {
                 throw new Error('M1 stability runtime diagnostics failed at sample ' + sampleIndex + ': ' +
