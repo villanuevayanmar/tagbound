@@ -605,7 +605,7 @@ jobs:
                 !diagnostics.report.includes('WASM SHA-256: ') ||
                 !diagnostics.report.includes('Save schema version: 3') ||
                 !/Frame rate: [1-9][0-9]* FPS/.test(diagnostics.report) ||
-                !/Frame time: [0-9]+\\.[0-9]{2} ms/.test(diagnostics.report) ||
+                !/Frame time: [0-9]+\.[0-9]{2} ms/.test(diagnostics.report) ||
                 diagnostics.report.includes('tagbound-save')) {
               throw new Error('Phone diagnostics panel is incomplete or exposes save content: ' + JSON.stringify(diagnostics));
             }
