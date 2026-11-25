@@ -829,7 +829,7 @@ jobs:
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
               await navigator.serviceWorker.ready;
-              await caches.open('tagbound-v23');
+              await caches.open('tagbound-v32');
               const registrations = await navigator.serviceWorker.getRegistrations();
               await Promise.all(registrations.map(registration => registration.unregister()));
             });
@@ -852,9 +852,12 @@ jobs:
             await context.setOffline(true);
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 30000 });
-            const offlineBuildInfo = await page.evaluate(async () => fetch('/build-info.json').then(response => response.json()));
-            if (offlineBuildInfo.commitSha !== process.env.GITHUB_SHA ||
-                !document.querySelector('#build-label')?.textContent.includes(process.env.GITHUB_SHA.slice(0, 12))) {
+            const offlineBuild = await page.evaluate(async () => ({
+              info: await fetch('/build-info.json').then(response => response.json()),
+              label: document.querySelector('#build-label')?.textContent || ''
+            }));
+            if (offlineBuild.info.commitSha !== process.env.GITHUB_SHA ||
+                !offlineBuild.label.includes(process.env.GITHUB_SHA.slice(0, 12))) {
               throw new Error('Offline launch did not retain the current build identity metadata.');
             }
             if (errors.length) throw new Error('Browser console errors: ' + errors.join(' | '));
