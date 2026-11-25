@@ -2,7 +2,7 @@ name: TAGBOUND build and browser smoke tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, development/complete-game]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -936,8 +936,10 @@ jobs:
               return { label:button?.getAttribute('aria-label'), cost:button?.dataset.cost,
                 icon:button?.querySelector('svg path')?.getAttribute('d'), disabled:button?.disabled };
             });
+            // The Cleaving Arc SVG begins with M4 20, then draws its first blade stroke to 19 5.
+            // Match the actual move-to/line-to sequence rather than expecting a second move command.
             if (!equippedAction.label?.includes('CLEAVING ARC') || equippedAction.cost !== '24M' ||
-                !equippedAction.icon?.includes('M19 5') || equippedAction.disabled) {
+                !equippedAction.icon?.includes('M4 20 19 5') || equippedAction.disabled) {
               throw new Error('Active technique icon/cost/readiness did not match the equipped skill: ' + JSON.stringify(equippedAction));
             }
             await statContext.close();
@@ -1215,15 +1217,16 @@ jobs:
           JS
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: tagbound-visual-review
           path: visual-review/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 1
 
   publish-dist:
     needs: [build, browser-smoke]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write
