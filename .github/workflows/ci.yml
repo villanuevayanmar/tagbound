@@ -133,6 +133,7 @@ jobs:
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
           import { PNG } from 'pngjs';
+          import { writeFileSync } from 'node:fs';
 
           const browser = await chromium.launch({
             headless: true,
@@ -1378,7 +1379,7 @@ jobs:
               visibility: document.visibilityState
             }));
             const stabilityStartImage = await stabilityPage.locator('#canvas').screenshot();
-            require('fs').writeFileSync('visual-review/m1-stability-start.png', stabilityStartImage);
+            writeFileSync('visual-review/m1-stability-start.png', stabilityStartImage);
             const backgroundPage = await stabilityContext.newPage();
             await backgroundPage.goto('about:blank');
             const stabilityStartedAt = Date.now();
@@ -1508,7 +1509,7 @@ jobs:
             };
             console.log('M1 STABILITY BASELINE: ' + JSON.stringify(m1StabilityReport));
             const stabilityEndImage = await stabilityPage.locator('#canvas').screenshot();
-            require('fs').writeFileSync('visual-review/m1-stability-end.png', stabilityEndImage);
+            writeFileSync('visual-review/m1-stability-end.png', stabilityEndImage);
             await backgroundPage.close();
             await stabilityContext.close();
 
