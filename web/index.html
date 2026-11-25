@@ -160,7 +160,7 @@ function writeSessionNumber(key,value){try{sessionStorage.setItem(key,String(val
 let recentRuntimeErrors=[];
 try{const savedErrors=JSON.parse(sessionStorage.getItem(runtimeErrorKey)||'[]');if(Array.isArray(savedErrors))recentRuntimeErrors=savedErrors.filter(x=>typeof x==='string').slice(-5)}catch(error){}
 function recordRuntimeError(message){
- const clean=String(message||'Runtime error').replace(/[\\r\\n]+/g,' ').slice(0,240);
+ const clean=String(message||'Runtime error').replace(/[\r\n]+/g,' ').slice(0,240);
  recentRuntimeErrors.push(clean);recentRuntimeErrors=recentRuntimeErrors.slice(-5);
  try{sessionStorage.setItem(runtimeErrorKey,JSON.stringify(recentRuntimeErrors))}catch(error){}
 }
