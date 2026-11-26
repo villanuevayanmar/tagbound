@@ -1383,6 +1383,7 @@ jobs:
               { timeout: 45000 }
             );
             try {
+              await stabilityPage.bringToFront();
               await stabilityPage.locator('#start').click({ timeout: 8000 });
             } catch (error) {
               const clickState = await stabilityPage.evaluate(async () => {
@@ -1405,6 +1406,8 @@ jobs:
                 const style = button ? getComputedStyle(button) : null;
                 return {
                   viewport: { innerWidth, innerHeight, clientWidth: document.documentElement.clientWidth, clientHeight: document.documentElement.clientHeight },
+                  visibilityState: document.visibilityState,
+                  hasFocus: document.hasFocus(),
                   loadingClass: loading?.className || null,
                   introClass: intro?.className || null,
                   introRect: rectOf(intro),
