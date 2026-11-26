@@ -1,3 +1,22 @@
+## SESSION HANDOFF — RESUME HERE
+
+Last updated: 2026-11-26
+
+- Development branch: `development/complete-game`
+- Exact current branch HEAD: `9ab20f271babfdbc9414d7f94503d6630102d757`
+- Current milestone: **M1 — rendering and sustained stability; incomplete**.
+- Session commit: `9ab20f271babfdbc9414d7f94503d6630102d757` — `test: foreground stability page before real start click`.
+- Change: the isolated three-minute stability scenario now explicitly brings its page to the foreground before using Playwright's real `#start` click. Failure diagnostics now record `document.visibilityState` and `document.hasFocus()`. The click remains a real Playwright user interaction; no JavaScript click or actionability bypass was introduced.
+- Latest exact-head CI: [push run #512](https://github.com/villanuevayanmar/tagbound/actions/runs/45751713956) is in progress; [PR run #513](https://github.com/villanuevayanmar/tagbound/actions/runs/45751717697) was queued at handoff. Neither is a pass yet. Verify both against this exact SHA.
+- Previous exact-head failure: [run #511](https://github.com/villanuevayanmar/tagbound/actions/runs/45694973240), source SHA `aa0e0ce0f52628e3c1e0c8dada59f5f33eae6e93`. Build/C++/Emscripten/PWA passed; browser-smoke failed at the isolated stability page's real Start click after 8 seconds. Diagnostics showed the button visible, enabled, stable, and hit-tested at its center, but did not record page focus/visibility. This makes background-tab focus a testable hypothesis, not yet a confirmed root cause.
+- The raylib 5.5 optional-normal guard remains present in `CMakeLists.txt`: CMake verifies the expected upstream source block and patches the non-VAO WebGL path to skip attribute location -1. This is a build-time compatibility patch, not proof of sustained renderer stability.
+- The corrected WebGL tracer is present, but corrected call stacks and the absence of invalid WebGL attribute errors have not yet been verified by a successful stability run.
+- Vercel project `tagbound` was inspected read-only. No Preview deployment was returned for `development/complete-game`. Production remains untouched. Do not create or deploy a Preview without authorization and verified zero-cost capacity.
+- PR #17 remains open, draft, and unmerged. PRs #13–#16 also remain open/unmerged according to the current open-PR listing; verify their live bases and dependencies before changing anything.
+- Physical Android verification: **not performed**. Chromium automation is not a physical-device test.
+- Remaining milestones: M1 stability; M2 boss arenas; M3 movement/camera/parkour; M4 combat/skills/progression; M5 safe save migration; M6 floor-aware fog of war; M7 keys/rewards/equipment; M8 complete five-city campaign.
+- Next task: inspect runs #512/#513 on this exact head. If foregrounding fixes the Start click, continue diagnosing any next M1 gate failure and complete the full three-minute run without weakening checks. If it still fails, use the new focus/visibility evidence to isolate the actual cause. Then update this handoff with measured FPS/frame-time, memory, WebGL errors, context counters, and screenshots only when the test actually passes.
+
 # TAGBOUND Development Status
 
 Last updated: 2026-11-25
