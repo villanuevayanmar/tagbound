@@ -3,11 +3,11 @@
 Last updated: 2026-11-26
 
 - Development branch: `development/complete-game`
-- Exact current branch HEAD: `9ab20f271babfdbc9414d7f94503d6630102d757`
+- Exact current branch HEAD: `90e6358695efa5494aa1290b4e2b4f80a0abbf6c`
 - Current milestone: **M1 — rendering and sustained stability; incomplete**.
-- Session commit: `9ab20f271babfdbc9414d7f94503d6630102d757` — `test: foreground stability page before real start click`.
+- Session commits: `9ab20f271babfdbc9414d7f94503d6630102d757` (foreground stability page before the real Start click) and `90e6358695efa5494aa1290b4e2b4f80a0abbf6c` (this handoff update).
 - Change: the isolated three-minute stability scenario now explicitly brings its page to the foreground before using Playwright's real `#start` click. Failure diagnostics now record `document.visibilityState` and `document.hasFocus()`. The click remains a real Playwright user interaction; no JavaScript click or actionability bypass was introduced.
-- Latest exact-head CI: [push run #512](https://github.com/villanuevayanmar/tagbound/actions/runs/45751713956) is in progress; [PR run #513](https://github.com/villanuevayanmar/tagbound/actions/runs/45751717697) was queued at handoff. Neither is a pass yet. Verify both against this exact SHA.
+- CI for the immediately preceding code-only head `9ab20f271babfdbc9414d7f94503d6630102d757`: [push run #512](https://github.com/villanuevayanmar/tagbound/actions/runs/45751713956) and [PR run #513](https://github.com/villanuevayanmar/tagbound/actions/runs/45751717697) were still in progress at last inspection. Documentation-head CI for this SHA: [push run #514](https://github.com/villanuevayanmar/tagbound/actions/runs/45751758676) pending and [PR run #515](https://github.com/villanuevayanmar/tagbound/actions/runs/45751763854) queued. None is a pass yet.
 - Previous exact-head failure: [run #511](https://github.com/villanuevayanmar/tagbound/actions/runs/45694973240), source SHA `aa0e0ce0f52628e3c1e0c8dada59f5f33eae6e93`. Build/C++/Emscripten/PWA passed; browser-smoke failed at the isolated stability page's real Start click after 8 seconds. Diagnostics showed the button visible, enabled, stable, and hit-tested at its center, but did not record page focus/visibility. This makes background-tab focus a testable hypothesis, not yet a confirmed root cause.
 - The raylib 5.5 optional-normal guard remains present in `CMakeLists.txt`: CMake verifies the expected upstream source block and patches the non-VAO WebGL path to skip attribute location -1. This is a build-time compatibility patch, not proof of sustained renderer stability.
 - The corrected WebGL tracer is present, but corrected call stacks and the absence of invalid WebGL attribute errors have not yet been verified by a successful stability run.
