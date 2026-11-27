@@ -1450,18 +1450,69 @@ jobs:
             if (bossStart.health <= 0 || bossStart.mana < 24) {
               throw new Error('M1 boss/skill fixture did not load: ' + JSON.stringify(bossStart));
             }
-            const stabilityTouch = (x, y, buttons) => stabilityPage.evaluate(
-              ([moveX, moveY, bits]) => Module.ccall(
-                'SetTouch', 'null', ['number', 'number', 'number'], [moveX, moveY, bits]
-              ),
-              [x, y, buttons]
-            );
-            await stabilityTouch(0, -0.35, 68);
-            await stabilityPage.waitForTimeout(1200);
-            await stabilityTouch(0, -0.35, 69);
-            await stabilityPage.waitForTimeout(120);
-            await stabilityTouch(0, -0.35, 68);
-            await stabilityPage.waitForTimeout(850);
+            const stabilityTouchSession = await stabilityContext.newCDPSession(stabilityPage);
+            const dispatchStabilityTouch = (type, touchPoints) =>
+              stabilityTouchSession.send('Input.dispatchTouchEvent', { type, touchPoints });
+            let nextStabilityTouchId = 1;
+            const stabilityPoint = (id, x, y) => ({
+              id, x, y, radiusX: 6, radiusY: 6, force: 1
+            });
+            const stabilityControl = async (moveX, moveY, buttons, duration = 120) => {
+              const points = [];
+              let stickId = null;
+              if (moveX !== 0 || moveY !== 0) {
+                const stick = stabilityPage.locator('#stick');
+                const box = await stick.boundingBox();
+                if (!box || !(await stick.isVisible())) {
+                  throw new Error('M1 real-touch joystick is not visible.');
+                }
+                stickId = nextStabilityTouchId++;
+                points.push(stabilityPoint(stickId, box.x + box.width / 2, box.y + box.height / 2));
+              }
+              const actions = [
+                [1, '.action.jump'], [2, '.action.slide'], [4, '.action.attack'],
+                [8, '.action.block'], [16, '.action.bow'], [32, '.action.skill'], [64, '.action.sprint']
+              ];
+              for (const [bit, selector] of actions) {
+                if (!(buttons & bit)) continue;
+                const action = stabilityPage.locator(selector);
+                const box = await action.boundingBox();
+                if (!box || !(await action.isVisible()) || !(await action.isEnabled())) {
+                  throw new Error('M1 real-touch action is unavailable: ' + selector);
+                }
+                points.push(stabilityPoint(nextStabilityTouchId++, box.x + box.width / 2, box.y + box.height / 2));
+              }
+              if (!points.length) return;
+              await dispatchStabilityTouch('touchStart', points);
+              try {
+                if (stickId !== null) {
+                  await stabilityPage.waitForTimeout(30);
+                  const moved = points.map(point => point.id === stickId
+                    ? stabilityPoint(point.id, point.x + Math.max(-42, Math.min(42, moveX * 42)),
+                      point.y + Math.max(-42, Math.min(42, moveY * 42)))
+                    : point);
+                  await dispatchStabilityTouch('touchMove', moved);
+                }
+                await stabilityPage.waitForTimeout(duration);
+              } finally {
+                await dispatchStabilityTouch('touchEnd', []);
+              }
+            };
+            const stabilityTap = async selector => {
+              const action = stabilityPage.locator(selector);
+              const box = await action.boundingBox();
+              if (!box || !(await action.isVisible()) || !(await action.isEnabled())) {
+                throw new Error('M1 real-touch control is unavailable: ' + selector);
+              }
+              const point = stabilityPoint(nextStabilityTouchId++, box.x + box.width / 2, box.y + box.height / 2);
+              await dispatchStabilityTouch('touchStart', [point]);
+              await stabilityPage.waitForTimeout(90);
+              await dispatchStabilityTouch('touchEnd', []);
+              await stabilityPage.waitForTimeout(60);
+            };
+            await stabilityControl(0, -0.35, 68, 1200);
+            await stabilityControl(0, -0.35, 69, 120);
+            await stabilityControl(0, -0.35, 68, 850);
             const movementState = await stabilityPage.evaluate(() => ({
               x: Module.ccall('GetPlayerPositionX', 'number', [], []),
               z: Module.ccall('GetPlayerPositionZ', 'number', [], [])
@@ -1469,7 +1520,7 @@ jobs:
             if (Math.hypot(movementState.x - bossStart.x, movementState.z - bossStart.z) < 1) {
               throw new Error('M1 stability scenario did not move the player through the real touch controls.');
             }
-            await stabilityPage.evaluate(() => Module.ccall('UseClassSkill', 'null', [], []));
+            await stabilityTap('.action.technique');
             await stabilityPage.waitForTimeout(150);
             const manaAfterSkill = await stabilityPage.evaluate(() =>
               Module.ccall('GetPlayerMana', 'number', [], [])
@@ -1477,7 +1528,7 @@ jobs:
             if (manaAfterSkill >= bossStart.mana) {
               throw new Error('M1 stability scenario did not activate the equipped class skill.');
             }
-            await stabilityTouch(0, 0, 4);
+            await stabilityControl(0, 0, 4, 500);
             await stabilityPage.waitForFunction(
               (initialHealth) => Module.ccall('GetBossHealth', 'number', [], []) < initialHealth,
               bossStart.health,
@@ -1492,8 +1543,7 @@ jobs:
                 Module.ccall('GetCurrentCity', 'number', [], [])
               );
               if (city === 1) break;
-              await stabilityTouch(0, -0.18, 68);
-              await stabilityPage.waitForTimeout(700);
+              await stabilityControl(0, -0.18, 68, 700);
             }
             const transitionState = await stabilityPage.evaluate(() => ({
               city: Module.ccall('GetCurrentCity', 'number', [], []),
@@ -1509,7 +1559,6 @@ jobs:
               throw new Error('M1 stability scenario did not complete the Port Town boss and enter Merchant Tier: ' +
                 JSON.stringify({ bossStart, bossDamaged, movementState, transitionState }));
             }
-            await stabilityTouch(0, 0, 0);
             const stabilityInitial = await stabilityPage.evaluate(() => ({
               contextLosses: window.TagboundGraphics?.contextLosses || 0,
               contextRestores: window.TagboundGraphics?.contextRestores || 0,
@@ -1530,21 +1579,19 @@ jobs:
             let webglErrorSamples = [];
             let backgroundHiddenObserved = false;
             for (let sampleIndex = 0; sampleIndex < 180; sampleIndex++) {
-              if (sampleIndex % 18 === 0) await stabilityTouch(0, -0.3, 68);
-              else if (sampleIndex % 18 === 6) await stabilityTouch(0.25, 0, 68);
-              else if (sampleIndex % 18 === 12) await stabilityTouch(0, 0, 4);
+              if (sampleIndex % 18 === 0) await stabilityControl(0, -0.3, 68, 120);
+              else if (sampleIndex % 18 === 6) await stabilityControl(0.25, 0, 68, 120);
+              else if (sampleIndex % 18 === 12) await stabilityControl(0, 0, 4, 120);
               if (sampleIndex % 24 === 8) {
-                await stabilityTouch(0, -0.2, 69);
-                await stabilityPage.waitForTimeout(90);
-                await stabilityTouch(0, -0.2, 68);
+                await stabilityControl(0, -0.2, 69, 90);
+                await stabilityControl(0, -0.2, 68, 100);
               }
               if (sampleIndex % 15 === 5) {
-                await stabilityPage.evaluate(() => {
-                  if (Module.ccall('GetTechniqueCooldownTenths', 'number', [], []) === 0 &&
-                      Module.ccall('GetPlayerMana', 'number', [], []) >= 24) {
-                    Module.ccall('UseClassSkill', 'null', [], []);
-                  }
-                });
+                const canUseSkill = await stabilityPage.evaluate(() =>
+                  Module.ccall('GetTechniqueCooldownTenths', 'number', [], []) === 0 &&
+                  Module.ccall('GetPlayerMana', 'number', [], []) >= 28
+                );
+                if (canUseSkill) await stabilityTap('.action.technique');
               }
               if (sampleIndex === 89) {
                 await backgroundPage.bringToFront();
@@ -1613,7 +1660,6 @@ jobs:
               if (frameState.webglErrors.length) webglErrorSamples.push(...frameState.webglErrors);
             }
             const stabilityDurationMs = Date.now() - stabilityStartedAt;
-            await stabilityTouch(0, 0, 0);
             const stabilityFinal = await stabilityPage.evaluate(() => ({
               city: Module.ccall('GetCurrentCity', 'number', [], []),
               contextLosses: window.TagboundGraphics?.contextLosses || 0,
