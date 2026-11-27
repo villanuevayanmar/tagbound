@@ -1382,9 +1382,18 @@ jobs:
               null,
               { timeout: 45000 }
             );
+            let startControlState = null;
             try {
               await stabilityPage.bringToFront();
-              await stabilityPage.locator('#start').click({ timeout: 8000 });
+              const startControl = stabilityPage.locator('#start');
+              const startControlCount = await startControl.count();
+              startControlState = {
+                count: startControlCount,
+                visible: startControlCount === 1 && await startControl.isVisible(),
+                enabled: startControlCount === 1 && await startControl.isEnabled(),
+                box: startControlCount === 1 ? await startControl.boundingBox() : null
+              };
+              await startControl.tap({ timeout: 8000 });
             } catch (error) {
               const clickState = await stabilityPage.evaluate(async () => {
                 const button = document.querySelector('#start');
@@ -1422,7 +1431,7 @@ jobs:
               }).catch(diagnosticError => ({ diagnosticError: String(diagnosticError) }));
               const screenshot = await stabilityPage.screenshot({ fullPage: true }).catch(() => null);
               if (screenshot) writeFileSync('visual-review/m1-start-actionability-failure.png', screenshot);
-              throw new Error('M1 stability start control was not actionable: ' + JSON.stringify({ message: String(error), clickState }));
+              throw new Error('M1 stability start control was not actionable: ' + JSON.stringify({ message: String(error), startControlState, clickState }));
             }
             await stabilityPage.waitForFunction(
               () => document.querySelector('#intro')?.classList.contains('hidden') &&
