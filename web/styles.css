@@ -24,15 +24,29 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 .stick-ring{width:124px;height:124px;border-radius:50%;border:2px solid #d9c29a66;background:#18233166;display:grid;place-items:center}
 .stick-knob{width:54px;height:54px;border-radius:50%;background:#d9c29a99;border:2px solid #f3dfb7}
 .action-pad{pointer-events:auto;position:absolute;right:3vw;bottom:4vh;width:min(42vw,310px);display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
-.action{border:1px solid #e8d0a466;background:#14202dbb;color:#fff2d7;border-radius:50%;aspect-ratio:1;padding:5px;font-size:10px;font-weight:900;letter-spacing:.03em;box-shadow:0 3px 10px #0008}
+.action{border:1px solid #e8d0a466;background:#14202dbb;color:#fff2d7;border-radius:50%;aspect-ratio:1;padding:0;display:grid;place-items:center;box-shadow:0 3px 10px #0008}
+.action[hidden]{display:none}
+.action svg{width:29px;height:29px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .action:active,.action.active{background:#a97143;color:#fff}.action.attack{grid-row:1;grid-column:3;width:78px;justify-self:end;background:#722d2dce}
 .action.jump{grid-row:1;grid-column:2}.action.skill{grid-row:2;grid-column:3}.action.sprint{grid-row:3;grid-column:1}
-.touch-help{display:none;position:absolute;left:50%;bottom:8px;transform:translateX(-50%);font-size:9px;color:#ffffff9a;white-space:nowrap;pointer-events:none;z-index:2}
+.action.map{grid-row:3;grid-column:3}
+.action.bow svg{width:31px;height:31px}
+.action.block svg{width:31px;height:31px}
 .rotate{position:absolute;inset:0;background:#101621;z-index:8;display:grid;align-content:center;justify-items:center;gap:12px;text-align:center}
 .rotate span{font-size:50px;color:#c18a55}.rotate small{color:#a9b4c0}
 .loading{position:absolute;z-index:7;bottom:50%;left:50%;transform:translate(-50%,50%);background:#101621d9;border:1px solid #6e614c;padding:14px 20px;font-size:12px;letter-spacing:.16em;color:#efd8b2}
-@media(pointer:coarse){#touch-controls{display:block}#touch-help{display:block}}
-@media(pointer:fine){#touch-controls,#touch-help{display:none}}
+@media(pointer:coarse){#touch-controls{display:block}}
+@media(pointer:fine){#touch-controls{display:none}}
+#touch-controls.map-open .stick-area,#touch-controls.map-open .action-pad .action:not(.map){display:none;visibility:hidden;pointer-events:none}
+.map-floor-controls{position:absolute;z-index:6;top:calc(50% - 186px);left:50%;transform:translateX(-50%);display:flex;align-items:center;justify-content:center;gap:10px;min-height:34px;padding:3px 8px;border:1px solid #b58e60;background:#141c27f2;color:#f4e6ce;pointer-events:auto}
+.map-floor-controls button{width:32px;height:28px;padding:3px;display:grid;place-items:center;border:1px solid #7c705e;background:#27313c;color:#f4e6ce}
+.map-floor-controls button:disabled{opacity:.32;cursor:default}
+.map-floor-controls svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#map-floor-label{min-width:110px;text-align:center;font-size:10px;font-weight:800;letter-spacing:.14em}
+@media(max-height:440px){.map-floor-controls{top:calc(50% - 186px);min-height:30px}.map-floor-controls button{height:26px}}
+
+#touch-controls.map-open .action-pad{width:72px;display:block}
+#touch-controls.map-open .action.map{width:64px;margin-left:auto;visibility:visible;pointer-events:auto}
 @media(orientation:portrait) and (pointer:coarse){#rotate{display:grid;visibility:visible}}
 @media(max-height:440px){.stick-area{width:120px;height:120px}.stick-ring{width:98px;height:98px}.stick-knob{width:44px;height:44px}.action-pad{width:250px;gap:4px}.action{font-size:9px}.panel{max-height:91dvh;padding:14px 20px}.story-copy{font-size:13px}.muted{font-size:11px}.class-card{min-height:66px;padding:8px}}
 
@@ -54,17 +68,118 @@ button{font:inherit;cursor:pointer;touch-action:manipulation}
 }
 
 
-/* In-game pause and settings controls */
-.game-settings{position:absolute;z-index:4;top:calc(12px + env(safe-area-inset-top));left:calc(50% - 152px);right:auto;transform:none;width:92px;padding:10px 4px;text-align:center;border:1px solid #d9bd8c99;background:#111b29e8;color:#f2dfbd;font-size:11px;font-weight:900;letter-spacing:.12em;box-shadow:0 3px 12px #0008}
+/* Icon-only pause and action controls */
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.game-settings{position:absolute;z-index:4;top:calc(12px + env(safe-area-inset-top));left:calc(50% - 152px);right:auto;transform:none;width:44px;height:44px;padding:8px;display:grid;place-items:center;border:1px solid #d9bd8c99;border-radius:50%;background:#111b29e8;color:#f2dfbd;box-shadow:0 3px 12px #0008}
+.game-settings svg{width:25px;height:25px;fill:none;stroke:currentColor;stroke-width:1.65;stroke-linecap:round;stroke-linejoin:round}
 .game-settings:active{background:#a97143;color:#fff}
-.settings-panel{width:min(460px,92vw);text-align:center}
-.settings-panel .eyebrow{margin-bottom:8px}
-.settings-panel h1{font-size:clamp(32px,7vw,48px)}
-.settings-actions{display:grid;grid-template-columns:1fr;gap:8px;margin-top:18px}
-.settings-actions .secondary{margin:0}
-.settings-panel .primary{margin-top:12px}
+.pause-emblem{width:66px;height:66px;display:grid;place-items:center;border:1px solid #d9bd8c88;border-radius:50%;background:#1b2633;color:#d9bd8c}
+.pause-emblem svg{width:38px;height:38px;fill:none;stroke:currentColor;stroke-width:1.55;stroke-linecap:round;stroke-linejoin:round}
+.settings-panel{width:min(420px,92vw);min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center}
+.build-label{margin:0 0 5px;color:#9aabba;font:700 9px/1.4 ui-monospace,monospace;letter-spacing:.11em;overflow-wrap:anywhere}
+.settings-panel{max-height:92dvh;overflow-y:auto}
+.diagnostics-toggle{max-width:100%;margin:0;padding:8px 13px;font-size:10px;letter-spacing:.12em}
+.diagnostics-panel{width:min(560px,92vw);max-height:min(42dvh,260px);overflow:auto;padding:10px 12px;border:1px solid #88704e;background:#111b27;color:#e4d3b6;text-align:left}
+.diagnostics-panel h2{margin:0 0 8px;color:#d7b47f;font-size:10px;letter-spacing:.16em}
+.diagnostics-panel pre{margin:0 0 10px;white-space:pre-wrap;overflow-wrap:anywhere;font:10px/1.5 ui-monospace,monospace;color:#d5e0e8}
+.diagnostics-panel button{display:block;margin:0 auto;padding:7px 12px;font-size:9px}
 
+.level-up-panel{width:min(860px,94vw);max-height:94dvh;text-align:center}
+.level-up-panel h1{font-size:clamp(30px,5vw,48px)}
+.level-up-count{margin:12px 0;color:#d9bd8c;font-size:12px;font-weight:800;letter-spacing:.14em}
+.stat-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(128px,1fr));gap:9px;margin-top:18px}
+.stat-choice{min-height:112px;padding:12px 9px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px solid #8c7657;background:#1b2633;color:#f2eadb;text-align:center}
+.stat-choice:active,.stat-choice:focus-visible{border-color:#e3bd7e;background:#342c25;outline:2px solid #e3bd7e;outline-offset:2px}
+.stat-choice:disabled{opacity:.38;cursor:not-allowed}
+.stat-choice strong{font-size:13px;letter-spacing:.14em;color:#e7c38e}
+.stat-choice small{font-size:12px;line-height:1.35;color:#d4dbe0}
+.stat-choice span{font-size:10px;color:#99a8b5;letter-spacing:.1em}
+.skill-choice-panel{width:min(760px,94vw);max-height:94dvh;text-align:center}
+.skill-choice-panel h1{font-size:clamp(30px,5vw,48px)}
+.skill-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:18px}
+.skill-choice{min-height:132px;padding:16px 12px;display:flex;flex-direction:column;justify-content:center;gap:10px;border:1px solid #9b805c;background:#1b2633;color:#f2eadb;text-align:left}
+.skill-choice strong{font-size:14px;letter-spacing:.12em;color:#e7c38e}
+.skill-choice small{font-size:13px;line-height:1.5;color:#d4dbe0}
+.skill-choice:active,.skill-choice:focus-visible{border-color:#e3bd7e;background:#342c25;outline:2px solid #e3bd7e;outline-offset:2px}
+.skill-choice:disabled{opacity:.35;cursor:not-allowed}
+.skill-loadout{width:100%;padding:8px 0;border-top:1px solid #71634f66;border-bottom:1px solid #71634f66}
+.skill-loadout-heading{margin:0 0 8px;color:#c7a36c;font-size:10px;font-weight:800;letter-spacing:.2em}
+.skill-loadout-slots{display:flex;justify-content:center;gap:22px}
+.skill-loadout-slot{display:flex;align-items:center;gap:8px;min-width:0}
+.skill-loadout-slot span{max-width:116px;color:#d7c8b2;font-size:10px;font-weight:700;letter-spacing:.08em}
+.skill-slot-button{width:40px;height:40px;margin:0;padding:8px;display:grid;place-items:center;border:1px solid #79694f;border-radius:50%;background:#182331;color:#d9bd8c}
+.skill-slot-button svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.skill-slot-button.selected{border-color:#eac27e;background:#63482c;color:#fff0ce}
+.skill-slot-button:disabled{opacity:.3}
+.skill-target-overlay{position:absolute;inset:0;z-index:10;display:block;background:rgba(4,8,14,.08);touch-action:none;pointer-events:auto}
+.skill-target-top{position:absolute;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;max-width:90vw;padding:9px 16px;border:1px solid #c89b62;background:#141c27ed;color:#f4e6ce;text-align:center;pointer-events:none}
+.skill-target-top strong{font-size:13px;letter-spacing:.18em}
+.skill-target-top span{font-size:10px;color:#c8b99f}
+.skill-target-status{position:absolute;left:50%;bottom:calc(92px + env(safe-area-inset-bottom));transform:translateX(-50%);padding:8px 12px;background:#101923e8;border:1px solid #756247;color:#e8d4b0;font-size:10px;font-weight:800;letter-spacing:.12em;white-space:nowrap;pointer-events:none}
+.skill-target-actions{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;gap:18px;pointer-events:auto}
+.skill-target-actions button{width:58px;height:58px;margin:0;padding:14px;display:grid;place-items:center;border:1px solid #d6b67b;border-radius:50%;background:#172331f5;color:#f4e6ce;box-shadow:0 4px 16px #0009}
+.skill-target-actions button:last-child{background:#74512e}
+.skill-target-actions button:disabled{opacity:.35;cursor:not-allowed}
+.skill-target-actions svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#touch-controls.skill-targeting{visibility:hidden;pointer-events:none}
+#touch-controls.skill-targeting *{pointer-events:none}
+.action.technique{grid-row:3;grid-column:2}
+.action.technique::after{content:attr(data-cost);position:absolute;right:-5px;bottom:-5px;min-width:24px;padding:2px 4px;border:1px solid #9d885e;border-radius:9px;background:#101923;color:#e8d7b8;font-size:8px;font-weight:800;line-height:1.1;letter-spacing:0}
+.action.technique.cooling::after{content:attr(data-cooldown);color:#ffd08a}
+.action.technique.no-mana::after{content:"NO MANA";color:#ffaaa0;min-width:0}
+.action.technique:disabled{opacity:.62;cursor:default}
+
+
+
+.settings-actions{display:flex;align-items:center;justify-content:center;gap:14px;margin:0}
+.icon-action{width:56px;height:56px;margin:0;padding:0;display:grid;place-items:center;border:1px solid #d9bd8c99;border-radius:50%;background:#182331;color:#f2dfbd}
+.icon-action svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.icon-action .sound-muted{display:none}
+.icon-action.muted .sound-wave{display:none}
+.icon-action.muted .sound-muted{display:block}
+.resume-icon{width:70px;height:70px;margin:0;padding:0;display:grid;place-items:center;border:0;border-radius:50%;background:#b9854e;color:#171820}
+.resume-icon svg{width:32px;height:32px;fill:currentColor;stroke:none}
+.action:focus-visible,.game-settings:focus-visible,.icon-action:focus-visible,.resume-icon:focus-visible{outline:2px solid #f4d19a;outline-offset:3px}
+@media(max-height:440px){
+  .game-settings{width:40px;height:40px}
+  .game-settings svg{width:23px;height:23px}
+  .settings-panel{width:min(420px,92vw);min-height:190px;gap:12px}
+  .level-up-panel{max-height:calc(100dvh - 16px);padding:12px 16px}
+  .level-up-panel h1{margin:4px 0;font-size:28px}
+  .level-up-panel .story-copy{font-size:12px;line-height:1.35;margin:6px 0}
+  .level-up-count{margin:4px 0;font-size:10px}
+  .stat-choice-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-top:8px}
+  .stat-choice{min-height:78px;padding:6px 4px;gap:4px}
+  .stat-choice strong{font-size:10px}
+  .stat-choice small{font-size:9px}
+  .stat-choice span{font-size:8px}
+  .skill-choice-panel{max-height:calc(100dvh - 16px);padding:12px 16px}
+  .skill-choice-panel h1{margin:4px 0;font-size:28px}
+  .skill-choice-panel .story-copy{font-size:12px;line-height:1.35;margin:6px 0}
+  .skill-choice-grid{gap:7px;margin-top:8px}
+  .skill-choice{min-height:84px;padding:8px;gap:5px}
+  .skill-choice strong{font-size:10px}
+  .skill-choice small{font-size:9px;line-height:1.3}
+  .skill-slot-button{width:34px;height:34px;padding:6px}
+  .skill-loadout-slot span{max-width:100px;font-size:8px}
+  .skill-target-actions button{width:52px;height:52px}
+  .skill-target-status{bottom:calc(82px + env(safe-area-inset-bottom));font-size:9px}
+
+
+  .pause-emblem{width:56px;height:56px}
+  .icon-action{width:48px;height:48px}
+  .resume-icon{width:60px;height:60px}
+  .action svg{width:24px;height:24px}
+}
 @media(max-width:760px){
-  .game-settings{width:42px;left:calc(50% - 98px);padding:7px 0;font-size:0;letter-spacing:0}
-  .game-settings::after{content:"⚙";font-size:16px}
+  .game-settings{width:42px;height:42px;padding:7px}
+  .game-settings svg{width:24px;height:24px}
+}
+/* Keep the pause control in the clear gap between the objective and level HUDs. */
+@media(pointer:coarse) and (orientation:landscape){
+  .game-settings{left:calc(75% - 116px)}
+}
+/* Narrow landscape screens have no safe space in the top HUD row. */
+@media(pointer:coarse) and (orientation:landscape) and (max-width:700px) and (max-height:440px){
+  .game-settings{left:calc(50% - 21px);top:auto;bottom:calc(100px + 6vh)}
 }

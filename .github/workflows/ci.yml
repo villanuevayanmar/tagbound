@@ -2,7 +2,7 @@ name: TAGBOUND build and browser smoke tests
 
 on:
   push:
-    branches: [main]
+    branches: [main, development/complete-game]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -10,6 +10,9 @@ on:
 concurrency:
   group: tagbound-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  TAGBOUND_SOURCE_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
 
 permissions:
   contents: read
@@ -49,28 +52,45 @@ jobs:
       - name: Assemble static PWA
         run: cp -R web/. dist/
 
+      - name: Write per-build diagnostics metadata
+        run: |
+          WASM_SHA256="$(sha256sum dist/game.wasm | cut -d ' ' -f1)"
+          printf '{"commitSha":"%s","integrationSha":"%s","wasmSha256":"%s","saveSchemaVersion":3}\n' \
+            "$TAGBOUND_SOURCE_SHA" "$GITHUB_SHA" "$WASM_SHA256" > dist/build-info.json
+
       - name: Validate generated output
         run: |
           test -s dist/game.js
           test -s dist/game.wasm
           test -s dist/index.html
           test -s dist/sw.js
+          test -s dist/build-info.json
           node --check dist/pwa.js
           node --check dist/game.js
           python3 - <<'PY'
+          import hashlib
           import json
+          import os
           from pathlib import Path
           root = Path('dist')
           json.loads((root / 'manifest.json').read_text())
+          metadata = json.loads((root / 'build-info.json').read_text())
+          wasm_sha = hashlib.sha256((root / 'game.wasm').read_bytes()).hexdigest()
+          assert metadata.get('commitSha') == os.environ['TAGBOUND_SOURCE_SHA'], 'Build SHA metadata does not match the source branch commit.'
+          assert metadata.get('integrationSha') == os.environ['GITHUB_SHA'], 'Integration SHA metadata does not match the workflow commit.'
+          assert metadata.get('wasmSha256') == wasm_sha, 'WASM hash metadata does not match the compiled artifact.'
+          assert metadata.get('saveSchemaVersion') == 3, 'Unexpected campaign save schema version.'
+          index = (root / 'index.html').read_text()
+          assert 'content="tagbound-v33"' in index, 'HTML application version was not bumped.'
           sw = (root / 'sw.js').read_text()
-          assert "const VERSION='tagbound-v25';" in sw, 'Service-worker cache version was not bumped.'
+          assert "const VERSION='tagbound-v33';" in sw, 'Service-worker cache version was not bumped.'
           for asset in ('/', '/styles.css', '/pwa.js', '/manifest.json',
                         '/icons/icon-192.png', '/icons/icon-512.png',
-                        '/game.js', '/game.wasm'):
-              path = root / ('index.html' if asset == '/' else asset.lstrip('/'))
-              assert path.exists() and path.is_file(), f'Missing cached asset: {asset}'
+                        '/game.js', '/game.wasm', '/build-info.json'):
+              file_path = root / ('index.html' if asset == '/' else asset.lstrip('/'))
+              assert file_path.exists() and file_path.is_file(), f'Missing cached asset: {asset}'
               assert f"'{asset}'" in sw or f'"{asset}"' in sw, f'Not in service-worker core list: {asset}'
-          print('Static PWA assets and service-worker precache list are valid.')
+          print('Static PWA assets, commit/WASM metadata, and service-worker precache list are valid.')
           PY
 
       - uses: actions/upload-artifact@v4
@@ -113,6 +133,7 @@ jobs:
           node --input-type=module <<'JS'
           import { chromium } from 'playwright';
           import { PNG } from 'pngjs';
+          import { writeFileSync } from 'node:fs';
 
           const browser = await chromium.launch({
             headless: true,
@@ -121,6 +142,27 @@ jobs:
           const context = await browser.newContext();
           const page = await context.newPage();
           const errors = [];
+          const assertCanvasFramesVisible = async (targetPage, label) => {
+            const canvas = targetPage.locator('#canvas');
+            let minimumVisibleRatio = 1;
+            for (let sample = 0; sample < 12; sample++) {
+              const frame = PNG.sync.read(await canvas.screenshot({ animations: 'disabled' }));
+              let visiblePixels = 0;
+              for (let offset = 0; offset < frame.data.length; offset += 4) {
+                if (frame.data[offset] > 12 || frame.data[offset + 1] > 12 ||
+                    frame.data[offset + 2] > 12) visiblePixels++;
+              }
+              const visibleRatio = visiblePixels / (frame.width * frame.height);
+              minimumVisibleRatio = Math.min(minimumVisibleRatio, visibleRatio);
+              if (visibleRatio < 0.97) {
+                throw new Error(label + ' canvas frame was unexpectedly black: ' +
+                  JSON.stringify({ sample, visibleRatio, minimumVisibleRatio }));
+              }
+              await targetPage.waitForTimeout(80);
+            }
+            console.log('PASS: ' + label + ' canvas remained visible across 12 samples; minimum non-black pixel ratio ' +
+              minimumVisibleRatio.toFixed(4));
+          };
           page.on('pageerror', error => errors.push(error.message));
           page.on('console', message => {
             if (message.type() === 'error') errors.push(message.text());
@@ -133,7 +175,38 @@ jobs:
               const loading = document.querySelector('#loading');
               return loading && loading.classList.contains('hidden');
             }, { timeout: 45000 });
+            const buildMetadata = await page.evaluate(async () => ({
+              info: await fetch('/build-info.json').then(response => response.json()),
+              label: document.querySelector('#build-label')?.textContent || ''
+            }));
+            if (buildMetadata.info.commitSha !== process.env.TAGBOUND_SOURCE_SHA ||
+                buildMetadata.info.integrationSha !== process.env.GITHUB_SHA ||
+                !/^[0-9a-f]{64}$/i.test(buildMetadata.info.wasmSha256 || '') ||
+                buildMetadata.info.saveSchemaVersion !== 3 ||
+                !buildMetadata.label.includes(process.env.TAGBOUND_SOURCE_SHA.slice(0, 12))) {
+              throw new Error('Build identity metadata or title-screen label is incorrect: ' + JSON.stringify(buildMetadata));
+            }
             await page.screenshot({ path: 'visual-review/desktop-intro.png', fullPage: true });
+
+            const iconOnlyUi = await page.evaluate(() => {
+              const actionButtons = [...document.querySelectorAll('#touch-controls .action')];
+              const iconOnly = button => !!button && !!button.querySelector('svg[aria-hidden="true"]') &&
+                !!button.getAttribute('aria-label') && !button.textContent.trim();
+              const pauseActions = ['#settings-sound', '#settings-install', '#resume']
+                .map(selector => document.querySelector(selector));
+              return {
+                touchHelpRemoved: !document.querySelector('#touch-help'),
+                actionButtonsIconOnly: actionButtons.length === 9 && actionButtons.every(iconOnly),
+                pauseButtonIconOnly: iconOnly(document.querySelector('#settings-open')),
+                pauseActionsIconOnly: pauseActions.every(iconOnly),
+                pauseTitleAccessible: document.querySelector('#settings-title')?.classList.contains('sr-only')
+              };
+            });
+            if (!iconOnlyUi.touchHelpRemoved || !iconOnlyUi.actionButtonsIconOnly ||
+                !iconOnlyUi.pauseButtonIconOnly || !iconOnlyUi.pauseActionsIconOnly ||
+                !iconOnlyUi.pauseTitleAccessible) {
+              throw new Error('Icon-only game controls are incomplete: ' + JSON.stringify(iconOnlyUi));
+            }
 
             const runtime = await page.evaluate(() => ({
               canvas: !!document.querySelector('#canvas'),
@@ -230,6 +303,89 @@ jobs:
             }
             await holdContext.close();
 
+            // Survival objectives advance away from the beacon and expose their own timer.
+            for (const objective of [
+              { city: 1, quest: 1, duration: 18 },
+              { city: 2, quest: 1, duration: 20 },
+              { city: 4, quest: 0, duration: 22 }
+            ]) {
+              const survivalContext = await browser.newContext();
+              const survivalPage = await survivalContext.newPage();
+              const survivalResponse = await survivalPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              if (!survivalResponse?.ok()) throw new Error('Survival-objective test page did not return HTTP 200.');
+              await survivalPage.evaluate((saved) => localStorage.setItem('tagbound-save', JSON.stringify({
+                schemaVersion: 1, city: saved.city, level: 1, xp: 0, unlocked: saved.city,
+                klass: 0, weapon: 0, finished: 0, quest: saved.quest
+              })), objective);
+              await survivalPage.reload({ waitUntil: 'networkidle' });
+              await survivalPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await survivalPage.locator('#start').click();
+              await survivalPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const state = await survivalPage.evaluate(() => ({
+                quest: Module.ccall('GetQuestProgress', 'number', [], []),
+                survival: Module.ccall('IsCurrentQuestSurvivalObjective', 'number', [], []),
+                survivalDuration: Module.ccall('GetCurrentQuestSurvivalDuration', 'number', [], []),
+                hold: Module.ccall('IsCurrentQuestHoldObjective', 'number', [], []),
+                holdDuration: Module.ccall('GetCurrentQuestHoldDuration', 'number', [], [])
+              }));
+              if (state.quest !== objective.quest || state.survival !== 1 ||
+                  Math.abs(state.survivalDuration - objective.duration) > 0.01 ||
+                  state.hold !== 0 || state.holdDuration !== 0) {
+                throw new Error('Survival objective did not restore correctly: ' + JSON.stringify({ objective, state }));
+              }
+              await survivalContext.close();
+            }
+
+            // Legacy saves used stage 3 = High Spire and stage 4 = Imperial Capital.
+            // Re-map the city identities once, then persist schemaVersion 2 so reloads do not swap them again.
+            for (const savedStage of [3, 4]) {
+              const stageContext = await browser.newContext();
+              const stagePage = await stageContext.newPage();
+              const stageResponse = await stagePage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+              if (!stageResponse?.ok()) throw new Error('Saved campaign-stage page did not return HTTP 200.');
+              await stagePage.evaluate((city) => localStorage.setItem('tagbound-save', JSON.stringify({
+                city, level: 2, xp: 15, unlocked: city, klass: 1, weapon: 3, finished: 0, quest: 1
+              })), savedStage);
+              await stagePage.reload({ waitUntil: 'networkidle' });
+              await stagePage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await stagePage.locator('#start').click();
+              await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const expectedStage = savedStage === 3 ? 4 : 3;
+              const restoredStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (restoredStage?.city !== expectedStage || restoredStage?.unlocked !== expectedStage ||
+                  restoredStage?.schemaVersion !== 3 || restoredStage?.quest !== 1 ||
+                  restoredStage?.level !== 2 || restoredStage?.xp !== 15 ||
+                  restoredStage?.klass !== 1 || restoredStage?.weapon !== 3 ||
+                  restoredStage?.finished !== 0) {
+                throw new Error('Legacy campaign save migration failed: ' + JSON.stringify({ savedStage, expectedStage, restoredStage }));
+              }
+              await stagePage.reload({ waitUntil: 'networkidle' });
+              await stagePage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+              await stagePage.locator('#start').click();
+              await stagePage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+              const reloadedStage = await stagePage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+              if (reloadedStage?.city !== expectedStage || reloadedStage?.unlocked !== expectedStage ||
+                  reloadedStage?.schemaVersion !== 3 || reloadedStage?.quest !== 1 ||
+                  reloadedStage?.level !== 2 || reloadedStage?.xp !== 15 ||
+                  reloadedStage?.klass !== 1 || reloadedStage?.weapon !== 3 ||
+                  reloadedStage?.finished !== 0) {
+                throw new Error('Legacy campaign save was migrated more than once: ' + JSON.stringify({ savedStage, expectedStage, reloadedStage }));
+              }
+              await stageContext.close();
+            }
+
             await page.locator('#sound-toggle').click();
             const muted = await page.evaluate(() => ({
               label: document.querySelector('#sound-toggle').textContent,
@@ -250,6 +406,73 @@ jobs:
             await page.locator('[data-class="1"]').click();
             await page.locator('#start').click();
             await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const idleUiMutations = await page.evaluate(async () => {
+              const targets = [
+                '#level-up-count',
+                '#skill-choice-count',
+                '#skill-target-status',
+                '#skill-slot-0-name',
+                '.action.technique'
+              ].map(selector => document.querySelector(selector));
+              if (targets.some(target => !target)) {
+                throw new Error('The idle HUD mutation regression targets are missing.');
+              }
+              let mutations = 0;
+              const observer = new MutationObserver(records => { mutations += records.length; });
+              for (const target of targets) {
+                observer.observe(target, {
+                  attributes: true,
+                  childList: true,
+                  characterData: true,
+                  subtree: true
+                });
+              }
+              await new Promise(resolve => setTimeout(resolve, 800));
+              observer.disconnect();
+              return mutations;
+            });
+            if (idleUiMutations !== 0) {
+              throw new Error('Idle gameplay rewrote unchanged HUD/skill DOM ' + idleUiMutations +
+                ' times in 800 ms; frame-synchronous UI writes must be state-gated.');
+            }
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
+            const exploredMap = await page.evaluate(() => ({
+              open: Module.ccall('IsMapOpen','number',[],[]) === 1,
+              floor: Module.ccall('GetMapFloor','number',[],[]),
+              count: Module.ccall('GetExploredCount','number',[],[]),
+              saved: localStorage.getItem('tagbound-exploration-v2-0'),
+              label: document.querySelector('#map-floor-label')?.textContent,
+              controlsVisible: !document.querySelector('#map-floor-controls')?.classList.contains('hidden'),
+              previousDisabled: document.querySelector('#map-floor-prev')?.disabled,
+              nextDisabled: document.querySelector('#map-floor-next')?.disabled
+            }));
+            if (!exploredMap.open || exploredMap.floor !== 0 || exploredMap.count < 1 || exploredMap.count >= 320 ||
+                !exploredMap.saved || exploredMap.saved.length !== 1600 || !exploredMap.saved.includes('1') ||
+                exploredMap.label !== 'GROUND' || !exploredMap.controlsVisible ||
+                !exploredMap.previousDisabled || !exploredMap.nextDisabled) {
+              throw new Error('Explored ground map/floor navigation did not restore correctly: ' + JSON.stringify(exploredMap));
+            }
+            const savedExploration = exploredMap.saved;
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
+            await page.reload({ waitUntil: 'networkidle' });
+            await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            await page.locator('#start').click();
+            await page.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
+            const restoredExploration = await page.evaluate(() => ({
+              floor: Module.ccall('GetMapFloor','number',[],[]),
+              count: Module.ccall('GetExploredCount','number',[],[]),
+              saved: localStorage.getItem('tagbound-exploration-v2-0')
+            }));
+            if (restoredExploration.floor !== 0 || restoredExploration.count < 1 ||
+                restoredExploration.saved !== savedExploration) {
+              throw new Error('Exploration floor discovery did not persist across reload: ' + JSON.stringify(restoredExploration));
+            }
+            await page.keyboard.press('m');
+            await page.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
             await page.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
             await page.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             await page.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
@@ -271,9 +494,9 @@ jobs:
               settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
               settingsButtonClearOfHud: (() => {
                 const s = document.querySelector('#settings-open').getBoundingClientRect();
-                const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+                const h = innerHeight <= 440 ? 116 : innerHeight - 78;
                 const boxes = [
-                  { left: 12, right: 262, top: 12, bottom: 87 },
+                  { left: 12, right: 282, top: 12, bottom: 110 },
                   { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
                   { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
                   { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
@@ -288,6 +511,61 @@ jobs:
                 !gameplay.settingsButtonVisible || !gameplay.settingsButtonClearOfHud) {
               throw new Error('Gameplay start/class-selection/save smoke test failed: ' + JSON.stringify(gameplay));
             }
+
+            // Losing browser focus or being backgrounded must clear held touch/look input.
+            const restoreHeldInput = async pointerId => page.evaluate(pointerId => {
+              Module.ccall('SetTouch', null, ['number', 'number', 'number'], [0.7, -0.6, 4]);
+              Module.ccall('SetLook', null, ['number', 'number'], [6, -3]);
+              const action = document.querySelector('.action');
+              action.classList.add('active');
+              action.dataset.pointerId = String(pointerId);
+            }, pointerId);
+            const assertTouchReset = async label => {
+              const state = await page.evaluate(() => ({
+                clear: Module.ccall('IsInputStateClear', 'number', [], []),
+                activeButtons: document.querySelectorAll('.action.active').length,
+                pointerIds: document.querySelectorAll('.action[data-pointer-id]').length
+              }));
+              if (state.clear !== 1 || state.activeButtons || state.pointerIds) {
+                throw new Error(label + ' did not clear held input: ' + JSON.stringify(state));
+              }
+            };
+            const notesBeforeBlur = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
+            await restoreHeldInput(997);
+            await page.evaluate(() => window.dispatchEvent(new Event('blur')));
+            await assertTouchReset('Window blur');
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score did not pause when the browser lost focus.');
+            }
+            await page.evaluate(() => window.dispatchEvent(new Event('focus')));
+            await page.waitForFunction(
+              previous => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previous,
+              notesBeforeBlur,
+              { timeout: 5000 }
+            );
+
+            const notesBeforeHidden = await page.evaluate(() => window.TagboundAudio?.getMusicNoteCount?.());
+            await restoreHeldInput(996);
+            await page.evaluate(() => {
+              Object.defineProperty(document, 'hidden', { configurable: true, value: true });
+              document.dispatchEvent(new Event('visibilitychange'));
+            });
+            await assertTouchReset('Document hidden');
+            if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
+              throw new Error('Ambient score did not pause when the document became hidden.');
+            }
+            await page.evaluate(() => {
+              Object.defineProperty(document, 'hidden', { configurable: true, value: false });
+              document.dispatchEvent(new Event('visibilitychange'));
+              delete document.hidden;
+            });
+            await page.waitForFunction(
+              previous => window.TagboundAudio?.getMusicState?.() === 'playing' &&
+                window.TagboundAudio?.getMusicNoteCount?.() > previous,
+              notesBeforeHidden,
+              { timeout: 5000 }
+            );
 
             // Settings must expose install only while open and pause the actual C++ simulation.
             await page.evaluate(() => {
@@ -320,13 +598,78 @@ jobs:
             if (!settingsVisible.open || !settingsVisible.installVisible || !settingsVisible.homeInstallHidden) {
               throw new Error('Settings screen or install placement failed: ' + JSON.stringify(settingsVisible));
             }
+            const debugPanelInitiallyHidden = await page.locator('#diagnostics-panel').evaluate(element => element.classList.contains('hidden'));
+            if (!debugPanelInitiallyHidden) throw new Error('Debug diagnostics panel must be hidden by default.');
+            await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+            await page.locator('#diagnostics-toggle').click();
+            await page.waitForFunction(() => {
+              const report = window.TagboundDiagnostics?.getReport?.() || '';
+              return /Frame rate: [1-9][0-9]* FPS/.test(report) &&
+                /Frame time: [0-9]+[.][0-9]{2} ms/.test(report);
+            }, null, { timeout: 8000 });
+            const diagnostics = await page.evaluate(() => ({
+              open: !document.querySelector('#diagnostics-panel').classList.contains('hidden'),
+              report: window.TagboundDiagnostics?.getReport?.() || '',
+              build: window.TagboundBuildInfo || null
+            }));
+            const frameRate = Number(diagnostics.report.match(/Frame rate: ([0-9]+) FPS/)?.[1] || 0);
+            const frameTimeMs = Number(diagnostics.report.match(/Frame time: ([0-9]+[.][0-9]{2}) ms/)?.[1] || 0);
+            const frameMetricError = Math.abs(frameRate * frameTimeMs - 1000);
+            if (!diagnostics.open || !Number.isFinite(frameRate) || frameRate < 1 ||
+                !Number.isFinite(frameTimeMs) || frameTimeMs <= 0 ||
+                frameMetricError > Math.max(10, frameTimeMs) ||
+                diagnostics.build?.commitSha !== process.env.TAGBOUND_SOURCE_SHA ||
+                diagnostics.build?.integrationSha !== process.env.GITHUB_SHA ||
+                !diagnostics.report.includes('Build SHA: ' + process.env.TAGBOUND_SOURCE_SHA) ||
+                !diagnostics.report.includes('Integration SHA: ' + process.env.GITHUB_SHA) ||
+                !diagnostics.report.includes('WASM SHA-256: ') ||
+                !diagnostics.report.includes('Save schema version: 3') ||
+                !diagnostics.report.includes('WebGL version: ') ||
+                !diagnostics.report.includes('GPU renderer: ') ||
+                !/Frame rate: [1-9][0-9]* FPS/.test(diagnostics.report) ||
+                !/Frame time: [0-9]+\.[0-9]{2} ms/.test(diagnostics.report) ||
+                diagnostics.report.includes('tagbound-save')) {
+              throw new Error('Phone diagnostics panel is incomplete or exposes save content: ' + JSON.stringify(diagnostics));
+            }
+            await page.locator('#diagnostics-copy').click();
+            const copiedDiagnostics = await page.evaluate(() => navigator.clipboard.readText());
+            if (!copiedDiagnostics.includes('Build SHA: ' + process.env.TAGBOUND_SOURCE_SHA) ||
+                !copiedDiagnostics.includes('Integration SHA: ' + process.env.GITHUB_SHA) ||
+                copiedDiagnostics.includes('tagbound-save')) {
+              throw new Error('Diagnostics Copy did not provide the safe build/runtime report.');
+            }
+            await page.locator('#diagnostics-toggle').click();
             await page.locator('#settings-sound').click();
-            if (await page.locator('#sound-toggle').textContent() !== 'SOUND: OFF' ||
-                await page.locator('#settings-sound').textContent() !== 'SOUND: OFF' ||
-                await page.evaluate(() => localStorage.getItem('tagbound-sound')) !== 'off') {
-              throw new Error('Settings sound toggle did not synchronize with Home.');
+            const settingsMuted = await page.evaluate(() => {
+              const button = document.querySelector('#settings-sound');
+              return {
+                homeText: document.querySelector('#sound-toggle').textContent,
+                label: button.getAttribute('aria-label'),
+                pressed: button.getAttribute('aria-pressed'),
+                muted: button.classList.contains('muted'),
+                saved: localStorage.getItem('tagbound-sound')
+              };
+            });
+            if (settingsMuted.homeText !== 'SOUND: OFF' || settingsMuted.label !== 'Enable sound' ||
+                settingsMuted.pressed !== 'false' || !settingsMuted.muted || settingsMuted.saved !== 'off') {
+              throw new Error('Icon-only Settings sound toggle did not synchronize with Home: ' +
+                JSON.stringify(settingsMuted));
             }
             await page.locator('#settings-sound').click();
+            const settingsUnmuted = await page.evaluate(() => {
+              const button = document.querySelector('#settings-sound');
+              return {
+                label: button.getAttribute('aria-label'),
+                pressed: button.getAttribute('aria-pressed'),
+                muted: button.classList.contains('muted'),
+                saved: localStorage.getItem('tagbound-sound')
+              };
+            });
+            if (settingsUnmuted.label !== 'Mute sound' || settingsUnmuted.pressed !== 'true' ||
+                settingsUnmuted.muted || settingsUnmuted.saved !== 'on') {
+              throw new Error('Icon-only Settings sound toggle did not restore its accessible state: ' +
+                JSON.stringify(settingsUnmuted));
+            }
             if (await page.evaluate(() => window.TagboundAudio?.getMusicState?.()) !== 'paused') {
               throw new Error('Ambient score resumed while Settings was still open.');
             }
@@ -361,10 +704,16 @@ jobs:
               bosses: Module.ccall('GetActiveBossCount', 'number', [], []),
               save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
             }));
-            if (restored.quest !== 3 || restored.bosses !== 1 || restored.save?.quest !== 3) {
+            if (restored.quest !== 3 || restored.bosses !== 1 ||
+                restored.save?.city !== 0 || restored.save?.unlocked !== 0 ||
+                restored.save?.quest !== 3 || restored.save?.level !== 1 ||
+                restored.save?.xp !== 0 || restored.save?.klass !== 1 ||
+                restored.save?.weapon !== 3 || restored.save?.finished !== 0 ||
+                restored.save?.schemaVersion !== 3) {
               throw new Error('Saved boss-gate restoration failed: ' + JSON.stringify(restored));
             }
             await page.waitForTimeout(2000);
+            await assertCanvasFramesVisible(page, 'Desktop gameplay');
             const gameplayImage = await page.screenshot({ path: 'visual-review/desktop-gameplay.png', fullPage: true });
             const gameplayPng = PNG.sync.read(gameplayImage);
             let healthTextPixels = 0;
@@ -382,20 +731,79 @@ jobs:
             const staminaRegion = PNG.sync.read(gameplayImage);
             let staminaDigitPixels = 0;
             let staminaOverlapGreenPixels = 0;
-            for (let y = 56; y < 70; y++) {
-              for (let x = 108; x < 127; x++) {
+            for (let y = 37; y < 54; y++) {
+              for (let x = 70; x < 126; x++) {
                 const pixel = (y * staminaRegion.width + x) * 4;
                 const red = staminaRegion.data[pixel];
                 const green = staminaRegion.data[pixel + 1];
                 const blue = staminaRegion.data[pixel + 2];
                 if (red > 170 && green > 170 && blue > 170) staminaDigitPixels++;
-                if (y >= 60 && y < 67 && green > 100 && green > red + 30 && green > blue + 30) staminaOverlapGreenPixels++;
+                if (y >= 43 && y < 51 && x < 126 && green > 100 && green > red + 30 && green > blue + 30) staminaOverlapGreenPixels++;
               }
             }
             if (staminaDigitPixels < 5 || staminaOverlapGreenPixels !== 0) {
               throw new Error('Desktop stamina value is clipped/covered by its bar: ' +
                 JSON.stringify({ staminaDigitPixels, staminaOverlapGreenPixels }));
             }
+
+            // Capture every real boss-gate scene at desktop and mobile landscape sizes.
+            // The saved quest-3 state causes StartGame to reconstruct the city-specific boss.
+            for (const device of [
+              { name: 'desktop', viewport: { width: 1280, height: 720 }, isMobile: false, hasTouch: false },
+              { name: 'mobile', viewport: { width: 844, height: 390 }, isMobile: true, hasTouch: true }
+            ]) {
+              for (let city = 0; city < 5; city++) {
+                const bossContext = await browser.newContext({
+                  viewport: device.viewport, deviceScaleFactor: 1,
+                  isMobile: device.isMobile, hasTouch: device.hasTouch
+                });
+                const bossPage = await bossContext.newPage();
+                const bossResponse = await bossPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+                if (!bossResponse?.ok()) throw new Error('Boss visual-review page did not return HTTP 200.');
+                await bossPage.evaluate((savedCity) => localStorage.setItem('tagbound-save', JSON.stringify({
+                  schemaVersion: 1, city: savedCity, level: 1, xp: 0, unlocked: savedCity,
+                  klass: 0, weapon: 0, finished: 0, quest: 3
+                })), city);
+                await bossPage.reload({ waitUntil: 'networkidle' });
+                await bossPage.waitForFunction(
+                  () => document.querySelector('#loading')?.classList.contains('hidden'),
+                  null,
+                  { timeout: 45000 }
+                );
+                await bossPage.locator('#start').click();
+                await bossPage.waitForFunction(
+                  () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                    Module.ccall('GetQuestProgress', 'number', [], []) === 3 &&
+                    Module.ccall('GetActiveBossCount', 'number', [], []) === 1,
+                  null,
+                  { timeout: 10000 }
+                );
+                const bossSave = await bossPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+                if (bossSave?.city !== city || bossSave?.quest !== 3) {
+                  throw new Error('Boss visual-review save did not restore the requested city: ' +
+                    JSON.stringify({ city, bossSave }));
+                }
+                // Verify the live WebAssembly boss stays inside the simulation arena.
+                // Do not require a windup: the player can start outside the gate after save restore.
+                await bossPage.waitForFunction(
+                  () => Module.ccall('IsBossArenaContained', 'number', [], []) === 1,
+                  null,
+                  { timeout: 10000 }
+                );
+                await bossPage.waitForTimeout(1200);
+                const arenaState = await bossPage.evaluate(() =>
+                  Module.ccall('IsBossArenaContained', 'number', [], [])
+                );
+                if (arenaState !== 1) throw new Error('Boss escaped its arena during browser visual review: ' + city);
+                await bossPage.waitForTimeout(100);
+                await bossPage.screenshot({
+                  path: 'visual-review/boss-' + device.name + '-city-' + city + '.png',
+                  fullPage: true
+                });
+                await bossContext.close();
+              }
+            }
+
             await page.evaluate(() => {
               const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
               save.finished = 1;
@@ -413,11 +821,38 @@ jobs:
               throw new Error('A completed save started ambient music behind the victory screen: ' + JSON.stringify(victoryAudio));
             }
 
+            // Restart from the fifth-city ending and verify campaign progress is reset.
+            await Promise.all([
+              page.waitForNavigation({ waitUntil: 'networkidle' }),
+              page.locator('#restart').click()
+            ]);
+            await page.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            const restarted = await page.evaluate(() => ({
+              introVisible: !document.querySelector('#intro').classList.contains('hidden'),
+              endingHidden: document.querySelector('#ending').classList.contains('hidden'),
+              selectedClass: document.querySelector('.class-card.selected')?.dataset.class,
+              soundSetting: localStorage.getItem('tagbound-sound'),
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!restarted.introVisible || !restarted.endingHidden ||
+                restarted.save?.city !== 0 || restarted.save?.unlocked !== 0 ||
+                restarted.save?.quest !== 0 || restarted.save?.level !== 1 ||
+                restarted.save?.xp !== 0 || restarted.save?.finished !== 0 ||
+                restarted.save?.schemaVersion !== 3 ||
+                restarted.save?.klass !== 1 || restarted.save?.weapon !== 3 ||
+                restarted.selectedClass !== '1' || restarted.soundSetting !== 'on') {
+              throw new Error('Campaign restart did not reset progression while preserving class and sound: ' + JSON.stringify(restarted));
+            }
+
             // Seed an old installed-PWA cache, then verify the new worker removes it.
             await page.evaluate(async () => {
               if (!('serviceWorker' in navigator)) throw new Error('Service workers are unavailable.');
               await navigator.serviceWorker.ready;
-              await caches.open('tagbound-v23');
+              await caches.open('tagbound-v32');
               const registrations = await navigator.serviceWorker.getRegistrations();
               await Promise.all(registrations.map(registration => registration.unregister()));
             });
@@ -426,13 +861,13 @@ jobs:
             await page.waitForFunction(() => !!navigator.serviceWorker.controller, { timeout: 30000 });
             const cacheState = await page.evaluate(async () => {
               const keys = await caches.keys();
-              const cache = await caches.open('tagbound-v25');
+              const cache = await caches.open('tagbound-v33');
               const expected = ['/', '/styles.css', '/pwa.js', '/manifest.json',
-                '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm'];
+                '/icons/icon-192.png', '/icons/icon-512.png', '/game.js', '/game.wasm', '/build-info.json'];
               const cached = await Promise.all(expected.map(async path => !!await cache.match(path)));
               return { keys, expected, cached };
             });
-            if (!cacheState.keys.includes('tagbound-v25') || cacheState.keys.includes('tagbound-v23') ||
+            if (!cacheState.keys.includes('tagbound-v33') || cacheState.keys.includes('tagbound-v32') || cacheState.keys.includes('tagbound-v23') ||
                 cacheState.cached.some(value => !value)) {
               throw new Error('Service-worker upgrade or precache failed: ' + JSON.stringify(cacheState));
             }
@@ -440,6 +875,15 @@ jobs:
             await context.setOffline(true);
             await page.reload({ waitUntil: 'networkidle' });
             await page.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), { timeout: 30000 });
+            const offlineBuild = await page.evaluate(async () => ({
+              info: await fetch('/build-info.json').then(response => response.json()),
+              label: document.querySelector('#build-label')?.textContent || ''
+            }));
+            if (offlineBuild.info.commitSha !== process.env.TAGBOUND_SOURCE_SHA ||
+                offlineBuild.info.integrationSha !== process.env.GITHUB_SHA ||
+                !offlineBuild.label.includes(process.env.TAGBOUND_SOURCE_SHA.slice(0, 12))) {
+              throw new Error('Offline launch did not retain the current build identity metadata.');
+            }
             if (errors.length) throw new Error('Browser console errors: ' + errors.join(' | '));
 
             const mobileContext = await browser.newContext({
@@ -467,15 +911,15 @@ jobs:
               classCardsVisible: [...document.querySelectorAll('.class-card')].every(e => { const r=e.getBoundingClientRect(); return r.top>=0 && r.bottom<=innerHeight; })
             }));
             if (!mobile.controlsVisible || !mobile.installVisible || !mobile.soundToggleVisible ||
-                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 6 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.rotateHidden ||
+                !mobile.settingsInstallHidden || !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 8 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.rotateHidden ||
                 !mobile.startVisible || !mobile.classCardsVisible) {
               throw new Error('Mobile landscape layout test failed: ' + JSON.stringify(mobile));
             }
             const mobileLoadouts = [
-              { klass: 1, weapon: 3, bowVisible: true, actions: 7 },
-              { klass: 2, weapon: 2, bowVisible: false, actions: 6 },
-              { klass: 0, weapon: 0, bowVisible: false, actions: 6 },
-              { klass: 1, weapon: 3, bowVisible: true, actions: 7 }
+              { klass: 1, weapon: 3, bowVisible: true, actions: 9 },
+              { klass: 2, weapon: 2, bowVisible: false, actions: 8 },
+              { klass: 0, weapon: 0, bowVisible: false, actions: 8 },
+              { klass: 1, weapon: 3, bowVisible: true, actions: 9 }
             ];
             for (const loadout of mobileLoadouts) {
               await mobilePage.locator('[data-class="' + loadout.klass + '"]').tap();
@@ -489,6 +933,22 @@ jobs:
               }
             }
             await mobilePage.locator('#start').tap();
+            await mobilePage.locator('#touch-controls .action.map').tap();
+            await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 1);
+            const mobileMap = await mobilePage.evaluate(() => ({
+              floor: Module.ccall('GetMapFloor','number',[],[]),
+              count: Module.ccall('GetExploredCount','number',[],[]),
+              saved: localStorage.getItem('tagbound-exploration-v2-0'),
+              floorLabel: document.querySelector('#map-floor-label')?.textContent,
+              floorControlsVisible: !document.querySelector('#map-floor-controls')?.classList.contains('hidden'),
+              nextDisabled: document.querySelector('#map-floor-next')?.disabled
+            }));
+            if (mobileMap.floor !== 0 || mobileMap.count < 1 || !mobileMap.saved || mobileMap.saved.length !== 1600 ||
+                mobileMap.floorLabel !== 'GROUND' || !mobileMap.floorControlsVisible || !mobileMap.nextDisabled) {
+              throw new Error('Mobile map did not show its saved ground floor and disabled undiscovered floors: ' + JSON.stringify(mobileMap));
+            }
+            await mobilePage.locator('#touch-controls .action.map').tap();
+            await mobilePage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[]) === 0);
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getState?.() === 'running', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicState?.() === 'playing', null, { timeout: 5000 });
             await mobilePage.waitForFunction(() => window.TagboundAudio?.getMusicNoteCount?.() > 0, null, { timeout: 5000 });
@@ -496,11 +956,213 @@ jobs:
             if (mobileSavedLoadout?.klass !== 1 || mobileSavedLoadout?.weapon !== 3) {
               throw new Error('Mobile Skirmisher save did not retain its Bow loadout: ' + JSON.stringify(mobileSavedLoadout));
             }
+
+            // Earlier single-layer city maps migrate to the ground layer without changing the campaign save.
+            const legacyMapContext = await browser.newContext();
+            const legacyMapPage = await legacyMapContext.newPage();
+            const legacyMapResponse = await legacyMapPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!legacyMapResponse?.ok()) throw new Error('Legacy exploration migration page did not return HTTP 200.');
+            const legacyMap = '0'.repeat(150) + '1' + '0'.repeat(169);
+            const legacyCampaign = {
+              schemaVersion: 1, city: 0, level: 2, xp: 15, unlocked: 0,
+              klass: 0, weapon: 0, finished: 0, quest: 0
+            };
+            await legacyMapPage.evaluate(({ map, save }) => {
+              localStorage.setItem('tagbound-exploration-v1-0', map);
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            }, { map: legacyMap, save: legacyCampaign });
+            await legacyMapPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            await legacyMapPage.locator('#start').click();
+            await legacyMapPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            const migratedMap = await legacyMapPage.evaluate(() => ({
+              map: localStorage.getItem('tagbound-exploration-v2-0'),
+              legacy: localStorage.getItem('tagbound-exploration-v1-0'),
+              campaign: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!migratedMap.map || migratedMap.map.length !== 1600 ||
+                migratedMap.map[150] !== '1' || migratedMap.legacy !== legacyMap ||
+                migratedMap.campaign?.schemaVersion !== 3 || migratedMap.campaign?.level !== 2 ||
+                migratedMap.campaign?.xp !== 15 || migratedMap.campaign?.city !== 0 ||
+                migratedMap.campaign?.pendingStatChoices !== 1 || migratedMap.campaign?.vitality !== 0) {
+              throw new Error('Legacy map migration changed or lost existing progress: ' + JSON.stringify(migratedMap));
+            }
+            await legacyMapContext.close();
+
+            // A saved level-up choice pauses play and persists exactly one selected stat.
+            const statContext = await browser.newContext();
+            const statPage = await statContext.newPage();
+            const statResponse = await statPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!statResponse?.ok()) throw new Error('Stat-choice page did not return HTTP 200.');
+            await statPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            const statSave = {
+              schemaVersion: 2, city: 0, level: 3, xp: 0, unlocked: 0,
+              klass: 0, weapon: 0, finished: 0, quest: 0, mana: 70,
+              vitality: 0, endurance: 0, focus: 0, power: 0, precision: 0,
+              pendingStatChoices: 1
+            };
+            await statPage.evaluate(save => localStorage.setItem('tagbound-save', JSON.stringify(save)), statSave);
+            await statPage.locator('#start').click();
+            await statPage.waitForFunction(() => document.querySelector('#level-up')?.classList.contains('hidden') === false);
+            const beforeChoice = await statPage.evaluate(() => ({
+              pending: Module.ccall('GetPendingStatChoices','number',[],[]),
+              buttons: [...document.querySelectorAll('[data-stat-choice]')].map(button => ({
+                name: button.querySelector('strong')?.textContent,
+                disabled: button.disabled
+              }))
+            }));
+            if (beforeChoice.pending !== 1 || beforeChoice.buttons.length !== 5 || beforeChoice.buttons.some(button => button.disabled)) {
+              throw new Error('Level-up stat selection did not open with five available choices: ' + JSON.stringify(beforeChoice));
+            }
+            await statPage.locator('[data-stat-choice="0"]').click();
+            await statPage.waitForFunction(() => document.querySelector('#level-up')?.classList.contains('hidden'));
+            await statPage.waitForFunction(() => !document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            const skillChoices = await statPage.evaluate(() => ({
+              pending: Module.ccall('GetPendingSkillChoices','number',[],[]),
+              options: [...document.querySelectorAll('.skill-choice')].filter(button => !button.hidden && !button.disabled)
+                .map(button => ({ title: button.querySelector('[data-skill-title]')?.textContent, id: button.dataset.skillId }))
+            }));
+            if (skillChoices.pending !== 1 || skillChoices.options.length !== 2 ||
+                !skillChoices.options[0].title?.includes('CLEAVING ARC')) {
+              throw new Error('Class skill milestone did not offer unlock choices: ' + JSON.stringify(skillChoices));
+            }
+            await statPage.locator('#skill-option-0').click();
+            await statPage.waitForFunction(() => document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            const afterChoice = await statPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+            if (afterChoice?.schemaVersion !== 3 || afterChoice?.vitality !== 1 ||
+                afterChoice?.pendingStatChoices !== 0 || afterChoice?.pendingSkillChoices !== 0 ||
+                afterChoice?.skill0 !== 1 || afterChoice?.rank0 !== 1 || afterChoice?.level !== 3) {
+              throw new Error('Stat and skill choices did not persist exactly once: ' + JSON.stringify(afterChoice));
+            }
+            await statPage.locator('#settings-open').click();
+            await statPage.locator('#skill-slot-0').click();
+            const equippedChoice = await statPage.evaluate(() => ({
+              active: JSON.parse(localStorage.getItem('tagbound-save') || 'null')?.activeSkillSlot,
+              label: document.querySelector('#skill-slot-0-name')?.textContent
+            }));
+            if (equippedChoice.active !== 0 || !equippedChoice.label?.includes('CLEAVING ARC')) {
+              throw new Error('Settings skill loadout did not retain the equipped technique: ' + JSON.stringify(equippedChoice));
+            }
+            const equippedAction = await statPage.evaluate(() => {
+              const button=document.querySelector('.action.technique');
+              return { label:button?.getAttribute('aria-label'), cost:button?.dataset.cost,
+                icon:button?.querySelector('svg path')?.getAttribute('d'), disabled:button?.disabled };
+            });
+            // The Cleaving Arc SVG begins with M4 20, then draws its first blade stroke to 19 5.
+            // Match the actual move-to/line-to sequence rather than expecting a second move command.
+            if (!equippedAction.label?.includes('CLEAVING ARC') || equippedAction.cost !== '24M' ||
+                !equippedAction.icon?.includes('M4 20 19 5') || equippedAction.disabled) {
+              throw new Error('Active technique icon/cost/readiness did not match the equipped skill: ' + JSON.stringify(equippedAction));
+            }
+            await statContext.close();
+
+            // Skirmisher Arrow Rain enters a target-confirm flow and spends Mana only on confirmation.
+            const arrowContext = await browser.newContext();
+            const arrowPage = await arrowContext.newPage();
+            const arrowResponse = await arrowPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            if (!arrowResponse?.ok()) throw new Error('Arrow Rain page did not return HTTP 200.');
+            await arrowPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            const arrowSave = {
+              schemaVersion: 2, city: 0, level: 3, xp: 0, unlocked: 0,
+              klass: 1, weapon: 3, finished: 0, quest: 0, mana: 90,
+              vitality: 0, endurance: 0, focus: 0, power: 0, precision: 0,
+              pendingStatChoices: 0
+            };
+            await arrowPage.evaluate(save => localStorage.setItem('tagbound-save', JSON.stringify(save)), arrowSave);
+            await arrowPage.locator('#start').click();
+            await arrowPage.waitForFunction(() => !document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            await arrowPage.locator('#skill-option-0').click();
+            await arrowPage.waitForFunction(() => document.querySelector('#skill-choice')?.classList.contains('hidden'));
+            const unlockedArrow = await arrowPage.evaluate(() => JSON.parse(localStorage.getItem('tagbound-save') || 'null'));
+            if (unlockedArrow?.skill0 !== 3 || unlockedArrow?.rank0 !== 1 || unlockedArrow?.pendingSkillChoices !== 0) {
+              throw new Error('Skirmisher did not unlock Arrow Rain: ' + JSON.stringify(unlockedArrow));
+            }
+            const arrowAction = await arrowPage.evaluate(() => ({
+              label:document.querySelector('.action.technique')?.getAttribute('aria-label'),
+              cost:document.querySelector('.action.technique')?.dataset.cost,
+              icon:document.querySelector('.action.technique svg path')?.getAttribute('d')
+            }));
+            if (!arrowAction.label?.includes('ARROW RAIN') || arrowAction.cost !== '38M' ||
+                !arrowAction.icon?.includes('M18 3')) {
+              throw new Error('Skirmisher technique button did not update to the Arrow Rain icon/cost: ' + JSON.stringify(arrowAction));
+            }
+            await arrowPage.keyboard.press('q');
+            await arrowPage.waitForFunction(() => !document.querySelector('#skill-target')?.classList.contains('hidden'));
+            const targetReady = await arrowPage.evaluate(() => ({
+              targeting: Module.ccall('IsSkillTargeting','number',[],[]),
+              mana: Module.ccall('GetPlayerMana','number',[],[]),
+              confirmDisabled: document.querySelector('#skill-target-confirm')?.disabled,
+              status: document.querySelector('#skill-target-status')?.textContent
+            }));
+            if (targetReady.targeting !== 1 || targetReady.mana !== 90 ||
+                targetReady.confirmDisabled || targetReady.status !== 'TARGET VALID') {
+              throw new Error('Arrow Rain target was not ready without spending Mana: ' + JSON.stringify(targetReady));
+            }
+            await arrowPage.locator('#skill-target-cancel').click();
+            await arrowPage.waitForFunction(() => Module.ccall('IsSkillTargeting','number',[],[]) === 0);
+            const arrowCancelled = await arrowPage.evaluate(() => ({
+              mana: Module.ccall('GetPlayerMana','number',[],[]),
+              effects: Module.ccall('GetSkillEffectCount','number',[],[]),
+              saved: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (arrowCancelled.mana !== 90 || arrowCancelled.effects !== 0 || arrowCancelled.saved?.mana !== 90) {
+              throw new Error('Cancelling Arrow Rain spent Mana or created an effect: ' + JSON.stringify(arrowCancelled));
+            }
+            await arrowPage.keyboard.press('q');
+            await arrowPage.waitForFunction(() => !document.querySelector('#skill-target')?.classList.contains('hidden'));
+            await arrowPage.locator('#skill-target-confirm').click();
+            await arrowPage.waitForFunction(() => Module.ccall('IsSkillTargeting','number',[],[]) === 0);
+            const arrowConfirmed = await arrowPage.evaluate(() => ({
+              effects: Module.ccall('GetSkillEffectCount','number',[],[]),
+              mana: Module.ccall('GetPlayerMana','number',[],[]),
+              saved: JSON.parse(localStorage.getItem('tagbound-save') || 'null'),
+              cooldown: document.querySelector('.action.technique')?.dataset.cooldown,
+              disabled: document.querySelector('.action.technique')?.disabled
+            }));
+            if (arrowConfirmed.effects !== 1 || arrowConfirmed.mana !== 52 ||
+                arrowConfirmed.saved?.mana !== 52 || Number.parseFloat(arrowConfirmed.cooldown) < 7.5 ||
+                Number.parseFloat(arrowConfirmed.cooldown) > 8.0 || !arrowConfirmed.disabled) {
+              throw new Error('Arrow Rain did not create its effect and spend/save Mana on confirmation: ' + JSON.stringify(arrowConfirmed));
+            }
+            await arrowContext.close();
+
+            // One floor-navigation key press advances only to the next discovered floor.
+            const floorContext = await browser.newContext();
+            const floorPage = await floorContext.newPage();
+            await floorPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await floorPage.waitForFunction(() => document.querySelector('#loading')?.classList.contains('hidden'), null, { timeout: 45000 });
+            const floorSave = {
+              schemaVersion: 2, city: 0, level: 1, xp: 0, unlocked: 0,
+              klass: 0, weapon: 0, finished: 0, quest: 0, mana: 70,
+              vitality: 0, endurance: 0, focus: 0, power: 0, precision: 0,
+              pendingStatChoices: 0
+            };
+            const floorDiscovery = Array(1600).fill('0');
+            floorDiscovery[150]='1';
+            floorDiscovery[470]='1';
+            floorDiscovery[1110]='1';
+            await floorPage.evaluate(({save,map}) => {
+              localStorage.setItem('tagbound-save',JSON.stringify(save));
+              localStorage.setItem('tagbound-exploration-v2-0',map.join(''));
+            },{save:floorSave,map:floorDiscovery});
+            await floorPage.locator('#start').click();
+            await floorPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            await floorPage.keyboard.press('m');
+            await floorPage.waitForFunction(() => Module.ccall('IsMapOpen','number',[],[])===1);
+            await floorPage.keyboard.press(']');
+            await floorPage.waitForFunction(() => Module.ccall('GetMapFloor','number',[],[])===1);
+            const oneStep = await floorPage.evaluate(() => ({
+              floor:Module.ccall('GetMapFloor','number',[],[]),
+              label:document.querySelector('#map-floor-label')?.textContent
+            }));
+            if(oneStep.floor!==1||oneStep.label!=='ROOFTOP 1') {
+              throw new Error('A single floor key press skipped more than one discovered floor: '+JSON.stringify(oneStep));
+            }
+            await floorContext.close();
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
-              const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+              const h = innerHeight <= 440 ? 116 : innerHeight - 78;
               const boxes = [
-                { left: 12, right: 262, top: 12, bottom: 87 },
+                { left: 12, right: 282, top: 12, bottom: 110 },
                 { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
                 { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
                 { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
@@ -559,19 +1221,22 @@ jobs:
             }
             await mobilePage.locator('[data-bit="4"]').tap();
             await mobilePage.waitForTimeout(1500);
+            await assertCanvasFramesVisible(mobilePage, 'Mobile-landscape gameplay');
             await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
             const mobileGameplayImage = await mobilePage.screenshot({ path: 'visual-review/mobile-gameplay.png', fullPage: true });
             const mobileStaminaRegion = PNG.sync.read(mobileGameplayImage);
             let mobileStaminaDigitPixels = 0;
             let mobileStaminaOverlapGreenPixels = 0;
-            for (let y = 56; y < 70; y++) {
-              for (let x = 108; x < 127; x++) {
+            // The C++ HUD draws STAMINA at x=24, y=39 on both desktop and mobile.
+            // Sample the same digit band as the desktop assertion, not the lower MANA row.
+            for (let y = 37; y < 54; y++) {
+              for (let x = 70; x < 126; x++) {
                 const pixel = (y * mobileStaminaRegion.width + x) * 4;
                 const red = mobileStaminaRegion.data[pixel];
                 const green = mobileStaminaRegion.data[pixel + 1];
                 const blue = mobileStaminaRegion.data[pixel + 2];
                 if (red > 170 && green > 170 && blue > 170) mobileStaminaDigitPixels++;
-                if (y >= 60 && y < 67 && green > 100 && green > red + 30 && green > blue + 30) mobileStaminaOverlapGreenPixels++;
+                if (y >= 43 && y < 51 && green > 100 && green > red + 30 && green > blue + 30) mobileStaminaOverlapGreenPixels++;
               }
             }
             if (mobileStaminaDigitPixels < 5 || mobileStaminaOverlapGreenPixels !== 0) {
@@ -598,22 +1263,599 @@ jobs:
             }
             await portraitContext.close();
 
-            console.log('PASS: WebAssembly runtime, WebGL, gameplay start/input/save, service-worker cache, offline reload, mobile landscape controls, and portrait rotation guidance.');
+            // M1 three-minute gameplay stability run: real controls, ranged boss fight, city transition and frame sampling.
+            const stabilityContext = await browser.newContext({
+              viewport: { width: 844, height: 390 },
+              deviceScaleFactor: 1,
+              isMobile: true,
+              hasTouch: true
+            });
+            const stabilityPage = await stabilityContext.newPage();
+            const stabilityPageErrors = [];
+            stabilityPage.on('pageerror', error => stabilityPageErrors.push(error.message));
+            await stabilityPage.addInitScript(() => {
+              const trace = { calls: 0, errors: [], installFailures: [] };
+              Object.defineProperty(window, '__TAGBOUND_GL_TRACE', { value: trace });
+              const originalGetContext = HTMLCanvasElement.prototype.getContext;
+              HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+                const gl = Reflect.apply(originalGetContext, this, [type, ...args]);
+                if (!gl || !/^webgl2?$/.test(type) || gl.__tagboundTraceInstalled) return gl;
+                Object.defineProperty(gl, '__tagboundTraceInstalled', { value: true });
+                const nativeGetError = gl.getError.bind(gl);
+                const record = (method, code, values) => trace.errors.push({
+                  method,
+                  code,
+                  args: values.map(value => {
+                    if (value === null || ['number', 'string', 'boolean'].includes(typeof value)) return value;
+                    if (ArrayBuffer.isView(value)) return value.constructor.name + '[' + value.length + ']';
+                    if (value && typeof value === 'object') return value.constructor?.name || 'object';
+                    return typeof value;
+                  }),
+                  stack: new Error().stack?.split('\n').slice(2, 7) || []
+                });
+                for (const name of ['vertexAttribPointer', 'enableVertexAttribArray']) {
+                  let prototype = Object.getPrototypeOf(gl);
+                  while (prototype) {
+                    const descriptor = Object.getOwnPropertyDescriptor(prototype, name);
+                    if (typeof descriptor?.value === 'function') {
+                      const original = descriptor.value;
+                      try {
+                        Object.defineProperty(prototype, name, {
+                          ...descriptor,
+                          value: function(...values) {
+                            const result = Reflect.apply(original, this, values);
+                            trace.calls++;
+                            for (let i = 0; i < 8; i++) {
+                              const code = nativeGetError();
+                              if (code === gl.NO_ERROR) break;
+                              record(name, code, values);
+                            }
+                            return result;
+                          }
+                        });
+                      } catch (error) {
+                        trace.installFailures.push(name + ': ' + String(error));
+                      }
+                      break;
+                    }
+                    prototype = Object.getPrototypeOf(prototype);
+                  }
+                }
+                for (let i = 0; i < 8; i++) {
+                  const code = nativeGetError();
+                  if (code === gl.NO_ERROR) break;
+                  record('context-created', code, []);
+                }
+                return gl;
+              };
+            });
+            const stabilityResponse = await stabilityPage.goto('http://127.0.0.1:4173/', { waitUntil: 'domcontentloaded', timeout: 45000 });
+            if (!stabilityResponse?.ok()) throw new Error('M1 stability page did not return HTTP 200.');
+            try {
+              await stabilityPage.waitForFunction(
+                () => document.querySelector('#loading')?.classList.contains('hidden'),
+                null,
+                { timeout: 45000 }
+              );
+            } catch (error) {
+              const startupState = await stabilityPage.evaluate(() => {
+                const loading = document.querySelector('#loading');
+                const canvas = document.querySelector('#canvas');
+                const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+                const pendingWebglErrors = [];
+                if (gl && !gl.isContextLost()) {
+                  for (let i = 0; i < 8; i++) {
+                    const code = gl.getError();
+                    if (code === gl.NO_ERROR) break;
+                    pendingWebglErrors.push(code);
+                  }
+                }
+                return {
+                  loadingExists: !!loading,
+                  loadingClass: loading?.className || null,
+                  loadingText: loading?.textContent || null,
+                  moduleCcall: typeof Module?.ccall === 'function',
+                  moduleCalledRun: Module?.calledRun ?? null,
+                  moduleRuntimeInitialized: Module?.runtimeInitialized ?? null,
+                  canvas: { width: canvas?.width || 0, height: canvas?.height || 0 },
+                  pendingWebglErrors,
+                  trace: window.__TAGBOUND_GL_TRACE || null,
+                  runtimeErrors: window.TagboundErrors?.list?.() || []
+                };
+              }).catch(() => null);
+              throw new Error('M1 stability WebAssembly startup failed: ' + JSON.stringify({
+                message: String(error),
+                pageErrors: stabilityPageErrors,
+                startupState
+              }));
+            }
+            await stabilityPage.evaluate(() => localStorage.setItem('tagbound-save', JSON.stringify({
+              schemaVersion: 3, city: 0, level: 5, xp: 0, unlocked: 0,
+              klass: 1, weapon: 3, finished: 0, quest: 3, mana: 90,
+              vitality: 10, endurance: 0, focus: 0, power: 0, precision: 10,
+              pendingStatChoices: 0, skill0: 3, rank0: 1, skill1: 4, rank1: 1,
+              activeSkillSlot: 1, pendingSkillChoices: 0, skillMilestoneMask: 3
+            })));
+            await stabilityPage.reload({ waitUntil: 'networkidle' });
+            await stabilityPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            const stabilityTouchSession = await stabilityContext.newCDPSession(stabilityPage);
+            const dispatchStabilityTouch = (type, touchPoints) =>
+              stabilityTouchSession.send('Input.dispatchTouchEvent', { type, touchPoints });
+            let nextStabilityTouchId = 1;
+            const stabilityPoint = (id, x, y) => ({
+              id, x, y, radiusX: 6, radiusY: 6, force: 1
+            });
+            const stabilityControl = async (moveX, moveY, buttons, duration = 120) => {
+              const points = [];
+              let stickId = null;
+              if (moveX !== 0 || moveY !== 0) {
+                const stick = stabilityPage.locator('#stick');
+                const box = await stick.boundingBox();
+                if (!box || !(await stick.isVisible())) {
+                  throw new Error('M1 real-touch joystick is not visible.');
+                }
+                stickId = nextStabilityTouchId++;
+                points.push(stabilityPoint(stickId, box.x + box.width / 2, box.y + box.height / 2));
+              }
+              const actions = [
+                [1, '.action.jump'], [2, '.action.slide'], [4, '.action.attack'],
+                [8, '.action.block'], [16, '.action.bow'], [32, '.action.skill'], [64, '.action.sprint']
+              ];
+              for (const [bit, selector] of actions) {
+                if (!(buttons & bit)) continue;
+                const action = stabilityPage.locator(selector);
+                const box = await action.boundingBox();
+                if (!box || !(await action.isVisible()) || !(await action.isEnabled())) {
+                  throw new Error('M1 real-touch action is unavailable: ' + selector);
+                }
+                points.push(stabilityPoint(nextStabilityTouchId++, box.x + box.width / 2, box.y + box.height / 2));
+              }
+              if (!points.length) return;
+              await dispatchStabilityTouch('touchStart', points);
+              try {
+                if (stickId !== null) {
+                  await stabilityPage.waitForTimeout(30);
+                  const moved = points.map(point => point.id === stickId
+                    ? stabilityPoint(point.id, point.x + Math.max(-42, Math.min(42, moveX * 42)),
+                      point.y + Math.max(-42, Math.min(42, moveY * 42)))
+                    : point);
+                  await dispatchStabilityTouch('touchMove', moved);
+                }
+                await stabilityPage.waitForTimeout(duration);
+              } finally {
+                await dispatchStabilityTouch('touchEnd', []);
+              }
+            };
+            const stabilityTap = async selector => {
+              const action = stabilityPage.locator(selector);
+              if (await action.count() !== 1 || !(await action.isVisible()) || !(await action.isEnabled())) {
+                throw new Error('M1 real-touch control is unavailable: ' + selector);
+              }
+              const initial = await action.boundingBox();
+              if (!initial) throw new Error('M1 real-touch control has no visible bounds: ' + selector);
+              await stabilityPage.waitForTimeout(60);
+              const stable = await action.boundingBox();
+              const unchanged = stable && Math.abs(initial.x-stable.x)<0.5 &&
+                Math.abs(initial.y-stable.y)<0.5 && Math.abs(initial.width-stable.width)<0.5 &&
+                Math.abs(initial.height-stable.height)<0.5;
+              const hit = await action.evaluate(element => {
+                const rect = element.getBoundingClientRect();
+                const target = document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+                return target === element || element.contains(target);
+              });
+              if (!unchanged || !hit) {
+                throw new Error('M1 real-touch control failed stable-position/hit-test checks: ' +
+                  JSON.stringify({ selector, initial, stable, hit }));
+              }
+              const point = stabilityPoint(nextStabilityTouchId++, stable.x+stable.width/2, stable.y+stable.height/2);
+              await dispatchStabilityTouch('touchStart', [point]);
+              await stabilityPage.waitForTimeout(90);
+              await dispatchStabilityTouch('touchEnd', []);
+              await stabilityPage.waitForTimeout(80);
+            };
+            const startEventTrace = await stabilityPage.evaluate(() => {
+              const button = document.querySelector('#start');
+              if (!button) throw new Error('M1 Start button missing before touch instrumentation.');
+              window.__TAGBOUND_START_EVENTS = [];
+              for (const type of ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'pointercancel', 'click']) {
+                document.addEventListener(type, event => {
+                  window.__TAGBOUND_START_EVENTS.push({
+                    type,
+                    trusted: event.isTrusted,
+                    target: event.target?.id || event.target?.className || null,
+                    pointerType: 'pointerType' in event ? event.pointerType : null,
+                    button: 'button' in event ? event.button : null,
+                    time: Number(performance.now().toFixed(2))
+                  });
+                }, true);
+              }
+              return {
+                tag: button.tagName,
+                touchAction: getComputedStyle(button).touchAction,
+                rect: (() => {
+                  const r = button.getBoundingClientRect();
+                  return { x: r.x, y: r.y, width: r.width, height: r.height };
+                })()
+              };
+            });
+            let startControlState = null;
+            try {
+              await stabilityPage.bringToFront();
+              const startControl = stabilityPage.locator('#start');
+              const startControlCount = await startControl.count();
+              startControlState = {
+                count: startControlCount,
+                visible: startControlCount === 1 && await startControl.isVisible(),
+                enabled: startControlCount === 1 && await startControl.isEnabled(),
+                box: startControlCount === 1 ? await startControl.boundingBox() : null
+              };
+              await stabilityTap('#start');
+            } catch (error) {
+              const clickState = await stabilityPage.evaluate(async () => {
+                const button = document.querySelector('#start');
+                const intro = document.querySelector('#intro');
+                const loading = document.querySelector('#loading');
+                const panel = button?.closest('.panel');
+                const rectOf = element => {
+                  if (!element) return null;
+                  const rect = element.getBoundingClientRect();
+                  return { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+                };
+                const samples = [];
+                for (let i = 0; i < 8; i++) {
+                  await new Promise(requestAnimationFrame);
+                  samples.push(rectOf(button));
+                }
+                const rect = button?.getBoundingClientRect();
+                const hit = rect && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                const style = button ? getComputedStyle(button) : null;
+                return {
+                  viewport: { innerWidth, innerHeight, clientWidth: document.documentElement.clientWidth, clientHeight: document.documentElement.clientHeight },
+                  visibilityState: document.visibilityState,
+                  hasFocus: document.hasFocus(),
+                  loadingClass: loading?.className || null,
+                  introClass: intro?.className || null,
+                  introRect: rectOf(intro),
+                  buttonRect: rectOf(button),
+                  buttonDisabled: button?.disabled ?? null,
+                  buttonStyle: style ? { display: style.display, visibility: style.visibility, opacity: style.opacity, pointerEvents: style.pointerEvents, position: style.position, transform: style.transform, transition: style.transition, animation: style.animation } : null,
+                  panelScroll: panel ? { top: panel.scrollTop, height: panel.clientHeight, scrollHeight: panel.scrollHeight } : null,
+                  centerHit: hit ? { tag: hit.tagName, id: hit.id, className: typeof hit.className === 'string' ? hit.className : '' } : null,
+                  activeAnimations: document.getAnimations().map(animation => ({ state: animation.playState, currentTime: animation.currentTime, target: animation.effect?.target?.id || animation.effect?.target?.className || null })),
+                  rectSamples: samples
+                };
+              }).catch(diagnosticError => ({ diagnosticError: String(diagnosticError) }));
+              const screenshot = await stabilityPage.screenshot({ fullPage: true }).catch(() => null);
+              if (screenshot) writeFileSync('visual-review/m1-start-actionability-failure.png', screenshot);
+              throw new Error('M1 stability start control was not actionable: ' + JSON.stringify({ message: String(error), startControlState, clickState }));
+            }
+            try {
+              await stabilityPage.waitForFunction(
+                () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                  Module.ccall('GetCurrentCity', 'number', [], []) === 0 &&
+                  Module.ccall('GetActiveBossCount', 'number', [], []) === 1 &&
+                  Module.ccall('IsBossArenaContained', 'number', [], []) === 1,
+                null,
+                { timeout: 10000 }
+              );
+            } catch (error) {
+              const startFailureState = await stabilityPage.evaluate(() => {
+                const button = document.querySelector('#start');
+                const intro = document.querySelector('#intro');
+                const rect = button?.getBoundingClientRect();
+                const hit = rect && document.elementFromPoint(rect.x + rect.width / 2, rect.y + rect.height / 2);
+                const read = name => {
+                  try { return Module.ccall(name, 'number', [], []); }
+                  catch (failure) { return String(failure); }
+                };
+                return {
+                  events: window.__TAGBOUND_START_EVENTS || [],
+                  introClass: intro?.className || null,
+                  startDisabled: button?.disabled ?? null,
+                  startHit: hit ? { tag: hit.tagName, id: hit.id, className: hit.className } : null,
+                  visibility: document.visibilityState,
+                  focused: document.hasFocus(),
+                  moduleReady: typeof Module?.ccall === 'function',
+                  city: read('GetCurrentCity'),
+                  started: read('IsGameUpdating'),
+                  bossCount: read('GetActiveBossCount'),
+                  bossContained: read('IsBossArenaContained'),
+                  pageErrors: window.TagboundErrors?.list?.() || []
+                };
+              });
+              const screenshot = await stabilityPage.screenshot({ fullPage: true }).catch(screenshotError => ({
+                error: String(screenshotError)
+              }));
+              if (Buffer.isBuffer(screenshot)) writeFileSync('visual-review/m1-start-touch-failure.png', screenshot);
+              throw new Error('M1 Start touch did not enter gameplay: ' + JSON.stringify({
+                message: String(error), startEventTrace, startFailureState,
+                screenshot: Buffer.isBuffer(screenshot) ? 'captured' : screenshot
+              }));
+            }
+            const bossStart = await stabilityPage.evaluate(() => ({
+              health: Module.ccall('GetBossHealth', 'number', [], []),
+              mana: Module.ccall('GetPlayerMana', 'number', [], []),
+              x: Module.ccall('GetPlayerPositionX', 'number', [], []),
+              z: Module.ccall('GetPlayerPositionZ', 'number', [], [])
+            }));
+            if (bossStart.health <= 0 || bossStart.mana < 24) {
+              throw new Error('M1 boss/skill fixture did not load: ' + JSON.stringify(bossStart));
+            }
+            await stabilityControl(0, -0.35, 68, 1200);
+            await stabilityControl(0, -0.35, 69, 120);
+            await stabilityControl(0, -0.35, 68, 850);
+            const movementState = await stabilityPage.evaluate(() => ({
+              x: Module.ccall('GetPlayerPositionX', 'number', [], []),
+              z: Module.ccall('GetPlayerPositionZ', 'number', [], [])
+            }));
+            if (Math.hypot(movementState.x - bossStart.x, movementState.z - bossStart.z) < 1) {
+              throw new Error('M1 stability scenario did not move the player through the real touch controls.');
+            }
+            await stabilityTap('.action.technique');
+            await stabilityPage.waitForTimeout(150);
+            const manaAfterSkill = await stabilityPage.evaluate(() =>
+              Module.ccall('GetPlayerMana', 'number', [], [])
+            );
+            if (manaAfterSkill >= bossStart.mana) {
+              throw new Error('M1 stability scenario did not activate the equipped class skill.');
+            }
+            await stabilityControl(0, 0, 4, 500);
+            await stabilityPage.waitForFunction(
+              (initialHealth) => Module.ccall('GetBossHealth', 'number', [], []) < initialHealth,
+              bossStart.health,
+              { timeout: 15000 }
+            );
+            const bossDamaged = await stabilityPage.evaluate(() =>
+              Module.ccall('GetBossHealth', 'number', [], [])
+            );
+            const bossFightDeadline = Date.now() + 60000;
+            while (Date.now() < bossFightDeadline) {
+              const city = await stabilityPage.evaluate(() =>
+                Module.ccall('GetCurrentCity', 'number', [], [])
+              );
+              if (city === 1) break;
+              await stabilityControl(0, -0.18, 68, 700);
+            }
+            const transitionState = await stabilityPage.evaluate(() => ({
+              city: Module.ccall('GetCurrentCity', 'number', [], []),
+              enemies: Module.ccall('GetLivingEnemyCount', 'number', [], []),
+              boss: Module.ccall('GetActiveBossCount', 'number', [], []),
+              bossHealth: Module.ccall('GetBossHealth', 'number', [], []),
+              playerHealth: Module.ccall('GetPlayerHealth', 'number', [], []),
+              playerX: Module.ccall('GetPlayerPositionX', 'number', [], []),
+              playerY: Module.ccall('GetPlayerPositionY', 'number', [], []),
+              playerZ: Module.ccall('GetPlayerPositionZ', 'number', [], [])
+            }));
+            if (transitionState.city !== 1 || transitionState.enemies < 1 || transitionState.boss !== 0) {
+              throw new Error('M1 stability scenario did not complete the Port Town boss and enter Merchant Tier: ' +
+                JSON.stringify({ bossStart, bossDamaged, movementState, transitionState }));
+            }
+            const stabilityInitial = await stabilityPage.evaluate(() => ({
+              contextLosses: window.TagboundGraphics?.contextLosses || 0,
+              contextRestores: window.TagboundGraphics?.contextRestores || 0,
+              jsHeap: performance.memory?.usedJSHeapSize || 0,
+              wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0,
+              visibility: document.visibilityState
+            }));
+            const stabilityStartImage = await stabilityPage.locator('#canvas').screenshot();
+            writeFileSync('visual-review/m1-stability-start.png', stabilityStartImage);
+            const backgroundPage = await stabilityContext.newPage();
+            await backgroundPage.goto('about:blank');
+            const stabilityStartedAt = Date.now();
+            const frameRates = [];
+            const frameTimes = [];
+            const jsHeapSamples = [];
+            const wasmHeapSamples = [];
+            let minimumVisibleRatio = 1;
+            let webglErrorSamples = [];
+            let backgroundHiddenObserved = false;
+            for (let sampleIndex = 0; sampleIndex < 180; sampleIndex++) {
+              if (sampleIndex % 18 === 0) await stabilityControl(0, -0.3, 68, 120);
+              else if (sampleIndex % 18 === 6) await stabilityControl(0.25, 0, 68, 120);
+              else if (sampleIndex % 18 === 12) await stabilityControl(0, 0, 4, 120);
+              if (sampleIndex % 24 === 8) {
+                await stabilityControl(0, -0.2, 69, 90);
+                await stabilityControl(0, -0.2, 68, 100);
+              }
+              if (sampleIndex % 15 === 5) {
+                const canUseSkill = await stabilityPage.evaluate(() =>
+                  Module.ccall('GetTechniqueCooldownTenths', 'number', [], []) === 0 &&
+                  Module.ccall('GetPlayerMana', 'number', [], []) >= 28
+                );
+                if (canUseSkill) await stabilityTap('.action.technique');
+              }
+              if (sampleIndex === 89) {
+                await backgroundPage.bringToFront();
+                await stabilityPage.waitForTimeout(1200);
+                backgroundHiddenObserved = await stabilityPage.evaluate(() => document.visibilityState === 'hidden');
+                await stabilityPage.bringToFront();
+                await stabilityPage.waitForTimeout(1200);
+              }
+              await stabilityPage.waitForTimeout(1000);
+              const frameBuffer = await stabilityPage.locator('#canvas').screenshot();
+              const frameImage = PNG.sync.read(frameBuffer);
+              let visiblePixels = 0;
+              let sampledPixels = 0;
+              for (let pixel = 0; pixel < frameImage.data.length; pixel += 16) {
+                if (frameImage.data[pixel] + frameImage.data[pixel + 1] + frameImage.data[pixel + 2] > 30) {
+                  visiblePixels++;
+                }
+                sampledPixels++;
+              }
+              const visibleRatio = visiblePixels / sampledPixels;
+              minimumVisibleRatio = Math.min(minimumVisibleRatio, visibleRatio);
+              if (visibleRatio < 0.97) {
+                throw new Error('M1 stability frame was black/blank at sample ' + sampleIndex +
+                  ': visible pixel ratio ' + visibleRatio);
+              }
+              const frameState = await stabilityPage.evaluate(() => {
+                const canvas = document.querySelector('#canvas');
+                const gl = canvas?.getContext('webgl2') || canvas?.getContext('webgl');
+                const webglErrors = [];
+                if (gl && !gl.isContextLost()) {
+                  for (let i = 0; i < 8; i++) {
+                    const error = gl.getError();
+                    if (error === gl.NO_ERROR) break;
+                    webglErrors.push(error);
+                  }
+                }
+                return {
+                  fps: Module.ccall('GetFrameRate', 'number', [], []),
+                  frameTimeMs: Module.ccall('GetFrameTimeMs', 'number', [], []),
+                  contextLosses: window.TagboundGraphics?.contextLosses || 0,
+                  contextRestores: window.TagboundGraphics?.contextRestores || 0,
+                  contextLost: !!gl?.isContextLost?.(),
+                  webglErrors: [
+                    ...(window.__TAGBOUND_GL_TRACE?.errors || []).slice(0, 12),
+                    ...webglErrors.map(code => ({ method: 'untraced-pending-error', code, args: [], stack: [] }))
+                  ],
+                  glTraceCalls: window.__TAGBOUND_GL_TRACE?.calls || 0,
+                  glTraceInstallFailures: window.__TAGBOUND_GL_TRACE?.installFailures || [],
+                  errors: window.TagboundErrors?.list?.() || [],
+                  jsHeap: performance.memory?.usedJSHeapSize || 0,
+                  wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0
+                };
+              });
+              if (frameState.contextLost || frameState.contextLosses !== stabilityInitial.contextLosses ||
+                  frameState.webglErrors.length || frameState.errors.length ||
+                  frameState.glTraceInstallFailures.length ||
+                  !Number.isFinite(frameState.fps) || frameState.fps < 1 ||
+                  !Number.isFinite(frameState.frameTimeMs) || frameState.frameTimeMs <= 0) {
+                throw new Error('M1 stability runtime diagnostics failed at sample ' + sampleIndex + ': ' +
+                  JSON.stringify(frameState));
+              }
+              frameRates.push(frameState.fps);
+              frameTimes.push(frameState.frameTimeMs);
+              if (frameState.jsHeap > 0) jsHeapSamples.push(frameState.jsHeap);
+              if (frameState.wasmHeap > 0) wasmHeapSamples.push(frameState.wasmHeap);
+              if (frameState.webglErrors.length) webglErrorSamples.push(...frameState.webglErrors);
+            }
+            const stabilityDurationMs = Date.now() - stabilityStartedAt;
+            const stabilityFinal = await stabilityPage.evaluate(() => ({
+              city: Module.ccall('GetCurrentCity', 'number', [], []),
+              contextLosses: window.TagboundGraphics?.contextLosses || 0,
+              contextRestores: window.TagboundGraphics?.contextRestores || 0,
+              errors: window.TagboundErrors?.list?.() || [],
+              jsHeap: performance.memory?.usedJSHeapSize || 0,
+              wasmHeap: Module.HEAPU8?.buffer?.byteLength || 0
+            }));
+            if (stabilityDurationMs < 180000 || frameRates.length !== 180 ||
+                stabilityFinal.contextLosses !== stabilityInitial.contextLosses ||
+                stabilityFinal.contextRestores !== stabilityInitial.contextRestores ||
+                stabilityFinal.errors.length || stabilityPageErrors.length ||
+                webglErrorSamples.length || stabilityFinal.city !== 1) {
+              throw new Error('M1 three-minute stability exit gate failed: ' + JSON.stringify({
+                durationMs: stabilityDurationMs, samples: frameRates.length, stabilityInitial,
+                stabilityFinal, stabilityPageErrors, webglErrorSamples
+              }));
+            }
+            const average = values => values.length
+              ? values.reduce((sum, value) => sum + value, 0) / values.length : null;
+            const m1StabilityReport = {
+              durationMs: stabilityDurationMs,
+              samples: frameRates.length,
+              cityAfterBoss: transitionState.city,
+              bossHealthBefore: bossStart.health,
+              bossHealthAfterDamage: bossDamaged,
+              manaBeforeSkill: bossStart.mana,
+              manaAfterSkill,
+              minimumVisibleRatio,
+              averageFps: average(frameRates),
+              averageFrameTimeMs: average(frameTimes),
+              maximumFrameTimeMs: Math.max(...frameTimes),
+              jsHeapStart: stabilityInitial.jsHeap || null,
+              jsHeapEnd: stabilityFinal.jsHeap || null,
+              wasmHeapStart: stabilityInitial.wasmHeap || null,
+              wasmHeapEnd: stabilityFinal.wasmHeap || null,
+              backgroundHiddenObserved
+            };
+            console.log('M1 STABILITY BASELINE: ' + JSON.stringify(m1StabilityReport));
+            const stabilityEndImage = await stabilityPage.locator('#canvas').screenshot();
+            writeFileSync('visual-review/m1-stability-end.png', stabilityEndImage);
+            await backgroundPage.close();
+            await stabilityContext.close();
+
+            // Force a real WebGL context loss in an isolated session and verify recovery reloads raylib.
+            const recoveryContext = await browser.newContext({
+              viewport: { width: 844, height: 390 },
+              deviceScaleFactor: 1
+            });
+            const recoveryPage = await recoveryContext.newPage();
+            await recoveryPage.goto('http://127.0.0.1:4173/', { waitUntil: 'networkidle' });
+            await recoveryPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            await recoveryPage.locator('#start').click();
+            await recoveryPage.waitForFunction(() => document.querySelector('#intro')?.classList.contains('hidden'));
+            // Corrupt only the test fixture after gameplay has started. SaveNow must replace it
+            // with the actual in-memory city before the page reloads.
+            await recoveryPage.evaluate(() => {
+              const save = JSON.parse(localStorage.getItem('tagbound-save') || '{}');
+              save.city = 4;
+              save.unlocked = 4;
+              localStorage.setItem('tagbound-save', JSON.stringify(save));
+            });
+            const recoveryNavigation = recoveryPage.waitForNavigation({
+              waitUntil: 'domcontentloaded',
+              timeout: 15000
+            });
+            await recoveryPage.evaluate(() => {
+              const canvas = document.querySelector('#canvas');
+              const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+              const extension = gl?.getExtension('WEBGL_lose_context');
+              if (!extension) throw new Error('Chromium WEBGL_lose_context extension is unavailable.');
+              canvas.addEventListener('webglcontextlost', () => {
+                setTimeout(() => extension.restoreContext(), 200);
+              }, { once: true });
+              extension.loseContext();
+            });
+            await recoveryNavigation;
+            await recoveryPage.waitForFunction(
+              () => document.querySelector('#loading')?.classList.contains('hidden'),
+              null,
+              { timeout: 45000 }
+            );
+            const recoveryState = await recoveryPage.evaluate(() => ({
+              attempted: !!sessionStorage.getItem('tagbound-webgl-recovery-at'),
+              save: JSON.parse(localStorage.getItem('tagbound-save') || 'null')
+            }));
+            if (!recoveryState.attempted || recoveryState.save?.city !== 0 ||
+                recoveryState.save?.unlocked !== 0 || recoveryState.save?.schemaVersion !== 3) {
+              throw new Error('WebGL context recovery did not flush the in-memory save before reloading: ' +
+                JSON.stringify(recoveryState));
+            }
+            await recoveryPage.locator('#start').click();
+            await recoveryPage.waitForFunction(
+              () => document.querySelector('#intro')?.classList.contains('hidden') &&
+                Module.ccall('IsGameUpdating', 'number', [], []) === 1,
+              null,
+              { timeout: 10000 }
+            );
+            await recoveryContext.close();
+
+            console.log('PASS: WebAssembly runtime, WebGL, context-loss recovery, gameplay start/input/save, service-worker cache, offline reload, mobile landscape controls, and portrait rotation guidance.');
           } finally {
             await browser.close();
           }
           JS
 
       - uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: tagbound-visual-review
           path: visual-review/
-          if-no-files-found: error
+          if-no-files-found: warn
           retention-days: 1
 
   publish-dist:
     needs: [build, browser-smoke]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     permissions:
       contents: write

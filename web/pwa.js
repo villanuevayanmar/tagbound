@@ -108,12 +108,16 @@ function setAudioEnabled(enabled){
 }
 const soundToggle=document.getElementById('sound-toggle');
 const settingsSoundToggle=document.getElementById('settings-sound');
-const soundButtons=[soundToggle,settingsSoundToggle].filter(Boolean);
 function syncSoundButtons(){
- soundButtons.forEach(button=>{
-  button.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
-  button.setAttribute('aria-pressed',String(audioEnabled));
- });
+ if(soundToggle){
+  soundToggle.textContent='SOUND: '+(audioEnabled?'ON':'OFF');
+  soundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
+ if(settingsSoundToggle){
+  settingsSoundToggle.classList.toggle('muted',!audioEnabled);
+  settingsSoundToggle.setAttribute('aria-label',audioEnabled?'Mute sound':'Enable sound');
+  settingsSoundToggle.setAttribute('aria-pressed',String(audioEnabled));
+ }
 }
 try { audioEnabled=localStorage.getItem('tagbound-sound')!=='off'; } catch(e) {}
 window.TagboundAudio={
@@ -123,8 +127,47 @@ window.TagboundAudio={
  getMusicNoteCount:()=>musicNotesPlayed
 };
 syncSoundButtons();
-soundButtons.forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
+[soundToggle,settingsSoundToggle].filter(Boolean).forEach(button=>button.addEventListener('click',()=>setAudioEnabled(!audioEnabled)));
 const call=(name,...args)=>{if(window.Module&&Module.ccall)try{Module.ccall(name,null,args.map(x=>'number'),args)}catch(e){console.warn(e)}};
+document.querySelectorAll('[data-stat-choice]').forEach(button=>{
+ button.addEventListener('click',()=>call('ChooseStat',Number(button.dataset.statChoice)));
+});
+document.querySelectorAll('.skill-choice').forEach(button=>{
+ button.addEventListener('click',()=>{
+  if(button.disabled||!button.dataset.skillId)return;
+  call('ChooseSkill',Number(button.dataset.skillId),Number(button.dataset.upgrade));
+ });
+});
+[0,1].forEach(slot=>{
+ document.getElementById('skill-slot-'+slot)?.addEventListener('click',()=>call('EquipSkillSlot',slot));
+});
+document.querySelector('.action.technique')?.addEventListener('click',()=>call('UseClassSkill'));
+
+const skillTarget=document.getElementById('skill-target');
+let skillTargetPointer=null;
+function updateSkillTarget(event){
+ call('SetClassSkillTargetScreen',event.clientX,event.clientY);
+}
+skillTarget?.addEventListener('pointerdown',event=>{
+ if(event.target.closest('button'))return;
+ event.preventDefault();
+ skillTargetPointer=event.pointerId;
+ skillTarget.setPointerCapture(event.pointerId);
+ updateSkillTarget(event);
+});
+skillTarget?.addEventListener('pointermove',event=>{
+ if(skillTargetPointer===event.pointerId)updateSkillTarget(event);
+});
+function releaseSkillTarget(event){
+ if(skillTargetPointer!==event.pointerId)return;
+ updateSkillTarget(event);
+ skillTargetPointer=null;
+}
+skillTarget?.addEventListener('pointerup',releaseSkillTarget);
+skillTarget?.addEventListener('pointercancel',releaseSkillTarget);
+document.getElementById('skill-target-confirm')?.addEventListener('click',()=>call('ConfirmSkillTarget'));
+document.getElementById('skill-target-cancel')?.addEventListener('click',()=>call('CancelSkillTarget'));
+
 const send=()=>call('SetTouch',moveX,moveY,buttons);
 const classCards=[...document.querySelectorAll('.class-card')];
 const bowAction=document.querySelector('.action[data-bit="16"]');
@@ -153,7 +196,6 @@ const ending=document.getElementById('ending');
 const settings=document.getElementById('settings');
 const settingsOpenButton=document.getElementById('settings-open');
 const touchControls=document.getElementById('touch-controls');
-const touchHelp=document.getElementById('touch-help');
 const resumeButton=document.getElementById('resume');
 function resetTouchInput(){
  const stickPointer=pointer,lookPointer=lastLook?.id;
@@ -170,6 +212,22 @@ function resetTouchInput(){
  knob.style.transform='translate(0,0)';
  send();
 }
+function resumeBackgroundMusic(){
+ if(document.hidden||!settings.classList.contains('hidden')||
+    !intro.classList.contains('hidden')||!ending.classList.contains('hidden'))return;
+ window.TagboundAudio?.resumeMusic?.();
+}
+function pauseForBackground(){
+ resetTouchInput();
+ window.TagboundAudio?.pauseMusic?.();
+}
+window.addEventListener('blur',pauseForBackground);
+window.addEventListener('focus',resumeBackgroundMusic);
+document.addEventListener('visibilitychange',()=>{
+ resetTouchInput();
+ if(document.hidden)window.TagboundAudio?.pauseMusic?.();
+ else resumeBackgroundMusic();
+});
 function openSettings(){
  resetTouchInput();
  window.TagboundAudio?.pauseMusic?.();
@@ -177,14 +235,12 @@ function openSettings(){
  settingsOpenButton.classList.add('hidden');
  settingsOpenButton.setAttribute('aria-expanded','true');
  touchControls.classList.add('hidden');
- touchHelp.classList.add('hidden');
  resumeButton.focus();
 }
 function closeSettings(){
  settings.classList.add('hidden');
  window.TagboundAudio?.resumeMusic?.();
  touchControls.classList.remove('hidden');
- touchHelp.classList.remove('hidden');
  settingsOpenButton.setAttribute('aria-expanded','false');
  if(intro.classList.contains('hidden')&&ending.classList.contains('hidden'))settingsOpenButton.classList.remove('hidden');
  canvas.focus();
@@ -192,7 +248,30 @@ function closeSettings(){
 settingsOpenButton.addEventListener('click',openSettings);
 resumeButton.addEventListener('click',closeSettings);
 document.addEventListener('keydown',event=>{
- if(event.key==='Escape'&&!settings.classList.contains('hidden'))closeSettings();
+ if(event.key==='Escape'&&!settings.classList.contains('hidden')) {
+  closeSettings();
+  return;
+ }
+ if(event.key.toLowerCase()==='q'&&!event.repeat&&intro.classList.contains('hidden')) {
+  event.preventDefault();
+  call('UseClassSkill');
+  return;
+ }
+ if(Module?.ccall&&Module.ccall('IsSkillTargeting','number',[],[])===1) {
+  if(event.key==='Enter') { event.preventDefault(); call('ConfirmSkillTarget'); return; }
+  if(event.key==='Escape') { event.preventDefault(); call('CancelSkillTarget'); return; }
+ }
+ if(event.key.toLowerCase()==='m'&&!event.repeat&&intro.classList.contains('hidden')) {
+  event.preventDefault();
+  call('ToggleMap');
+  return;
+ }
+ if((event.key==='['||event.key===']')&&Module?.ccall&&
+    Module.ccall('IsMapOpen','number',[],[])===1) {
+  event.preventDefault();
+  call('ChangeMapFloor',event.key==='['?-1:1);
+ }
+
 });
 window.TagboundSettings={isOpen:()=>!settings.classList.contains('hidden')};
 document.getElementById('start').addEventListener('click',()=>{
@@ -208,6 +287,10 @@ document.querySelectorAll('.action').forEach(b=>{
  const up=e=>{e.preventDefault();buttons&=~bit;b.classList.remove('active');delete b.dataset.pointerId;send()};
  b.addEventListener('pointerdown',down);b.addEventListener('pointerup',up);b.addEventListener('pointercancel',up);b.addEventListener('lostpointercapture',up);
 });
+const mapButton=document.querySelector('.action.map');
+mapButton?.addEventListener('click',()=>call('ToggleMap'));
+document.getElementById('map-floor-prev')?.addEventListener('click',()=>call('ChangeMapFloor',-1));
+document.getElementById('map-floor-next')?.addEventListener('click',()=>call('ChangeMapFloor',1));
 stick.addEventListener('pointerdown',e=>{pointer=e.pointerId;stick.setPointerCapture(pointer);updateStick(e)});
 stick.addEventListener('pointermove',e=>{if(e.pointerId===pointer)updateStick(e)});
 function releaseStick(e){if(e.pointerId!==pointer)return;pointer=null;moveX=moveY=0;knob.style.transform='translate(0,0)';send()}
@@ -222,6 +305,119 @@ canvas.addEventListener('pointermove',e=>{
  const dx=e.clientX-lastLook.x,dy=e.clientY-lastLook.y;lastLook={x:e.clientX,y:e.clientY,id:e.pointerId};call('SetLook',dx,dy);
 });
 ['pointerup','pointercancel','pointerleave'].forEach(n=>canvas.addEventListener(n,e=>{if(lastLook&&lastLook.id===e.pointerId)lastLook=null}));
+let buildInfo={commitSha:'UNAVAILABLE',integrationSha:'UNAVAILABLE',wasmSha256:'UNAVAILABLE',saveSchemaVersion:3};
+const buildLabel=document.getElementById('build-label');
+fetch('/build-info.json').then(response=>{
+ if(!response.ok)throw new Error('Build metadata request returned '+response.status);
+ return response.json();
+}).then(info=>{
+ if(!/^[0-9a-f]{40}$/i.test(info.commitSha||'')||!/^[0-9a-f]{64}$/i.test(info.wasmSha256||'')||
+    !Number.isInteger(info.saveSchemaVersion))throw new Error('Build metadata is incomplete or invalid.');
+ buildInfo=info;
+ window.TagboundBuildInfo=buildInfo;
+ if(buildLabel)buildLabel.textContent='BUILD '+info.commitSha.slice(0,12);
+ updateDiagnostics();
+}).catch(()=>{if(buildLabel)buildLabel.textContent='BUILD SHA UNAVAILABLE';});
+function diagnosticCall(name,fallback){
+ try{return typeof Module?.ccall==='function'?Module.ccall(name,'number',[],[]):fallback}catch(error){return fallback}
+}
+function formatBytes(value){
+ if(!Number.isFinite(value)||value<=0)return 'unavailable';
+ const units=['B','KB','MB','GB'];let size=value,index=0;
+ while(size>=1024&&index<units.length-1){size/=1024;index++}
+ return size.toFixed(index===0?0:1)+' '+units[index];
+}
+function getWebGLDiagnostics(){
+ try{
+  const gl=canvas.getContext('webgl2')||canvas.getContext('webgl');
+  if(!gl)return {version:'unavailable',renderer:'unavailable'};
+  const rendererInfo=gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer=rendererInfo?gl.getParameter(rendererInfo.UNMASKED_RENDERER_WEBGL):gl.getParameter(gl.RENDERER);
+  const version=gl.getParameter(gl.VERSION);
+  return {
+   version:typeof version==='string'&&version.trim()?version.replace(/[\\r\\n]+/g,' ').slice(0,120):'unavailable',
+   renderer:typeof renderer==='string'&&renderer.trim()?renderer.replace(/[\\r\\n]+/g,' ').slice(0,160):'restricted by browser'
+  };
+ }catch(error){return {version:'unavailable',renderer:'restricted by browser'}}
+}
+function getDiagnosticsReport(){
+ const fps=diagnosticCall('GetFrameRate',0);
+ const frameTime=diagnosticCall('GetFrameTimeMs',0);
+ const schema=diagnosticCall('GetSaveSchemaVersion',buildInfo.saveSchemaVersion||3);
+ const graphics=window.TagboundGraphics||{};
+ const webgl=getWebGLDiagnostics();
+ const wasmHeap=Module?.HEAPU8?.buffer?.byteLength||0;
+ const jsHeap=performance?.memory?.usedJSHeapSize||0;
+ const rect=canvas.getBoundingClientRect();
+ const errors=window.TagboundErrors?.list?.()||[];
+ return [
+  'TAGBOUND RUNTIME DIAGNOSTICS',
+  'Build SHA: '+(buildInfo.commitSha||'UNAVAILABLE'),
+  'Integration SHA: '+(buildInfo.integrationSha||'UNAVAILABLE'),
+  'WASM SHA-256: '+(buildInfo.wasmSha256||'UNAVAILABLE'),
+  'Save schema version: '+schema,
+  'Frame rate: '+(fps>0?fps+' FPS':'unavailable'),
+  'Frame time: '+(frameTime>0?frameTime.toFixed(2)+' ms':'unavailable'),
+  'WebGL context losses: '+(graphics.contextLosses||0),
+  'WebGL context restores: '+(graphics.contextRestores||0),
+  'WebGL version: '+webgl.version,
+  'GPU renderer: '+webgl.renderer,
+  'WASM heap allocated: '+formatBytes(wasmHeap),
+  'JS heap used: '+formatBytes(jsHeap),
+  'Canvas viewport: '+Math.round(rect.width)+' × '+Math.round(rect.height),
+  'Recent errors:',
+  ...(errors.length?errors.map((error,index)=>(index+1)+'. '+error):['None recorded'])
+ ].join('\n');
+}
+window.TagboundDiagnostics={
+ getReport:getDiagnosticsReport,
+ getBuildInfo:()=>({...buildInfo})
+};
+const diagnosticsPanel=document.getElementById('diagnostics-panel');
+const diagnosticsToggle=document.getElementById('diagnostics-toggle');
+const diagnosticsOutput=document.getElementById('diagnostics-output');
+const diagnosticsCopy=document.getElementById('diagnostics-copy');
+let diagnosticsTimer=null;
+function updateDiagnostics(){
+ if(!diagnosticsPanel||diagnosticsPanel.classList.contains('hidden'))return;
+ const report=getDiagnosticsReport();
+ if(diagnosticsOutput&&diagnosticsOutput.textContent!==report)diagnosticsOutput.textContent=report;
+}
+function closeDiagnostics(){
+ if(!diagnosticsPanel||!diagnosticsToggle)return;
+ diagnosticsPanel.classList.add('hidden');
+ diagnosticsToggle.textContent='SHOW DEBUG PANEL';
+ diagnosticsToggle.setAttribute('aria-expanded','false');
+ if(diagnosticsTimer!==null){clearInterval(diagnosticsTimer);diagnosticsTimer=null}
+}
+diagnosticsToggle?.addEventListener('click',()=>{
+ const open=diagnosticsPanel?.classList.contains('hidden');
+ if(!diagnosticsPanel||!diagnosticsToggle)return;
+ diagnosticsPanel.classList.toggle('hidden',!open);
+ diagnosticsToggle.textContent=open?'HIDE DEBUG PANEL':'SHOW DEBUG PANEL';
+ diagnosticsToggle.setAttribute('aria-expanded',String(!!open));
+ if(open){updateDiagnostics();if(diagnosticsTimer===null)diagnosticsTimer=window.setInterval(updateDiagnostics,750)}
+ else if(diagnosticsTimer!==null){clearInterval(diagnosticsTimer);diagnosticsTimer=null}
+});
+diagnosticsCopy?.addEventListener('click',async()=>{
+ const text=getDiagnosticsReport();
+ try{
+  if(navigator.clipboard?.writeText)await navigator.clipboard.writeText(text);
+  else {
+   const field=document.createElement('textarea');field.value=text;
+   field.setAttribute('readonly','');field.style.position='fixed';field.style.opacity='0';
+   document.body.appendChild(field);field.select();
+   const copied=document.execCommand('copy');field.remove();
+   if(!copied)throw new Error('Clipboard copy is unavailable.');
+  }
+  diagnosticsCopy.textContent='COPIED';
+ }catch(error){
+  diagnosticsCopy.textContent='COPY UNAVAILABLE';
+  window.TagboundErrors?.record?.('Diagnostics clipboard copy failed');
+ }
+ window.setTimeout(()=>{if(diagnosticsCopy)diagnosticsCopy.textContent='COPY DIAGNOSTICS'},1800);
+});
+resumeButton.addEventListener('click',closeDiagnostics);
 let installEvent=null;
 const installButtons=[document.getElementById('install'),document.getElementById('settings-install')].filter(Boolean);
 function updateInstallButtons(){

@@ -1,6 +1,14 @@
 # TAGBOUND: The Five Cities
 
-A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D renderer are C++17 compiled to WebAssembly with Emscripten and raylib. The browser layer supplies touch controls, PWA installation, offline caching and the opening story.
+## Development checkpoint — 2026-11-25
+
+- Development branch: `development/complete-game`.
+- Exact verified head: `d3722be3dbcf1b008bfbbe7a49e7f3dba40ce088`.
+- M0 passed exact-head GitHub Actions run [#475](https://github.com/villanuevayanmar/tagbound/actions/runs/45594604642): WebAssembly build, C++ gameplay tests, PWA validation, desktop Chromium, and mobile-landscape Chromium.
+- PR #17 remains open, draft, and unmerged. Temporary PRs #18 and #19 are closed without merging.
+- M1 is still open. The short canvas checks passed (desktop minimum non-black ratio 0.9999; mobile 1.0000 across 12 samples), but the intermittent black/flickering-frame root cause is not established and the required three-minute scripted test has not passed.
+- The 14 full-resolution desktop/mobile screenshots from run #475 were inspected. The current five-city environments still show prototype/blockout geometry; boss-gate screenshots are not complete boss-fight evidence.
+- No new Preview was published. Vercel free-tier deployment capacity could not be verified. `main` and production were not changed.
 
 ## Current playable scope
 
@@ -13,20 +21,21 @@ A mobile-first, low-poly fantasy rooftop chase. The game simulation and 3D rende
 - Landing recovery poses and slide-assisted forward rolls after hard falls.
 - Timed melee strike poses, enemy impact flashes, short hit-stun and knockback feedback.
 - Rooftop traversal with running, sprinting, jumping, sliding, solid building-side collision, wall-running and wall-jumping.
-- Pursuit pressure, health, stamina and class-exclusive weapons: Vanguard sword, Skirmisher bow and Warden shield.
+- Pursuit pressure, health, stamina and separate slowly regenerating mana. Stamina supports physical traversal/guarding; Mana is reserved for class techniques. Vanguard uses a sword, Skirmisher a bow and Warden a shield.
 - Warden's shield reduces the stamina cost of blocking both pursuer and boss strikes.
 - Vanguard's sword deals a heavier melee strike; Skirmisher retains the fastest base movement speed; Warden uses less stamina while guarding.
-- Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss.
-- Three mixed beacon objectives per city: some are reached immediately, while selected beacons require the player to remain inside the capture radius for a city-specific duration as pursuers stay active. Leaving the radius or dying resets capture progress. Each city then ends with a unique boss and its own strike pattern, attack range, visual design and telegraphed warning zone: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
+- Each city has its own rooftop route with a different direction and platform sequence, followed by its unique boss. The raised boss deck has three collision-bearing stone walls and an open south entrance aligned with the final rooftop route.
+- Three varied objectives per city combine immediate reach beacons, timed hold captures, and selected survival encounters where the player must outlast the pursuit away from the beacon. Leaving a hold beacon or dying resets capture progress; dying also resets survival progress. Pursuers remain active during either timed objective. Each city then ends with a unique boss and its own strike pattern, attack range, visual design and telegraphed warning zone: Harbor Warden's frontal cleave, Gilded Charger's charge lane, Foundry Colossus and Imperial Regent's radial strikes, and Spire Sentinel's long thrust lane.
 - Shared beacon and boss-gate coordinates drive gameplay triggers, 3D markers and the live HUD distance readout.
 - A rotating objective compass points toward the active beacon or boss gate relative to the player's facing direction.
 - Boss windup countdowns use the same timing values as combat and display the remaining time before each strike.
 - Bosses enter an enrage phase at half health, telegraph and recover faster, and deal increased strike damage.
-- XP, levels, two skill unlock milestones and local progress saving.
+- XP and levels, with one permanent stat choice at every level-up: Vitality (+8 max health), Endurance (+8 max stamina), Focus (+12 max mana), Power (+4% melee damage) or Precision (+4% bow damage). Each stat is capped at rank 10. Level 3 and level 5 each also grant one class-skill choice: unlock one of two class skills or upgrade an owned skill to rank 3. A two-slot loadout is available in Settings, with one active technique action at a time. Save schema version 3 preserves Mana, stats, skill choices and loadout.
+- Floor-aware explored-area map: each city has five independent 20 × 16 map layers representing the existing ground, three objective rooftops, and boss deck. Nearby 5-unit cells reveal only while the player is grounded on that elevation. Discovered structures are drawn only in revealed areas, the player marker appears only on their current floor, and the objective marker appears only after its floor and map cell have been explored. Previous/next controls skip undiscovered floors.
 - Landscape-first mobile controls and keyboard/mouse support.
 - PWA manifest, phone icons, service worker and offline asset cache.
 
-This is an early playable foundation, not a finished commercial game. Character models, animation, detailed city layouts, advanced parkour traversal, quest variety and complete boss encounter tuning remain development work. The current renderer uses procedural low-poly geometry. No online accounts or game server are required.
+TAGBOUND is a playable five-city campaign prototype with the listed movement, objective, class, boss, progression, save, audio and offline-PWA systems implemented. It remains in active development: the renderer uses intentionally stylized procedural low-poly assets, encounter balance and visual polish still benefit from playtesting, and real mid-range Android performance has not yet been measured. No online accounts or game server are required.
 
 ## Requirements
 
@@ -134,21 +143,23 @@ The first visit must download the game assets. The service worker caches the HTM
 
 ## Settings and pause
 
-During a run, tap SETTINGS in the top HUD row to pause the game. The Settings screen shares the saved sound preference with Home and exposes INSTALL ON PHONE only while the Settings screen is open. RESUME returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. The install action is not shown during active gameplay.
+During a run, tap the pause icon in the top HUD row to open Settings. The sound and install actions, and the Resume action, use icons with accessible labels. The saved sound preference is shared with Home. The install action appears only while Settings is open. Resume returns to the same run without resetting progress. The ambient score pauses with Settings and resumes with gameplay. When the browser loses focus or the app moves to the background, held touch/look input is cleared and the ambient score pauses. Returning to active gameplay resumes the score; it does not resume over Settings or the ending.
 
 ## Controls
 
 ### Touch
 
-- Left joystick: move
-- Right side of the screen: swipe to look
+- Left joystick: move relative to the camera
+- Right side of the screen: swipe to look; when movement stops, the camera smoothly follows the character's facing direction. A manual swipe temporarily overrides automatic follow.
+- Gameplay actions are icon-only and have accessible labels; the Bow icon appears only for Skirmisher
 - Vault: jump; near a reachable wall, face it and jump to mantle over the edge; when hanging, jump to climb onto the roof
 - Slide: short speed boost while grounded; hold it through a hard landing to roll forward; while hanging, slide or push down on the joystick to drop
 - Attack: use equipped weapon
 - Block: defend against incoming attacks
 - Bow: aim with the Skirmisher's bow; use Attack to fire
-- Skill: one-tap escape dash after level 3 (stamina cost and cooldown)
+- Skill: one-tap escape dash after level 3 (Stamina cost and cooldown). Technique: use the equipped class skill with the star action or Q; it spends Mana and uses a cooldown. Unlock or upgrade skills at levels 3 and 5, then equip one of two owned slots in Settings. Skirmisher Arrow Rain opens an aim/confirm overlay, shows its target radius and warning, then strikes the area in three waves; press Enter to confirm or Escape to cancel while aiming.
 - Sprint: hold; sprint beside a wall while airborne to wall-run, then tap Vault to wall-jump
+- Map: tap the map icon or press M to open the explored-area map; tap the map icon or press M again to close it. Use the floor arrows or [ and ] to browse floors already discovered in that city.
 
 ### Keyboard / mouse
 
@@ -162,7 +173,7 @@ During a run, tap SETTINGS in the top HUD row to pause the game. The Settings sc
 
 ## Save data
 
-Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices.
+Progress is saved to browser localStorage on the device. Saves are local to each browser profile and do not automatically synchronize across devices. Campaign data uses save schema version 3 and migrates earlier saves without changing city, level, XP or class. Earlier characters receive unspent stat and skill milestone choices where appropriate. City/floor exploration is stored separately under a versioned key per city and does not overwrite the campaign save. Earlier 320-cell city maps are retained as the ground-floor layer when the new 1,600-cell format is first loaded.
 
 ## Zero-cost notes
 

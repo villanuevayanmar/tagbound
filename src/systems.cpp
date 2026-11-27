@@ -3,7 +3,24 @@
 #include <algorithm>
 #include <cmath>
 
-static float cameraYaw=0.0f, cameraPitch=-0.18f;
+static float cameraYaw=0.0f, cameraPitch=-0.18f, cameraManualLookTime=0.0f;
+
+static void SetCameraPose(Vector3 player,Camera3D& camera) {
+    Vector3 forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
+    Vector3 right={forward.z,0,-forward.x};
+    camera.target={player.x+forward.x*4.0f,player.y+1.2f+cameraPitch*5.0f,player.z+forward.z*4.0f};
+    camera.position={player.x-forward.x*8.0f+right.x*1.6f,player.y+4.0f,player.z-forward.z*8.0f+right.z*1.6f};
+}
+
+void ResetCamera(const Player& p,Camera3D& camera) {
+    Vector3 facing=p.facing; facing.y=0;
+    if(Vector3Length(facing)<0.001f) facing={0,0,1};
+    else facing=Vector3Normalize(facing);
+    cameraYaw=std::atan2(facing.x,facing.z);
+    cameraPitch=-0.18f;
+    cameraManualLookTime=0.0f;
+    SetCameraPose(p.position,camera);
+}
 
 static bool Inside(Vector3 p,const Platform& b) {
     return std::abs(p.x-b.position.x)<=b.size.x*0.5f &&
@@ -37,15 +54,15 @@ static bool SegmentSphere(Vector3 from,Vector3 to,Vector3 center,float radius,fl
     hitTime=t;
     return true;
 }
-static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime) {
+static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hitTime,float clearance=0.12f) {
     Vector3 low=Vector3Subtract(p.position,Vector3Scale(p.size,0.5f));
     Vector3 high=Vector3Add(p.position,Vector3Scale(p.size,0.5f));
     Vector3 delta=Vector3Subtract(to,from);
     float enter=0.0f,exit=1.0f;
     const float start[3]={from.x,from.y,from.z};
     const float step[3]={delta.x,delta.y,delta.z};
-    const float minimum[3]={low.x-0.12f,low.y-0.12f,low.z-0.12f};
-    const float maximum[3]={high.x+0.12f,high.y+0.12f,high.z+0.12f};
+    const float minimum[3]={low.x-clearance,low.y-clearance,low.z-clearance};
+    const float maximum[3]={high.x+clearance,high.y+clearance,high.z+clearance};
     for(int axis=0;axis<3;axis++) {
         if(std::abs(step[axis])<0.000001f) {
             if(start[axis]<minimum[axis]||start[axis]>maximum[axis]) return false;
@@ -62,31 +79,32 @@ static bool SegmentPlatform(Vector3 from,Vector3 to,const Platform& p,float& hit
     hitTime=enter;
     return true;
 }
-static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to) {
+static bool HasLineOfSight(const GameState& g,Vector3 from,Vector3 to,float clearance=0.12f) {
     from.y+=1.0f;
     to.y+=1.0f;
     for(const auto& platform:g.platforms) {
         float hitTime=0.0f;
-        if(SegmentPlatform(from,to,platform,hitTime)) return false;
+        if(SegmentPlatform(from,to,platform,hitTime,clearance)) return false;
     }
     return true;
 }
 
 static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target,Vector3& waypoint) {
+    const float bodyRadius=e.boss?0.62f:0.42f;
     Vector3 from=e.position; from.y+=1.0f;
     Vector3 to=target; to.y+=1.0f;
     const Platform* blocker=nullptr;
     float nearest=1.0f;
     for(const auto& platform:g.platforms) {
         float hit=0.0f;
-        if(SegmentPlatform(from,to,platform,hit)&&hit<nearest) {
+        if(SegmentPlatform(from,to,platform,hit,bodyRadius)&&hit<nearest) {
             nearest=hit;
             blocker=&platform;
         }
     }
     if(!blocker) return false;
 
-    float clearance=(e.boss?0.62f:0.42f)+0.72f;
+    float clearance=bodyRadius+0.72f;
     float minX=blocker->position.x-blocker->size.x*0.5f-clearance;
     float maxX=blocker->position.x+blocker->size.x*0.5f+clearance;
     float minZ=blocker->position.z-blocker->size.z*0.5f-clearance;
@@ -103,6 +121,7 @@ static bool FindPursuitWaypoint(const GameState& g,const Enemy& e,Vector3 target
         float blockedByCurrent=0.0f;
         if(SegmentPlatform(cornerRay,to,*blocker,blockedByCurrent)) continue;
         float route=Distance(e.position,corner)+Distance(corner,target);
+        if(Distance(e.position,corner)<0.65f) continue;
         if(route<best) { best=route; waypoint=corner; found=true; }
     }
     return found;
@@ -113,6 +132,23 @@ static bool OverlapsWall(Vector3 feet,const Platform& b,float radius=0.34f,float
     bool y=feet.y+height>b.position.y-b.size.y*0.5f+0.05f && feet.y<b.position.y+b.size.y*0.5f-0.05f;
     return x&&z&&y;
 }
+static void ConstrainBossToArena(const GameState& g,Enemy& e) {
+    if(!e.boss||!g.bossArena.active) return;
+    constexpr float radius=0.62f;
+    const BossArena& arena=g.bossArena;
+    const float minX=arena.center.x-arena.halfExtents.x+radius;
+    const float maxX=arena.center.x+arena.halfExtents.x-radius;
+    const float minZ=arena.center.z-arena.halfExtents.y+radius;
+    const float maxZ=arena.center.z+arena.halfExtents.y-radius;
+    const float x=std::clamp(e.position.x,minX,maxX);
+    const float z=std::clamp(e.position.z,minZ,maxZ);
+    if(x!=e.position.x||z!=e.position.z||e.position.y!=arena.floorY)
+        e.hasPursuitWaypoint=false;
+    e.position.x=x;
+    e.position.y=arena.floorY;
+    e.position.z=z;
+}
+
 static void MoveEnemy(GameState& g,Enemy& e,Vector3 delta) {
     const float radius=e.boss?0.62f:0.42f;
     const float height=e.boss?2.2f:1.72f;
@@ -128,6 +164,7 @@ static void MoveEnemy(GameState& g,Enemy& e,Vector3 delta) {
         e.position.z=oldZ;
         break;
     }
+    ConstrainBossToArena(g,e);
 }
 static bool NearWall(Vector3 p,const Platform& b,Vector3& away) {
     float dx=std::abs(std::abs(p.x-b.position.x)-b.size.x*0.5f);
@@ -176,18 +213,29 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     p.vaultTime=std::max(0.0f,p.vaultTime-dt);
     p.vaulting=p.vaultTime>0;
 
+    const bool manualLook=std::abs(c.lookX)>0.001f||std::abs(c.lookY)>0.001f;
+    if(manualLook) cameraManualLookTime=1.2f;
+    else cameraManualLookTime=std::max(0.0f,cameraManualLookTime-dt);
     cameraYaw-=c.lookX*0.008f;
     cameraPitch=std::clamp(cameraPitch-c.lookY*0.008f,-0.48f,0.42f);
     Vector3 forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
     Vector3 right={forward.z,0,-forward.x};
-    auto updateCamera=[&]() {
-        camera.target={p.position.x+forward.x*4.0f,p.position.y+1.2f+cameraPitch*5.0f,p.position.z+forward.z*4.0f};
-        camera.position={p.position.x-forward.x*8.0f+right.x*1.6f,p.position.y+4.0f,p.position.z-forward.z*8.0f+right.z*1.6f};
-    };
     Vector3 direction=Vector3Add(Vector3Scale(right,c.move.x),Vector3Scale(forward,c.move.y));
     if(Vector3Length(direction)>1.0f) direction=Vector3Normalize(direction);
-    if(Vector3Length(direction)>0.05f) p.facing=Vector3Normalize(direction);
+    const bool moving=Vector3Length(direction)>0.05f;
+    if(moving) p.facing=Vector3Normalize(direction);
     else if(c.aim) p.facing=forward;
+    else if(cameraManualLookTime<=0.0f&&!p.ledgeGrabbing&&!p.climbing) {
+        Vector3 facing=p.facing; facing.y=0;
+        if(Vector3Length(facing)>0.001f) {
+            const float targetYaw=std::atan2(facing.x,facing.z);
+            const float yawDelta=std::atan2(std::sin(targetYaw-cameraYaw),std::cos(targetYaw-cameraYaw));
+            cameraYaw+=yawDelta*(1.0f-std::exp(-4.0f*dt));
+            forward={std::sin(cameraYaw),0,std::cos(cameraYaw)};
+            right={forward.z,0,-forward.x};
+        }
+    }
+    auto updateCamera=[&]() { SetCameraPose(p.position,camera); };
 
     if(p.ledgeGrabbing) {
         p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
@@ -206,6 +254,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
         } else {
             p.position=p.ledgeHangPosition;
             p.velocity={0,0,0};
+            p.moveVelocity={0,0};
             p.grounded=false;
             p.wallRunning=false;
             p.vaulting=false;
@@ -223,6 +272,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             Vector3Scale(Vector3Subtract(p.ledgeTargetPosition,p.ledgeHangPosition),eased));
         p.facing=Vector3Scale(p.ledgeNormal,-1.0f);
         p.velocity={0,0,0};
+        p.moveVelocity={0,0};
         p.grounded=false;
         p.vaulting=true;
         if(t>=1.0f) {
@@ -242,13 +292,33 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
     float speed=p.playerClass==PlayerClass::Skirmisher?7.5f:6.0f;
     float sprintCost=18.0f*dt;
     if(c.sprint&&p.stamina>=sprintCost) { speed*=1.5f; p.stamina-=sprintCost; }
-    else p.stamina=std::min(ClassMaxStamina(p.playerClass),p.stamina+13*dt);
+    else if(!c.sprint) p.stamina=std::min(PlayerMaxStamina(p),p.stamina+13*dt);
     if(c.slide&&p.grounded) speed*=1.22f;
     if(c.skill&&p.escapeSkill>0&&p.stamina>=20&&p.dashCooldown<=0) {
         p.dashTime=0.24f; p.dashCooldown=1.8f; p.stamina-=20;
         if(Vector3Length(direction)<0.05f) direction=p.facing;
     }
     if(p.dashTime>0) speed*=2.7f;
+
+    // Keep player-driven locomotion separate from physics impulses such as vaults
+    // and knockback. Ground movement accelerates and brakes responsively; air
+    // steering is weaker and preserves more horizontal momentum.
+    const Vector2 targetMoveVelocity={direction.x*speed,direction.z*speed};
+    const float targetSpeed=std::sqrt(targetMoveVelocity.x*targetMoveVelocity.x+
+                                      targetMoveVelocity.y*targetMoveVelocity.y);
+    const float currentDeltaX=targetMoveVelocity.x-p.moveVelocity.x;
+    const float currentDeltaZ=targetMoveVelocity.y-p.moveVelocity.y;
+    const float deltaLength=std::sqrt(currentDeltaX*currentDeltaX+currentDeltaZ*currentDeltaZ);
+    const float rate=targetSpeed>0.05f
+        ? (p.dashTime>0.0f?100.0f:(p.grounded?34.0f:16.0f))
+        : (p.grounded?28.0f:3.5f);
+    const float maxChange=rate*dt;
+    if(deltaLength<=maxChange) p.moveVelocity=targetMoveVelocity;
+    else if(deltaLength>0.0001f) {
+        const float scale=maxChange/deltaLength;
+        p.moveVelocity.x+=currentDeltaX*scale;
+        p.moveVelocity.y+=currentDeltaZ*scale;
+    }
 
     auto moveAxis=[&](float amount,bool xAxis) {
         if(std::abs(amount)<0.000001f) return false;
@@ -260,15 +330,15 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             bool blocked=false;
             for(const auto& b:g.platforms) if(OverlapsWall(p.position,b)) { blocked=true; break; }
             if(blocked) {
-                if(xAxis) { p.position.x-=step; p.velocity.x=0; }
-                else { p.position.z-=step; p.velocity.z=0; }
+                if(xAxis) { p.position.x-=step; p.moveVelocity.x=0; p.velocity.x=0; }
+                else { p.position.z-=step; p.moveVelocity.y=0; p.velocity.z=0; }
                 return true;
             }
         }
         return false;
     };
-    bool wallContact=moveAxis((direction.x*speed+p.velocity.x)*dt,true);
-    wallContact=moveAxis((direction.z*speed+p.velocity.z)*dt,false)||wallContact;
+    bool wallContact=moveAxis((p.moveVelocity.x+p.velocity.x)*dt,true);
+    wallContact=moveAxis((p.moveVelocity.y+p.velocity.z)*dt,false)||wallContact;
     p.velocity.x*=std::max(0.0f,1.0f-9.0f*dt);
     p.velocity.z*=std::max(0.0f,1.0f-9.0f*dt);
 
@@ -280,6 +350,7 @@ void UpdateMovement(GameState& g,const Controls& c,Camera3D& camera,float dt) {
             p.ledgeTargetPosition=target;
             p.position=hang;
             p.velocity={0,0,0};
+            p.moveVelocity={0,0};
             p.grounded=false;
             p.ledgeGrabbing=true;
             p.vaulting=false;
@@ -371,6 +442,7 @@ void UpdatePursuit(GameState& g,float dt) {
     int nearby=0;
     for(auto& e:g.enemies) {
         if(!e.alive) continue;
+        ConstrainBossToArena(g,e);
         float d=Distance(e.position,p.position);
         e.hitTime=std::max(0.0f,e.hitTime-dt);
         e.stunTime=std::max(0.0f,e.stunTime-dt);
@@ -378,6 +450,7 @@ void UpdatePursuit(GameState& g,float dt) {
         if(d<25) nearby++;
         if(!e.boss&&(d>1.45f||e.stunTime>0)) e.attackWindup=0;
         if(e.stunTime>0) {
+            e.hasPursuitWaypoint=false;
             e.attackWindup=0;
             MoveEnemy(g,e,Vector3Scale(e.knockback,dt));
             e.knockback=Vector3Scale(e.knockback,std::max(0.0f,1.0f-8.0f*dt));
@@ -385,12 +458,21 @@ void UpdatePursuit(GameState& g,float dt) {
             Vector3 to=Vector3Subtract(p.position,e.position); to.y=0;
             float horizontal=Vector3Length(to);
             if(d>1.45f&&horizontal>0.001f&&(!e.boss||e.phase==BossPhase::Dormant||e.phase==BossPhase::Hunt)) {
-                Vector3 destination=p.position,waypoint{};
-                if(!HasLineOfSight(g,e.position,p.position)&&FindPursuitWaypoint(g,e,p.position,waypoint))
-                    destination=waypoint;
+                const float bodyRadius=e.boss?0.62f:0.42f;
+                if(HasLineOfSight(g,e.position,p.position,bodyRadius)) e.hasPursuitWaypoint=false;
+                else if(!e.hasPursuitWaypoint) {
+                    Vector3 waypoint{};
+                    if(FindPursuitWaypoint(g,e,p.position,waypoint)) {
+                        e.pursuitWaypoint=waypoint;
+                        e.hasPursuitWaypoint=true;
+                    }
+                }
+                Vector3 destination=e.hasPursuitWaypoint?e.pursuitWaypoint:p.position;
                 Vector3 route=Vector3Subtract(destination,e.position); route.y=0;
                 if(Vector3Length(route)>0.001f)
                     MoveEnemy(g,e,Vector3Scale(Vector3Normalize(route),e.speed*dt));
+                if(e.hasPursuitWaypoint&&Distance(e.position,e.pursuitWaypoint)<0.45f)
+                    e.hasPursuitWaypoint=false;
             } else if(!e.boss) {
                 bool canStrike=d<=1.45f&&HasLineOfSight(g,e.position,p.position);
                 if(!canStrike||e.cooldown>0) e.attackWindup=0;
@@ -401,15 +483,15 @@ void UpdatePursuit(GameState& g,float dt) {
                         e.cooldown=1.0f;
                         float guardCost=p.playerClass==PlayerClass::Warden?5.0f:8.0f;
                         if(p.blocking&&FacesAttacker(p,e.position)&&p.stamina>=guardCost) p.stamina-=guardCost;
-                        else if(p.invulnerable<=0) { p.health-=11; p.invulnerable=0.48f; }
+                        else if(p.invulnerable<=0) { p.health-=11.0f*(p.aegisTime>0.0f?0.55f:1.0f); p.invulnerable=0.48f; }
                     }
                 }
             }
         }
         if(e.boss) {
-            static const float strike[5]={0.35f,0.32f,0.38f,0.22f,0.48f};
-            static const float recover[5]={0.8f,0.9f,1.0f,0.72f,0.65f};
-            static const float damage[5]={24,30,32,18,28};
+            static const float strike[5]={0.35f,0.32f,0.38f,0.48f,0.22f};
+            static const float recover[5]={0.8f,0.9f,1.0f,0.65f,0.72f};
+            static const float damage[5]={24,30,32,28,18};
             int v=std::clamp(e.variant,0,4);
             const float attackRange=BossStrikeRange(v);
             bool enraged=e.hp<=e.maxHp*0.5f;
@@ -433,22 +515,18 @@ void UpdatePursuit(GameState& g,float dt) {
                 if(e.phaseTime>strikeDuration) {
                     bool inRange=d<attackRange;
                     Vector3 attackOrigin=e.position;
-                    if(v==0||v==1||v==3) {
+                    if(v==0||v==1||v==4) {
                         attackOrigin=e.strikeOrigin;
                         Vector3 toPlayer=Vector3Subtract(p.position,attackOrigin); toPlayer.y=0;
                         float forward=Vector3DotProduct(toPlayer,e.strikeDirection);
                         float lateralSquared=std::max(0.0f,Vector3LengthSqr(toPlayer)-forward*forward);
-                        if(v==0) {
-                            float halfWidth=std::max(0.0f,forward)*0.38f;
-                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
-                        } else {
-                            inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=0.9f*0.9f;
-                        }
+                        const float halfWidth=BossStrikeHalfWidth(v,forward);
+                        inRange=forward>0.0f&&forward<attackRange&&lateralSquared<=halfWidth*halfWidth;
                     }
                     if(inRange&&HasLineOfSight(g,attackOrigin,p.position)&&p.invulnerable<=0) {
                         float guardCost=p.playerClass==PlayerClass::Warden?12.0f:18.0f;
                         if(p.blocking&&FacesAttacker(p,attackOrigin)&&p.stamina>=guardCost) p.stamina-=guardCost;
-                        else { p.health-=damage[v]*(enraged?1.1f:1.0f); p.invulnerable=0.65f; }
+                        else { p.health-=damage[v]*(enraged?1.1f:1.0f)*(p.aegisTime>0.0f?0.55f:1.0f); p.invulnerable=0.65f; }
                     }
                     e.phase=BossPhase::Recover; e.phaseTime=0;
                 }
@@ -484,7 +562,8 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
             }
         }
         if(target) {
-            float damage=p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:(p.weapon==Weapon::Sword?30:26)));
+            float damage=(p.weapon==Weapon::Axe?43:(p.weapon==Weapon::Spear?32:(p.weapon==Weapon::Shield?14:(p.weapon==Weapon::Sword?30:26))))*
+                PlayerMeleeDamageMultiplier(p);
             if(p.weapon==Weapon::Shield&&p.combatSkill) damage=29;
             target->hp-=damage;
             target->hitTime=0.16f;
@@ -523,7 +602,7 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
         s.position=Vector3Lerp(from,to,std::min(firstHit,1.0f));
         s.life-=dt;
         if(target) {
-            target->hp-=45;
+            target->hp-=45.0f*PlayerRangedDamageMultiplier(p);
             target->hitTime=0.16f;
             target->stunTime=target->boss?0.08f:0.16f;
             Vector3 knock=Vector3Subtract(target->position,p.position); knock.y=0;
@@ -545,10 +624,11 @@ void UpdateCombat(GameState& g,const Controls& c,float dt) {
     if(p.health<=0) {
         Vector3 checkpoint=QuestCheckpoint(g.city,g.quest);
         p.facing=QuestCheckpointFacing(g.city,g.quest);
-        p.health=ClassMaxHealth(p.playerClass);
-        p.stamina=ClassMaxStamina(p.playerClass);
+        p.health=PlayerMaxHealth(p);
+        p.stamina=PlayerMaxStamina(p);
         p.position=checkpoint;
         p.velocity={0,0,0};
+        p.moveVelocity={0,0};
         p.grounded=true;
         p.wallRunning=false;
         p.dashTime=0;
@@ -569,9 +649,322 @@ void UpdateProgression(GameState& g,int amount) {
     Player& p=g.player;
     p.xp=std::max(0,p.xp+amount);
     while(p.xp>=p.level*100) {
-        p.xp-=p.level*100; p.level++;
-        p.health=std::min(ClassMaxHealth(p.playerClass),p.health+12); p.stamina=ClassMaxStamina(p.playerClass);
+        p.xp-=p.level*100;
+        p.level++;
+        p.pendingStatChoices++;
+        p.health=std::min(PlayerMaxHealth(p),p.health+12.0f);
+        p.stamina=PlayerMaxStamina(p);
+        p.mana=std::min(PlayerMaxMana(p),p.mana+10.0f);
     }
     if(p.level>=3) p.escapeSkill=1;
     if(p.level>=5) p.combatSkill=1;
+    if(p.level>=3&&!(p.skillMilestoneMask&1)) {
+        p.skillMilestoneMask|=1;
+        p.pendingSkillChoices++;
+    }
+    if(p.level>=5&&!(p.skillMilestoneMask&2)) {
+        p.skillMilestoneMask|=2;
+        p.pendingSkillChoices++;
+    }
 }
+
+bool ChooseStatUpgrade(GameState& g,StatUpgrade stat) {
+    Player& p=g.player;
+    if(p.pendingStatChoices<=0) return false;
+    int* value=nullptr;
+    float resourceGain=0.0f;
+    switch(stat) {
+        case StatUpgrade::Vitality: value=&p.vitality; resourceGain=8.0f; break;
+        case StatUpgrade::Endurance: value=&p.endurance; resourceGain=8.0f; break;
+        case StatUpgrade::Focus: value=&p.focus; resourceGain=12.0f; break;
+        case StatUpgrade::Power: value=&p.power; break;
+        case StatUpgrade::Precision: value=&p.precision; break;
+        default: return false;
+    }
+    if(!value||*value>=MaxStatRank) return false;
+    ++*value;
+    --p.pendingStatChoices;
+    if(stat==StatUpgrade::Vitality) p.health=std::min(PlayerMaxHealth(p),p.health+resourceGain);
+    else if(stat==StatUpgrade::Endurance) p.stamina=std::min(PlayerMaxStamina(p),p.stamina+resourceGain);
+    else if(stat==StatUpgrade::Focus) p.mana=std::min(PlayerMaxMana(p),p.mana+resourceGain);
+    return true;
+}
+
+void RegenerateMana(Player& p,float dt) {
+    if(dt<=0.0f||p.health<=0.0f) return;
+    p.mana=std::min(PlayerMaxMana(p),p.mana+3.5f*std::min(dt,0.1f));
+}
+
+
+ClassSkill ClassSkillOption(PlayerClass playerClass,int option) {
+    static const ClassSkill skills[3][2]={
+        {ClassSkill::CleavingArc,ClassSkill::BreakerStrike},
+        {ClassSkill::ArrowRain,ClassSkill::PiercingShot},
+        {ClassSkill::ShieldBash,ClassSkill::AegisGuard}
+    };
+    return skills[std::clamp((int)playerClass,0,2)][std::clamp(option,0,1)];
+}
+
+const char* ClassSkillName(ClassSkill skill) {
+    switch(skill) {
+        case ClassSkill::CleavingArc: return "CLEAVING ARC";
+        case ClassSkill::BreakerStrike: return "BREAKER STRIKE";
+        case ClassSkill::ArrowRain: return "ARROW RAIN";
+        case ClassSkill::PiercingShot: return "PIERCING SHOT";
+        case ClassSkill::ShieldBash: return "SHIELD BASH";
+        case ClassSkill::AegisGuard: return "AEGIS GUARD";
+        default: return "NO SKILL";
+    }
+}
+float ClassSkillManaCost(ClassSkill skill) {
+    switch(skill) {
+        case ClassSkill::CleavingArc: return 24.0f;
+        case ClassSkill::BreakerStrike: return 30.0f;
+        case ClassSkill::ArrowRain: return 38.0f;
+        case ClassSkill::PiercingShot: return 28.0f;
+        case ClassSkill::ShieldBash: return 22.0f;
+        case ClassSkill::AegisGuard: return 30.0f;
+        default: return 0.0f;
+    }
+}
+float ClassSkillBaseCooldown(ClassSkill skill) {
+    switch(skill) {
+        case ClassSkill::CleavingArc: return 5.0f;
+        case ClassSkill::BreakerStrike: return 7.0f;
+        case ClassSkill::ArrowRain: return 8.0f;
+        case ClassSkill::PiercingShot: return 5.5f;
+        case ClassSkill::ShieldBash: return 5.0f;
+        case ClassSkill::AegisGuard: return 10.0f;
+        default: return 0.0f;
+    }
+}
+
+static int FindSkillSlot(const Player& p,ClassSkill skill) {
+    for(int slot=0;slot<2;slot++) if(p.skills[slot]==(int)skill) return slot;
+    return -1;
+}
+
+static bool IsClassSkill(PlayerClass playerClass,ClassSkill skill) {
+    return ClassSkillOption(playerClass,0)==skill||ClassSkillOption(playerClass,1)==skill;
+}
+
+bool ChooseSkillOption(GameState& g,int skillId,bool upgrade) {
+    Player& p=g.player;
+    const ClassSkill skill=(ClassSkill)skillId;
+    if(p.pendingSkillChoices<=0||!IsClassSkill(p.playerClass,skill)) return false;
+    const int owned=FindSkillSlot(p,skill);
+    if(upgrade) {
+        if(owned<0||p.skillRanks[owned]>=3) return false;
+        ++p.skillRanks[owned];
+        p.activeSkillSlot=owned;
+    } else {
+        if(owned>=0) return false;
+        int empty=-1;
+        for(int slot=0;slot<2;slot++) if(p.skills[slot]==(int)ClassSkill::None) { empty=slot; break; }
+        if(empty<0) return false;
+        p.skills[empty]=skillId;
+        p.skillRanks[empty]=1;
+        p.activeSkillSlot=empty;
+    }
+    --p.pendingSkillChoices;
+    return true;
+}
+
+bool EquipSkill(GameState& g,int slot) {
+    if(slot<0||slot>=2||g.player.skills[slot]==(int)ClassSkill::None) return false;
+    g.player.activeSkillSlot=slot;
+    return true;
+}
+
+static bool SkillTargetValid(const GameState& g,Vector3 target) {
+    const Player& p=g.player;
+    const float dx=target.x-p.position.x,dz=target.z-p.position.z;
+    if(dx*dx+dz*dz>18.0f*18.0f||target.x< -48.0f||target.x>48.0f||
+       target.z< -34.0f||target.z>40.0f) return false;
+    if(std::fabs(target.y-p.position.y)>0.65f) return false;
+    if(!HasLineOfSight(g,p.position,target)) return false;
+    const auto boss=std::find_if(g.enemies.begin(),g.enemies.end(),[](const Enemy& e){return e.alive&&e.boss;});
+    if(boss!=g.enemies.end()&&g.bossArena.active) {
+        const Vector3 center=g.bossArena.center;
+        const Vector2 half=g.bossArena.halfExtents;
+        if(std::fabs(target.x-center.x)>half.x-0.1f||std::fabs(target.z-center.z)>half.y-0.1f)
+            return false;
+    }
+    return true;
+}
+
+bool SetClassSkillTarget(GameState& g,Vector3 target) {
+    if(!g.skillTargeting) return false;
+    g.skillTarget=target;
+    return SkillTargetValid(g,target);
+}
+bool IsClassSkillTargetValid(const GameState& g) {
+    return g.skillTargeting&&SkillTargetValid(g,g.skillTarget);
+}
+
+bool ActivateClassSkill(GameState& g) {
+    Player& p=g.player;
+    if(p.health<=0.0f||p.pendingStatChoices>0||p.pendingSkillChoices>0||
+       p.techniqueCooldown>0.0f||p.activeSkillSlot<0||p.activeSkillSlot>=2) return false;
+    const ClassSkill skill=(ClassSkill)p.skills[p.activeSkillSlot];
+    const int rank=std::clamp(p.skillRanks[p.activeSkillSlot],1,3);
+    if(skill==ClassSkill::None) return false;
+    if(skill==ClassSkill::ArrowRain) {
+        if(p.mana<ClassSkillManaCost(skill)) return false;
+        Vector3 facing=p.facing; facing.y=0;
+        if(Vector3Length(facing)<0.001f) facing={0,0,1};
+        facing=Vector3Normalize(facing);
+        const Vector3 safeSide={facing.z,0,-facing.x};
+        g.skillTargeting=true;
+        g.skillTarget=Vector3Add(p.position,Vector3Scale(safeSide,7.0f));
+        g.skillTarget.y=p.position.y;
+        return true;
+    }
+    const float manaCost=ClassSkillManaCost(skill);
+    const float cooldown=ClassSkillBaseCooldown(skill);
+    if(manaCost<=0.0f||cooldown<=0.0f) return false;
+    if(p.mana<manaCost) return false;
+    p.mana-=manaCost;
+    p.techniqueCooldown=cooldown*std::max(0.75f,1.0f-0.08f*(rank-1));
+    if(skill==ClassSkill::AegisGuard) {
+        p.aegisTime=2.6f+0.55f*rank;
+        return true;
+    }
+    if(skill==ClassSkill::PiercingShot) {
+        const Vector3 from=Vector3Add(p.position,{0,1.25f,0});
+        const Vector3 to=Vector3Add(from,Vector3Scale(p.facing,24.0f));
+        float blocker=1.0f;
+        for(const Platform& platform:g.platforms) {
+            float hit=0.0f;
+            if(SegmentPlatform(from,to,platform,hit)) blocker=std::min(blocker,hit);
+        }
+        std::vector<std::pair<float,int>> hits;
+        for(int i=0;i<(int)g.enemies.size();i++) {
+            const Enemy& e=g.enemies[i];
+            if(!e.alive) continue;
+            float hit=0.0f;
+            if(SegmentSphere(from,to,Vector3Add(e.position,{0,1.0f,0}),1.15f,hit)&&hit<=blocker)
+                hits.push_back({hit,i});
+        }
+        std::sort(hits.begin(),hits.end(),[](const auto& a,const auto& b){return a.first<b.first;});
+        const int targetLimit=2+rank-1;
+        bool bossDefeated=false;
+        for(int n=0;n<(int)hits.size()&&n<targetLimit;n++) {
+            Enemy& e=g.enemies[hits[n].second];
+            e.hp-=31.0f*PlayerRangedDamageMultiplier(p)*(e.boss?0.72f:1.0f);
+            e.hitTime=0.16f;
+            e.stunTime=e.boss?0.12f:0.22f;
+            if(e.hp<=0.0f&&e.alive) {
+                e.alive=false;g.defeated++;UpdateProgression(g,e.boss?240:45);
+                if(e.boss) bossDefeated=true;
+            }
+        }
+        if(bossDefeated) {
+            g.unlockedCity=std::max(g.unlockedCity,std::min(4,g.city+1));
+            if(g.city==4) g.finished=true;
+            else { g.city++;BuildCity(g); }
+        }
+        return true;
+    }
+    const float range=skill==ClassSkill::CleavingArc?3.8f:skill==ClassSkill::BreakerStrike?3.0f:2.7f;
+    std::vector<int> targets;
+    for(int i=0;i<(int)g.enemies.size();i++) {
+        const Enemy& e=g.enemies[i];
+        if(!e.alive) continue;
+        Vector3 to=Vector3Subtract(e.position,p.position);to.y=0;
+        const float distance=Vector3Length(to);
+        if(distance>range||distance<0.001f) continue;
+        const float facing=Vector3DotProduct(p.facing,Vector3Scale(to,1.0f/distance));
+        if((skill==ClassSkill::CleavingArc&&facing<0.25f)||(skill!=ClassSkill::CleavingArc&&facing<0.45f)) continue;
+        if(HasLineOfSight(g,p.position,e.position)) targets.push_back(i);
+    }
+    if(skill==ClassSkill::BreakerStrike||skill==ClassSkill::ShieldBash) {
+        if(!targets.empty()) {
+            int selected=targets.front();
+            float nearest=Distance(g.enemies[selected].position,p.position);
+            for(int index:targets) if(Distance(g.enemies[index].position,p.position)<nearest) {
+                nearest=Distance(g.enemies[index].position,p.position);selected=index;
+            }
+            targets.assign(1,selected);
+        }
+    }
+    bool bossDefeated=false;
+    for(int index:targets) {
+        Enemy& e=g.enemies[index];
+        float damage=skill==ClassSkill::CleavingArc?27.0f+3.0f*rank:
+                     skill==ClassSkill::BreakerStrike?48.0f+5.0f*rank:24.0f+3.0f*rank;
+        damage*=PlayerMeleeDamageMultiplier(p);
+        if(e.boss) damage*=skill==ClassSkill::BreakerStrike?0.8f:0.65f;
+        e.hp-=damage;
+        e.hitTime=0.18f;
+        e.stunTime=skill==ClassSkill::BreakerStrike?0.38f:(e.boss?0.12f:0.30f);
+        Vector3 knock=Vector3Subtract(e.position,p.position);knock.y=0;
+        if(Vector3Length(knock)>0.001f)
+            e.knockback=Vector3Scale(Vector3Normalize(knock),skill==ClassSkill::ShieldBash?4.8f:2.8f);
+        if(e.hp<=0.0f&&e.alive) {
+            e.alive=false;g.defeated++;UpdateProgression(g,e.boss?240:45);
+            if(e.boss) bossDefeated=true;
+        }
+    }
+    if(bossDefeated) {
+        g.unlockedCity=std::max(g.unlockedCity,std::min(4,g.city+1));
+        if(g.city==4) g.finished=true;
+        else { g.city++;BuildCity(g); }
+    }
+    return true;
+}
+
+bool ConfirmClassSkillTarget(GameState& g) {
+    if(!g.skillTargeting||!SkillTargetValid(g,g.skillTarget)||g.player.mana<ClassSkillManaCost(ClassSkill::ArrowRain)||
+       g.player.techniqueCooldown>0.0f) return false;
+    const int rank=std::clamp(g.player.skillRanks[g.player.activeSkillSlot],1,3);
+    g.player.mana-=ClassSkillManaCost(ClassSkill::ArrowRain);
+    g.player.techniqueCooldown=ClassSkillBaseCooldown(ClassSkill::ArrowRain)*std::max(0.75f,1.0f-0.08f*(rank-1));
+    g.skillEffects.push_back({ClassSkill::ArrowRain,g.skillTarget,3.5f+0.25f*(rank-1),
+                              14.0f+2.0f*(rank-1),0.95f,0.25f,3});
+    g.skillTargeting=false;
+    return true;
+}
+
+void CancelClassSkillTarget(GameState& g) {
+    g.skillTargeting=false;
+}
+
+void UpdateClassSkills(GameState& g,float dt) {
+    Player& p=g.player;
+    p.techniqueCooldown=std::max(0.0f,p.techniqueCooldown-dt);
+    p.aegisTime=std::max(0.0f,p.aegisTime-dt);
+    bool bossDefeated=false;
+    for(SkillEffect& effect:g.skillEffects) {
+        if(effect.skill!=ClassSkill::ArrowRain) continue;
+        if(effect.delay>0.0f) {
+            effect.delay=std::max(0.0f,effect.delay-dt);
+            continue;
+        }
+        effect.waveTimer-=dt;
+        if(effect.waveTimer>0.0f) continue;
+        effect.waveTimer=0.25f;
+        for(Enemy& e:g.enemies) {
+            if(!e.alive||std::fabs(e.position.y-effect.position.y)>0.8f) continue;
+            const float dx=e.position.x-effect.position.x,dz=e.position.z-effect.position.z;
+            if(dx*dx+dz*dz>effect.radius*effect.radius) continue;
+            if(!HasLineOfSight(g,effect.position,e.position)) continue;
+            e.hp-=effect.damage*(e.boss?0.55f:1.0f);
+            e.hitTime=0.14f;
+            e.stunTime=std::max(e.stunTime,0.06f);
+            if(e.hp<=0.0f&&e.alive) {
+                e.alive=false;g.defeated++;UpdateProgression(g,e.boss?240:45);
+                if(e.boss) bossDefeated=true;
+            }
+        }
+        --effect.wavesRemaining;
+    }
+    g.skillEffects.erase(std::remove_if(g.skillEffects.begin(),g.skillEffects.end(),
+        [](const SkillEffect& effect){return effect.wavesRemaining<=0;}),g.skillEffects.end());
+    if(bossDefeated) {
+        g.unlockedCity=std::max(g.unlockedCity,std::min(4,g.city+1));
+        if(g.city==4) g.finished=true;
+        else { g.city++;BuildCity(g); }
+    }
+}
+

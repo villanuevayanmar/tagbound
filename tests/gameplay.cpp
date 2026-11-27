@@ -9,25 +9,57 @@ static bool near(float a, float b, float epsilon=0.02f) {
     return std::fabs(a-b) <= epsilon;
 }
 
+static float cameraTargetYaw(const Camera3D& camera,Vector3 player) {
+    return std::atan2(camera.target.x-player.x,camera.target.z-player.z);
+}
+static float angleDistance(float a,float b) {
+    return std::atan2(std::sin(a-b),std::cos(a-b));
+}
+
 int main() {
     GameState game;
     BuildCity(game);
     assert(game.city == 0);
-    assert(game.platforms.size() == 34);
+    assert(game.platforms.size() == 61);
     assert(game.enemies.size() == 2);
     assert(std::string(CityName(0)) == "PORT TOWN");
-    assert(std::string(CityName(4)) == "IMPERIAL CAPITAL");
+    assert(std::string(CityName(3)) == "IMPERIAL CAPITAL");
+    assert(std::string(CityName(4)) == "HIGH SPIRE");
     assert(std::string(BossName(0)) == "HARBOR WARDEN");
-    assert(std::string(BossName(4)) == "IMPERIAL REGENT");
+    assert(std::string(BossName(3)) == "IMPERIAL REGENT");
+    assert(std::string(BossName(4)) == "SPIRE SENTINEL");
+    assert(MigrateLegacyCityIndex(0)==0);
+    assert(MigrateLegacyCityIndex(1)==1);
+    assert(MigrateLegacyCityIndex(2)==2);
+    assert(MigrateLegacyCityIndex(3)==4);
+    assert(MigrateLegacyCityIndex(4)==3);
+    assert(MigrateLegacyCityIndex(-1)==-1);
     assert(std::string(WeaponName(Weapon::Spear)) == "SPEAR");
+
+    // Enemy models face their target; boss windup/strike poses retain the locked warning direction.
+    Enemy facingEnemy{{2,0.3f,3},100,100,2.5f,0,false,true};
+    Vector3 facing=EnemyFacing(facingEnemy,{5,0.3f,7});
+    assert(near(facing.x,0.6f)&&near(facing.z,0.8f));
+    Enemy facingBoss=facingEnemy;
+    facingBoss.boss=true;
+    facingBoss.phase=BossPhase::Windup;
+    facingBoss.strikeDirection={0,0,4};
+    facing=EnemyFacing(facingBoss,{-10,0.3f,3});
+    assert(near(facing.x,0.0f)&&near(facing.z,1.0f));
+    facingBoss.phase=BossPhase::Recover;
+    facing=EnemyFacing(facingBoss,{-2,0.3f,3});
+    assert(near(facing.x,-1.0f)&&near(facing.z,0.0f));
+    facing=EnemyFacing(facingEnemy,facingEnemy.position);
+    assert(near(facing.x,0.0f)&&near(facing.z,-1.0f));
+
 
     // Each city has its own rooftop route with consistent climb spacing.
     const Vector3 expectedRoutes[5][4]={
         {{4,1.7f,6},{10,2.45f,13},{14,3.2f,19},{18,3.95f,25}},
         {{-4,1.7f,6},{-10,2.45f,13},{-14,3.2f,19},{-18,3.95f,25}},
         {{5,1.7f,3},{12,2.45f,8},{10,3.2f,16},{5,3.95f,24}},
-        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}},
-        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}}
+        {{0,1.7f,7},{7,2.45f,14},{0,3.2f,21},{0,3.95f,29}},
+        {{-5,1.7f,3},{-12,2.45f,8},{-10,3.2f,16},{-5,3.95f,24}}
     };
     for(int city=0;city<5;city++) {
         for(int quest=0;quest<4;quest++) {
@@ -60,15 +92,28 @@ int main() {
         {false,true,false},
         {true,false,false},
         {false,false,true},
+        {true,false,true},
+        {false,true,false}
+    };
+    const bool survivalStages[5][3]={
+        {false,false,false},
         {false,true,false},
-        {true,false,true}
+        {false,true,false},
+        {false,false,false},
+        {true,false,false}
     };
     for(int city=0;city<5;city++) for(int quest=0;quest<3;quest++) {
         assert(QuestRequiresHold(city,quest)==holdStages[city][quest]);
+        assert(QuestRequiresSurvival(city,quest)==survivalStages[city][quest]);
+        assert(!(holdStages[city][quest]&&survivalStages[city][quest]));
         if(holdStages[city][quest]) {
             float duration=QuestHoldDuration(city,quest);
             assert(duration>=2.5f&&duration<=4.0f);
         } else assert(near(QuestHoldDuration(city,quest),0.0f));
+        if(survivalStages[city][quest]) {
+            float duration=QuestSurvivalDuration(city,quest);
+            assert(duration>=18.0f&&duration<=22.0f);
+        } else assert(near(QuestSurvivalDuration(city,quest),0.0f));
     }
 
     // Reach objectives complete as soon as the beacon radius is entered.
@@ -96,6 +141,27 @@ int main() {
     assert(UpdateQuestObjective(holdObjective,holdDuration*0.5f+0.01f));
     assert(near(holdObjective.beaconHoldTime,0.0f));
 
+    // Survival objectives progress away from the beacon and finish only after their timer.
+    const int survivalCities[3]={1,2,4};
+    const int survivalQuests[3]={1,1,0};
+    for(int i=0;i<3;i++) {
+        GameState survivalObjective;
+        survivalObjective.city=survivalCities[i];
+        BuildCity(survivalObjective);
+        SetQuestProgress(survivalObjective,survivalQuests[i]);
+        const float duration=QuestSurvivalDuration(survivalObjective.city,survivalObjective.quest);
+        assert(QuestRequiresSurvival(survivalObjective.city,survivalObjective.quest));
+        assert(!QuestRequiresHold(survivalObjective.city,survivalObjective.quest));
+        assert(near(QuestHoldDuration(survivalObjective.city,survivalObjective.quest),0.0f));
+        survivalObjective.player.position={-30,0.3f,30};
+        assert(!UpdateQuestObjective(survivalObjective,duration*0.4f));
+        assert(near(survivalObjective.beaconHoldTime,duration*0.4f));
+        assert(!UpdateQuestObjective(survivalObjective,duration*0.5f));
+        assert(UpdateQuestObjective(survivalObjective,duration*0.1f+0.01f));
+        assert(near(survivalObjective.beaconHoldTime,0.0f));
+    }
+
+
     // Changing the quest or rebuilding the city never carries old capture time forward.
     holdObjective.beaconHoldTime=0.9f;
     SetQuestProgress(holdObjective,2);
@@ -105,12 +171,77 @@ int main() {
     assert(near(holdObjective.beaconHoldTime,0.0f));
 
     // Boss warning countdowns and strike radii use shared combat/render values.
-    const float bossWindups[5]={0.65f,0.45f,0.9f,0.7f,0.5f};
-    const float bossRanges[5]={4.0f,2.3f,5.5f,8.0f,4.5f};
+    const float bossWindups[5]={0.65f,0.45f,0.9f,0.5f,0.7f};
+    const float bossRanges[5]={4.0f,2.3f,5.5f,4.5f,8.0f};
     for(int variant=0;variant<5;variant++) {
         assert(near(BossWindupDuration(variant),bossWindups[variant]));
         assert(near(BossWindupDuration(variant,true),bossWindups[variant]*0.85f));
         assert(near(BossStrikeRange(variant),bossRanges[variant]));
+    }
+
+    // Boss arena collision bounds are derived from the visible final gate floor.
+    // Pursuit, knockback, charge movement and attack phases must keep every boss grounded.
+    for(int city=0;city<5;city++) {
+        GameState arenaGame;
+        arenaGame.city=city;
+        BuildCity(arenaGame);
+        assert(!arenaGame.bossArena.active);
+        arenaGame.enemies.clear();
+        SetQuestProgress(arenaGame,3);
+        assert(arenaGame.bossArena.active);
+        const Vector3 gate=QuestTarget(city,3);
+        assert(near(arenaGame.bossArena.center.x,gate.x));
+        assert(near(arenaGame.bossArena.center.y,gate.y));
+        assert(near(arenaGame.bossArena.center.z,gate.z));
+        assert(near(arenaGame.bossArena.halfExtents.x,3.4f));
+        assert(near(arenaGame.bossArena.halfExtents.y,3.4f));
+        assert(near(arenaGame.bossArena.floorY,gate.y));
+        assert(arenaGame.enemies.size()==1&&arenaGame.enemies.front().boss);
+        Enemy* arenaBoss=&arenaGame.enemies.front();
+        assert(BossArenaContains(arenaGame,*arenaBoss));
+        arenaGame.player.position={gate.x+30.0f,gate.y,gate.z+30.0f};
+        const Vector3 pushes[4]={{1,0,0},{-1,0,0},{0,0,1},{0,0,-1}};
+        for(const Vector3 push:pushes) {
+            arenaBoss->position={
+                gate.x+(push.x>0?3.30f:(push.x<0?-3.30f:0.0f)),
+                gate.y+3.0f,
+                gate.z+(push.z>0?3.30f:(push.z<0?-3.30f:0.0f))
+            };
+            arenaBoss->stunTime=1.0f;
+            arenaBoss->knockback=Vector3Scale(push,100.0f);
+            UpdatePursuit(arenaGame,0.1f);
+            assert(BossArenaContains(arenaGame,*arenaBoss));
+        }
+        // A boss pursuing a player outside the platform cannot walk off its floor.
+        arenaBoss->stunTime=0.0f;
+        arenaBoss->phase=BossPhase::Hunt;
+        arenaBoss->position={gate.x+3.30f,gate.y,gate.z};
+        arenaGame.player.position={gate.x+18.0f,gate.y,gate.z};
+        UpdatePursuit(arenaGame,0.1f);
+        assert(BossArenaContains(arenaGame,*arenaBoss));
+
+        // The Gilded Charger is the only boss with forward strike movement.
+        if(city==1) {
+            arenaBoss->variant=1;
+            arenaBoss->phase=BossPhase::Strike;
+            arenaBoss->phaseTime=0.0f;
+            arenaBoss->strikeDirection={1,0,0};
+            arenaBoss->strikeOrigin=arenaBoss->position;
+            arenaBoss->position={gate.x+3.30f,gate.y,gate.z};
+            UpdatePursuit(arenaGame,0.1f);
+            assert(BossArenaContains(arenaGame,*arenaBoss));
+        }
+        // Resolve each city's attack phase at the boundary, then verify recovery is still grounded.
+        arenaBoss->variant=city;
+        arenaBoss->phase=BossPhase::Strike;
+        arenaBoss->phaseTime=2.0f;
+        arenaBoss->position={gate.x+3.30f,gate.y+2.0f,gate.z};
+        arenaGame.player.position={gate.x+30.0f,gate.y,gate.z+30.0f};
+        UpdatePursuit(arenaGame,0.05f);
+        assert(arenaBoss->phase==BossPhase::Recover);
+        assert(BossArenaContains(arenaGame,*arenaBoss));
+        SetQuestProgress(arenaGame,2);
+        assert(!arenaGame.bossArena.active);
     }
 
     // Each class has exactly one assigned weapon.
@@ -122,7 +253,7 @@ int main() {
     for (int city = 0; city < 5; ++city) {
         game.city = city;
         BuildCity(game);
-        assert(game.platforms.size() == 34);
+        assert(game.platforms.size() == 61);
         assert(game.enemies.size() == static_cast<size_t>(2 + city * 2));
         for(int quest=0;quest<4;quest++) {
             Vector3 target=QuestTarget(city,quest);
@@ -134,6 +265,98 @@ int main() {
         assert(game.quest == 0);
         assert(!game.bossUnlocked);
     }
+    // Every city has collision-bearing perimeter walls and a boss-route-aligned gate.
+    for(int city=0;city<5;city++) {
+        GameState enclosed;
+        enclosed.city=city;
+        BuildCity(enclosed);
+        assert(enclosed.platforms.size()==61);
+        const float gateX=QuestTarget(city,3).x;
+        const Platform& west=enclosed.platforms[34];
+        const Platform& east=enclosed.platforms[35];
+        const Platform& south=enclosed.platforms[36];
+        const Platform& northLeft=enclosed.platforms[37];
+        const Platform& northRight=enclosed.platforms[38];
+        const Platform& leftTower=enclosed.platforms[39];
+        const Platform& rightTower=enclosed.platforms[40];
+        const Platform& lintel=enclosed.platforms[41];
+        assert(near(west.position.x,-44.0f)&&near(west.size.x,2.0f));
+        assert(near(east.position.x,44.0f)&&near(east.size.x,2.0f));
+        assert(near(south.position.z,-31.0f)&&near(south.size.z,2.0f));
+        assert(near(west.size.y,12.0f)&&near(east.size.y,12.0f)&&near(south.size.y,12.0f));
+        assert(near(northLeft.position.x+northLeft.size.x*0.5f,gateX-5.0f));
+        assert(near(northRight.position.x-northRight.size.x*0.5f,gateX+5.0f));
+        assert(near(leftTower.position.x+leftTower.size.x*0.5f,gateX-5.0f));
+        assert(near(rightTower.position.x-rightTower.size.x*0.5f,gateX+5.0f));
+        assert(lintel.position.y-lintel.size.y*0.5f>2.0f);
+
+        auto moveFrom=[&](Vector3 start,Vector3 facing,Vector2 input) {
+            GameState movement;
+            movement.city=city;
+            BuildCity(movement);
+            movement.player.position=start;
+            movement.player.facing=facing;
+            Camera3D movementCamera{};
+            ResetCamera(movement.player,movementCamera);
+            Controls controls{};
+            controls.move=input;
+            UpdateMovement(movement,controls,movementCamera,0.3f);
+            return movement.player.position;
+        };
+        const Vector3 westStop=moveFrom({-42.0f,0.3f,4.0f},{-1,0,0},{0,1});
+        const Vector3 eastStop=moveFrom({42.0f,0.3f,4.0f},{1,0,0},{0,1});
+        const Vector3 southStop=moveFrom({0,0.3f,-29.0f},{0,0,-1},{0,1});
+        const float northWallTestX=gateX>=0.0f?-34.0f:34.0f;
+        const Vector3 northStop=moveFrom({northWallTestX,0.3f,36.0f},{0,0,1},{0,1});
+        const Vector3 gatePassage=moveFrom({gateX,0.3f,36.0f},{0,0,1},{0,1});
+        assert(westStop.x>-43.0f&&westStop.x<-42.0f);
+        assert(eastStop.x>42.0f&&eastStop.x<43.0f);
+        assert(southStop.z>-30.0f&&southStop.z<-29.0f);
+        assert(northStop.z>36.0f&&northStop.z<37.0f);
+        assert(gatePassage.z>37.0f);
+
+        // Each elevated objective deck and the boss deck is physically supported
+        // by four piers that meet the ground and the platform underside.
+        const float supportSideX[4]={-1.0f,-1.0f,1.0f,1.0f};
+        const float supportSideZ[4]={-1.0f,1.0f,-1.0f,1.0f};
+        for(int route=0;route<4;route++) {
+            const int deckIndex=route<3?2+route:5;
+            const Platform deck=enclosed.platforms[deckIndex];
+            const float pillarSize=route==3?0.85f:0.55f;
+            const float offset=deck.size.x*0.5f-pillarSize*0.5f-0.25f;
+            const float deckBottom=deck.position.y-deck.size.y*0.5f;
+            for(int corner=0;corner<4;corner++) {
+                const Platform& pier=enclosed.platforms[42+route*4+corner];
+                assert(near(pier.size.x,pillarSize)&&near(pier.size.z,pillarSize));
+                assert(near(pier.position.x,deck.position.x+supportSideX[corner]*offset));
+                assert(near(pier.position.z,deck.position.z+supportSideZ[corner]*offset));
+                assert(near(pier.position.y-pier.size.y*0.5f,0.0f));
+                assert(near(pier.position.y+pier.size.y*0.5f,deckBottom));
+                assert(pier.position.x-pier.size.x*0.5f>deck.position.x-deck.size.x*0.5f);
+                assert(pier.position.x+pier.size.x*0.5f<deck.position.x+deck.size.x*0.5f);
+                assert(pier.position.z-pier.size.z*0.5f>deck.position.z-deck.size.z*0.5f);
+                assert(pier.position.z+pier.size.z*0.5f<deck.position.z+deck.size.z*0.5f);
+            }
+        }
+        // The boss deck has a visible, collision-bearing three-sided enclosure.
+        // The south side stays open for entry from the rooftop route.
+        const Vector3 gate=QuestTarget(city,3);
+        const Platform& arenaWest=enclosed.platforms[58];
+        const Platform& arenaEast=enclosed.platforms[59];
+        const Platform& arenaNorth=enclosed.platforms[60];
+        assert(near(arenaWest.position.x,gate.x-3.7f));
+        assert(near(arenaEast.position.x,gate.x+3.7f));
+        assert(near(arenaWest.position.y,gate.y+1.4f));
+        assert(near(arenaWest.size.x,0.6f)&&near(arenaWest.size.y,2.8f));
+        assert(near(arenaWest.size.z,7.4f));
+        assert(near(arenaEast.size.x,0.6f)&&near(arenaEast.size.y,2.8f));
+        assert(near(arenaNorth.position.z,gate.z+3.7f));
+        assert(near(arenaNorth.size.x,8.0f)&&near(arenaNorth.size.y,2.8f));
+        assert(near(arenaNorth.size.z,0.6f));
+        assert(near(arenaWest.position.z,gate.z)&&near(arenaEast.position.z,gate.z));
+
+    }
+
     game.city = 0;
     BuildCity(game);
 
@@ -168,12 +391,386 @@ int main() {
     assert(game.player.level >= 5);
     assert(game.player.combatSkill == 1);
 
+    // Every level grants one bounded stat choice and the choice is consumed exactly once.
+    GameState statBuild;
+    BuildCity(statBuild);
+    statBuild.player.playerClass=PlayerClass::Vanguard;
+    statBuild.player.health=PlayerMaxHealth(statBuild.player);
+    statBuild.player.stamina=PlayerMaxStamina(statBuild.player);
+    statBuild.player.mana=PlayerMaxMana(statBuild.player);
+    assert(near(PlayerMaxHealth(statBuild.player),125.0f));
+    assert(near(PlayerMaxStamina(statBuild.player),95.0f));
+    assert(near(PlayerMaxMana(statBuild.player),70.0f));
+    UpdateProgression(statBuild,100);
+    assert(statBuild.player.level==2);
+    assert(statBuild.player.pendingStatChoices==1);
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Vitality));
+    assert(statBuild.player.vitality==1);
+    assert(statBuild.player.pendingStatChoices==0);
+    assert(near(PlayerMaxHealth(statBuild.player),133.0f));
+    assert(near(statBuild.player.health,133.0f));
+    assert(!ChooseStatUpgrade(statBuild,StatUpgrade::Vitality));
+
+    statBuild.player.pendingStatChoices=4;
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Endurance));
+    assert(near(PlayerMaxStamina(statBuild.player),103.0f));
+    assert(near(statBuild.player.stamina,103.0f));
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Focus));
+    assert(near(PlayerMaxMana(statBuild.player),82.0f));
+    assert(near(statBuild.player.mana,82.0f));
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Power));
+    assert(near(PlayerMeleeDamageMultiplier(statBuild.player),1.04f));
+    assert(ChooseStatUpgrade(statBuild,StatUpgrade::Precision));
+    assert(near(PlayerRangedDamageMultiplier(statBuild.player),1.04f));
+    assert(statBuild.player.pendingStatChoices==0);
+
+    // Stat caps prevent spending a level-up choice without consuming it.
+    statBuild.player.vitality=MaxStatRank;
+    statBuild.player.pendingStatChoices=1;
+    assert(!ChooseStatUpgrade(statBuild,StatUpgrade::Vitality));
+    assert(statBuild.player.pendingStatChoices==1);
+
+    // Mana regenerates separately and never exceeds its current maximum.
+    statBuild.player.mana=0.0f;
+    RegenerateMana(statBuild.player,0.1f);
+    assert(near(statBuild.player.mana,0.35f));
+    statBuild.player.mana=PlayerMaxMana(statBuild.player)-0.1f;
+    RegenerateMana(statBuild.player,0.1f);
+    assert(near(statBuild.player.mana,PlayerMaxMana(statBuild.player)));
+
+    // Class skills are class-bound, with a new-skill or upgrade choice at each milestone.
+    assert(ClassSkillOption(PlayerClass::Vanguard,0)==ClassSkill::CleavingArc);
+    assert(ClassSkillOption(PlayerClass::Vanguard,1)==ClassSkill::BreakerStrike);
+    assert(ClassSkillOption(PlayerClass::Skirmisher,0)==ClassSkill::ArrowRain);
+    assert(ClassSkillOption(PlayerClass::Skirmisher,1)==ClassSkill::PiercingShot);
+    assert(ClassSkillOption(PlayerClass::Warden,0)==ClassSkill::ShieldBash);
+    assert(ClassSkillOption(PlayerClass::Warden,1)==ClassSkill::AegisGuard);
+    assert(near(ClassSkillManaCost(ClassSkill::CleavingArc),24.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::BreakerStrike),30.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::ArrowRain),38.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::PiercingShot),28.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::ShieldBash),22.0f));
+    assert(near(ClassSkillManaCost(ClassSkill::AegisGuard),30.0f));
+    assert(near(ClassSkillBaseCooldown(ClassSkill::ArrowRain),8.0f));
+    assert(near(ClassSkillBaseCooldown(ClassSkill::AegisGuard),10.0f));
+    GameState skillMilestones;
+    BuildCity(skillMilestones);
+    UpdateProgression(skillMilestones,300);
+    assert(skillMilestones.player.level==3);
+    assert(skillMilestones.player.pendingSkillChoices==1);
+    assert((skillMilestones.player.skillMilestoneMask&1)!=0);
+    assert(ChooseSkillOption(skillMilestones,(int)ClassSkill::CleavingArc,false));
+    assert(skillMilestones.player.skills[0]==(int)ClassSkill::CleavingArc);
+    assert(skillMilestones.player.skillRanks[0]==1);
+    assert(skillMilestones.player.pendingSkillChoices==0);
+    assert(!ChooseSkillOption(skillMilestones,(int)ClassSkill::ArrowRain,false));
+    skillMilestones.player.playerClass=PlayerClass::Vanguard;
+    skillMilestones.player.pendingSkillChoices=1;
+    assert(ChooseSkillOption(skillMilestones,(int)ClassSkill::CleavingArc,true));
+    assert(skillMilestones.player.skillRanks[0]==2);
+    assert(skillMilestones.player.pendingSkillChoices==0);
+    skillMilestones.player.pendingSkillChoices=1;
+    assert(ChooseSkillOption(skillMilestones,(int)ClassSkill::BreakerStrike,false));
+    assert(skillMilestones.player.skills[1]==(int)ClassSkill::BreakerStrike);
+    assert(EquipSkill(skillMilestones,1));
+    assert(skillMilestones.player.activeSkillSlot==1);
+    assert(!EquipSkill(skillMilestones,2));
+    UpdateProgression(skillMilestones,700);
+    assert(skillMilestones.player.level==5);
+    assert(skillMilestones.player.pendingSkillChoices==1);
+    assert((skillMilestones.player.skillMilestoneMask&3)==3);
+    skillMilestones.player.skillRanks[0]=3;
+    skillMilestones.player.pendingSkillChoices=1;
+    assert(!ChooseSkillOption(skillMilestones,(int)ClassSkill::CleavingArc,true));
+    assert(skillMilestones.player.pendingSkillChoices==1);
+
+    // Arrow Rain validates range/line-of-sight, then deals three separated area waves.
+    GameState arrowRain;
+    BuildCity(arrowRain);
+    arrowRain.player.playerClass=PlayerClass::Skirmisher;
+    arrowRain.player.weapon=Weapon::Bow;
+    arrowRain.player.skills[0]=(int)ClassSkill::ArrowRain;
+    arrowRain.player.skillRanks[0]=1;
+    arrowRain.player.activeSkillSlot=0;
+    arrowRain.player.mana=90.0f;
+    arrowRain.enemies.clear();
+    arrowRain.enemies.push_back({{0,0.3f,16.0f},100,100,0,0,false,true});
+    assert(ActivateClassSkill(arrowRain));
+    assert(arrowRain.skillTargeting);
+    assert(SetClassSkillTarget(arrowRain,{0,0.3f,16.0f}));
+    assert(IsClassSkillTargetValid(arrowRain));
+    assert(ConfirmClassSkillTarget(arrowRain));
+    assert(!arrowRain.skillTargeting);
+    assert(near(arrowRain.player.mana,52.0f));
+    assert(near(arrowRain.player.techniqueCooldown,8.0f));
+    assert(arrowRain.skillEffects.size()==1);
+    UpdateClassSkills(arrowRain,1.0f);
+    assert(near(arrowRain.enemies.front().hp,100.0f));
+    UpdateClassSkills(arrowRain,0.26f);
+    assert(near(arrowRain.enemies.front().hp,86.0f));
+    UpdateClassSkills(arrowRain,0.25f);
+    assert(near(arrowRain.enemies.front().hp,72.0f));
+    UpdateClassSkills(arrowRain,0.25f);
+    assert(near(arrowRain.enemies.front().hp,58.0f));
+    assert(arrowRain.skillEffects.empty());
+
+    GameState invalidRain;
+    BuildCity(invalidRain);
+    invalidRain.player.playerClass=PlayerClass::Skirmisher;
+    invalidRain.player.skills[0]=(int)ClassSkill::ArrowRain;
+    invalidRain.player.skillRanks[0]=1;
+    invalidRain.player.mana=90;
+    assert(ActivateClassSkill(invalidRain));
+    assert(!SetClassSkillTarget(invalidRain,{0,0.3f,25.0f}));
+    assert(!SetClassSkillTarget(invalidRain,{0,2.45f,8.0f}));
+    invalidRain.platforms.push_back({{0,1.5f,8.0f},{5,3.0f,0.5f},GRAY});
+    assert(!SetClassSkillTarget(invalidRain,{0,0.3f,16.0f}));
+    CancelClassSkillTarget(invalidRain);
+    assert(!invalidRain.skillTargeting);
+    assert(near(invalidRain.player.mana,90.0f));
+
+    // A skill cannot activate without its full Mana cost or while cooling down.
+    GameState insufficientMana;
+    BuildCity(insufficientMana);
+    insufficientMana.player.playerClass=PlayerClass::Warden;
+    insufficientMana.player.skills[0]=(int)ClassSkill::AegisGuard;
+    insufficientMana.player.skillRanks[0]=1;
+    insufficientMana.player.mana=29.0f;
+    assert(!ActivateClassSkill(insufficientMana));
+    assert(near(insufficientMana.player.mana,29.0f));
+    assert(near(insufficientMana.player.techniqueCooldown,0.0f));
+    insufficientMana.player.mana=30.0f;
+    assert(ActivateClassSkill(insufficientMana));
+    assert(!ActivateClassSkill(insufficientMana));
+    assert(near(insufficientMana.player.mana,0.0f));
+
+    // Aegis Guard consumes Mana and creates a real defensive window.
+    GameState aegis;
+    BuildCity(aegis);
+    aegis.player.playerClass=PlayerClass::Warden;
+    aegis.player.skills[0]=(int)ClassSkill::AegisGuard;
+    aegis.player.skillRanks[0]=1;
+    aegis.player.activeSkillSlot=0;
+    aegis.player.mana=80.0f;
+    assert(ActivateClassSkill(aegis));
+    assert(near(aegis.player.mana,50.0f));
+    assert(aegis.player.aegisTime>2.5f);
+    assert(aegis.player.techniqueCooldown>9.0f);
+
     BuildCity(game);
     Camera3D camera{};
+    ResetCamera(game.player,camera);
     Controls move{};
     move.move.y = 1.0f;
-    UpdateMovement(game, move, camera, 0.1f);
+    for(int frame=0;frame<12;frame++) UpdateMovement(game,move,camera,1.0f/60.0f);
     assert(game.player.position.z > 0.4f);
+
+    // Ground movement ramps to the existing top speed, then brakes when released.
+    GameState movementResponse;
+    movementResponse.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    movementResponse.player.position={0,0.3f,0};
+    Camera3D movementCamera{};
+    ResetCamera(movementResponse.player,movementCamera);
+    Controls forwardMove{};
+    forwardMove.move.y=1.0f;
+    for(int frame=0;frame<6;frame++)
+        UpdateMovement(movementResponse,forwardMove,movementCamera,1.0f/60.0f);
+    assert(movementResponse.player.moveVelocity.y>1.0f);
+    assert(movementResponse.player.moveVelocity.y<6.0f);
+    for(int frame=0;frame<30;frame++)
+        UpdateMovement(movementResponse,forwardMove,movementCamera,1.0f/60.0f);
+    assert(near(movementResponse.player.moveVelocity.y,6.0f,0.08f));
+    const float speedBeforeBrake=movementResponse.player.moveVelocity.y;
+    UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
+    assert(movementResponse.player.moveVelocity.y<speedBeforeBrake);
+    assert(movementResponse.player.moveVelocity.y>0.0f);
+    for(int frame=0;frame<30;frame++)
+        UpdateMovement(movementResponse,Controls{},movementCamera,1.0f/60.0f);
+    assert(std::abs(movementResponse.player.moveVelocity.y)<0.05f);
+
+    // The existing dash burst still reaches its burst speed during its active window.
+    GameState dashResponse;
+    dashResponse.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    dashResponse.player.position={0,0.3f,0};
+    dashResponse.player.escapeSkill=1;
+    Camera3D dashCamera{};
+    ResetCamera(dashResponse.player,dashCamera);
+    Controls dashMove{};
+    dashMove.move.y=1.0f;
+    dashMove.skill=true;
+    for(int frame=0;frame<12;frame++)
+        UpdateMovement(dashResponse,dashMove,dashCamera,1.0f/60.0f);
+    assert(dashResponse.player.dashTime>0.0f);
+    assert(dashResponse.player.moveVelocity.y>15.5f);
+
+    // Air steering has less authority than grounded acceleration.
+    GameState airControl;
+    airControl.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    airControl.player.position={0,4.0f,0};
+    airControl.player.grounded=false;
+    Camera3D airCamera{};
+    ResetCamera(airControl.player,airCamera);
+    Controls airStrafe{};
+    airStrafe.move.x=1.0f;
+    UpdateMovement(airControl,airStrafe,airCamera,1.0f/60.0f);
+    assert(airControl.player.moveVelocity.x>0.0f);
+    assert(airControl.player.moveVelocity.x<0.4f);
+
+    // The camera-relative control scheme keeps its heading while moving, then follows
+    // the direction the character last faced after movement and any manual-look override end.
+    GameState cameraFollow;
+    cameraFollow.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    cameraFollow.player.position={0,0.3f,0};
+    cameraFollow.player.facing={0,0,1};
+    Camera3D followCamera{};
+    ResetCamera(cameraFollow.player,followCamera);
+    assert(near(cameraTargetYaw(followCamera,cameraFollow.player.position),0.0f));
+    assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
+    Controls strafe{};
+    strafe.move.x=1.0f;
+    UpdateMovement(cameraFollow,strafe,followCamera,0.1f);
+    assert(cameraFollow.player.facing.x>0.99f&&std::abs(cameraFollow.player.facing.z)<0.02f);
+    assert(near(cameraTargetYaw(followCamera,cameraFollow.player.position),0.0f));
+    for(int frame=0;frame<30;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),PI/2.0f))<0.05f);
+
+    // A manual swipe overrides automatic follow briefly while preserving camera-relative input.
+    cameraFollow.player.position={0,0.3f,0};
+    cameraFollow.player.facing={0,0,1};
+    ResetCamera(cameraFollow.player,followCamera);
+    Controls manualStrafe{};
+    manualStrafe.move.x=1.0f;
+    manualStrafe.lookX=60.0f;
+    UpdateMovement(cameraFollow,manualStrafe,followCamera,0.1f);
+    const float manuallySetYaw=cameraTargetYaw(followCamera,cameraFollow.player.position);
+    assert(near(manuallySetYaw,-0.48f));
+    for(int frame=0;frame<4;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),manuallySetYaw))<0.01f);
+    for(int frame=0;frame<30;frame++) UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    const float strafeFacingYaw=std::atan2(cameraFollow.player.facing.x,cameraFollow.player.facing.z);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),strafeFacingYaw))<0.05f);
+
+    // Starting a new run resets yaw, pitch and manual-look override to the new spawn facing.
+    cameraFollow.player.facing={-1,0,0};
+    ResetCamera(cameraFollow.player,followCamera);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
+    assert(near(followCamera.target.y-cameraFollow.player.position.y,0.3f));
+    UpdateMovement(cameraFollow,Controls{},followCamera,0.1f);
+    assert(std::abs(angleDistance(cameraTargetYaw(followCamera,cameraFollow.player.position),-PI/2.0f))<0.001f);
+    Player defaultCameraPlayer;
+    ResetCamera(defaultCameraPlayer,camera);
+
+    // Skirmisher keeps the fastest base movement speed without sprinting.
+    GameState vanguardMovement;
+    vanguardMovement.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    vanguardMovement.player.position={0,0.3f,0};
+    vanguardMovement.player.playerClass=PlayerClass::Vanguard;
+    GameState skirmisherMovement;
+    skirmisherMovement.platforms.push_back({{0,0,0},{120,0.6f,120},GRAY});
+    skirmisherMovement.player.position={0,0.3f,0};
+    skirmisherMovement.player.playerClass=PlayerClass::Skirmisher;
+    Camera3D vanguardCamera{},skirmisherCamera{};
+    ResetCamera(vanguardMovement.player,vanguardCamera);
+    ResetCamera(skirmisherMovement.player,skirmisherCamera);
+    for(int frame=0;frame<20;frame++) {
+        UpdateMovement(vanguardMovement,move,vanguardCamera,1.0f/60.0f);
+        UpdateMovement(skirmisherMovement,move,skirmisherCamera,1.0f/60.0f);
+    }
+    assert(skirmisherMovement.player.position.z>vanguardMovement.player.position.z+0.1f);
+
+    // Simulate every raised rooftop transfer from each city's spawn roof to its boss gate.
+    for(int city=0;city<5;city++) {
+        for(int segment=0;segment<4;segment++) {
+            GameState routeGame;
+            routeGame.city=city;
+            BuildCity(routeGame);
+            routeGame.player.playerClass=PlayerClass::Skirmisher;
+            routeGame.player.weapon=Weapon::Bow;
+            routeGame.player.stamina=100.0f;
+
+            const Vector3 startCenter=segment==0?Vector3{0,0.3f,0}:QuestTarget(city,segment-1);
+            const Vector3 target=QuestTarget(city,segment);
+            Vector3 direction={target.x-startCenter.x,0,target.z-startCenter.z};
+            const float distance=Vector3Length(direction);
+            assert(distance>0.001f);
+            direction=Vector3Scale(direction,1.0f/distance);
+
+            const float startHalf=segment==0?4.0f:2.5f;
+            const float edgeX=std::fabs(direction.x)>0.001f?startHalf/std::fabs(direction.x):1000.0f;
+            const float edgeZ=std::fabs(direction.z)>0.001f?startHalf/std::fabs(direction.z):1000.0f;
+            const float takeoffDistance=std::min(edgeX,edgeZ)-0.25f;
+            routeGame.player.position={
+                startCenter.x+direction.x*takeoffDistance,
+                startCenter.y,
+                startCenter.z+direction.z*takeoffDistance
+            };
+            routeGame.player.velocity={0,0,0};
+            routeGame.player.grounded=true;
+            routeGame.player.stamina=100.0f;
+
+            if(segment==3) {
+                // Starting the final approach must instantiate this city's actual boss at its gate.
+                SetQuestProgress(routeGame,3);
+                assert(routeGame.bossUnlocked);
+                assert(std::count_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==1);
+                const Enemy& boss=*std::find_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;});
+                assert(boss.variant==city);
+                assert(near(boss.position.x,target.x)&&near(boss.position.y,target.y)&&near(boss.position.z,target.z));
+            }
+
+            // Keep BuildCity's grounded spawn state and reset the shared camera for this route.
+            Camera3D routeCamera=camera;
+            ResetCamera(routeGame.player,routeCamera);
+
+            const float targetHalf=segment==3?4.0f:2.5f;
+            bool airborne=false;
+            bool landed=false;
+            for(int frame=0;frame<180;frame++) {
+                Vector3 toTarget={target.x-routeGame.player.position.x,0,target.z-routeGame.player.position.z};
+                const float remaining=Vector3Length(toTarget);
+                Controls input{};
+                if(remaining>0.25f) {
+                    const Vector3 desired=Vector3Scale(toTarget,1.0f/remaining);
+                    // Controls are camera-relative, so convert the world-space route direction
+                    // into this frame's camera basis before applying the movement input.
+                    const float yaw=cameraTargetYaw(routeCamera,routeGame.player.position);
+                    const Vector3 cameraForward={std::sin(yaw),0,std::cos(yaw)};
+                    const Vector3 cameraRight={cameraForward.z,0,-cameraForward.x};
+                    input.move.x=Vector3DotProduct(desired,cameraRight);
+                    input.move.y=Vector3DotProduct(desired,cameraForward);
+                    input.sprint=true;
+                }
+                // If the jump reaches a ledge, use the game's required jump-to-climb action.
+                input.jump=frame==0||routeGame.player.ledgeGrabbing;
+                UpdateMovement(routeGame,input,routeCamera,1.0f/60.0f);
+                if(!routeGame.player.grounded) airborne=true;
+                const bool insideTarget=std::fabs(routeGame.player.position.x-target.x)<targetHalf-0.2f &&
+                                        std::fabs(routeGame.player.position.z-target.z)<targetHalf-0.2f;
+                if(airborne&&routeGame.player.grounded&&insideTarget&&
+                   routeGame.player.position.y>=target.y-0.05f) {
+                    landed=true;
+                    break;
+                }
+            }
+            if(segment==3) {
+                assert(routeGame.bossUnlocked);
+                assert(std::count_if(routeGame.enemies.begin(),routeGame.enemies.end(),
+                    [](const Enemy& enemy){return enemy.boss&&enemy.alive;})==1);
+            }
+            if(!landed) {
+                std::cerr << "Rooftop route transfer failed: city=" << city
+                          << " segment=" << segment
+                          << " player=(" << routeGame.player.position.x << ","
+                          << routeGame.player.position.y << ","
+                          << routeGame.player.position.z << ")" << std::endl;
+                assert(landed);
+            }
+        }
+    }
+    Player defaultRouteCameraPlayer;
+    ResetCamera(defaultRouteCameraPlayer,camera);
 
     // A high-speed Skirmisher dash cannot tunnel through a thin wall.
     GameState dashCollision;
@@ -189,6 +786,38 @@ int main() {
     fastDash.skill=true;
     UpdateMovement(dashCollision,fastDash,camera,0.04f);
     assert(dashCollision.player.position.x<0.56f);
+
+    // Wall-running consumes stamina and a wall-jump launches away from the surface.
+    GameState wallRun;
+    wallRun.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    wallRun.platforms.push_back({{0,1.5f,0},{1,3,8},GRAY});
+    wallRun.player.position={0.95f,2.0f,0};
+    wallRun.player.velocity={0,-1.0f,0};
+    wallRun.player.grounded=false;
+    Controls wallRunInput{};
+    wallRunInput.sprint=true;
+    UpdateMovement(wallRun,wallRunInput,camera,0.04f);
+    assert(wallRun.player.wallRunning);
+    assert(wallRun.player.velocity.y>-2.5f);
+    assert(near(wallRun.player.stamina,98.96f));
+    Controls wallJumpInput=wallRunInput;
+    wallJumpInput.jump=true;
+    UpdateMovement(wallRun,wallJumpInput,camera,0.04f);
+    assert(!wallRun.player.wallRunning);
+    assert(wallRun.player.velocity.x>5.0f);
+    assert(wallRun.player.velocity.y>8.5f);
+
+    // Holding sprint cannot regenerate stamina while a wall-run is exhausting it.
+    GameState exhaustedWallRun;
+    exhaustedWallRun.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    exhaustedWallRun.platforms.push_back({{0,1.5f,0},{1,3,8},GRAY});
+    exhaustedWallRun.player.position={0.95f,2.0f,0};
+    exhaustedWallRun.player.velocity={0,-1.0f,0};
+    exhaustedWallRun.player.grounded=false;
+    exhaustedWallRun.player.stamina=0.2f;
+    for(int frame=0;frame<2;frame++) UpdateMovement(exhaustedWallRun,wallRunInput,camera,0.04f);
+    assert(near(exhaustedWallRun.player.stamina,0.0f));
+    assert(!exhaustedWallRun.player.wallRunning);
 
     Controls jump{};
     jump.jump = true;
@@ -304,6 +933,24 @@ int main() {
     assert(game.player.landingTime > 0.25f);
     assert(!game.player.landingRoll);
 
+    // Falling onto a raised roof must snap to that platform's actual top, not world Y=0.
+    GameState raisedLanding;
+    raisedLanding.platforms.push_back({{0,2.0f,0},{12,0.6f,12},GRAY});
+    raisedLanding.player.position={0,4.0f,0};
+    raisedLanding.player.velocity={0,-4.0f,0};
+    raisedLanding.player.grounded=false;
+    Camera3D raisedCamera{};
+    ResetCamera(raisedLanding.player,raisedCamera);
+    for(int frame=0;frame<90&&!raisedLanding.player.grounded;frame++)
+        UpdateMovement(raisedLanding,Controls{},raisedCamera,1.0f/60.0f);
+    assert(raisedLanding.player.grounded);
+    assert(near(raisedLanding.player.position.y,2.3f,0.001f));
+    assert(near(raisedLanding.player.velocity.y,0.0f));
+    assert(raisedLanding.player.landingTime>0.25f);
+    UpdateMovement(raisedLanding,Controls{},raisedCamera,1.0f/60.0f);
+    assert(raisedLanding.player.grounded);
+    assert(near(raisedLanding.player.position.y,2.3f,0.001f));
+
     game.player.escapeSkill = 1;
     Controls dash{};
     dash.skill = true;
@@ -411,6 +1058,35 @@ int main() {
     assert(near(game.enemies.front().hp, 55.0f));
     assert(game.enemies.front().hitTime>0.1f);
     assert(game.enemies.front().stunTime>0.1f);
+
+    // Power and Precision affect the actual melee and bow hit damage.
+    GameState poweredAttack;
+    BuildCity(poweredAttack);
+    poweredAttack.enemies.clear();
+    poweredAttack.player.position={0,0.3f,0};
+    poweredAttack.player.facing={0,0,1};
+    poweredAttack.player.weapon=Weapon::Sword;
+    poweredAttack.player.power=5;
+    poweredAttack.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+    Controls poweredHit{};
+    poweredHit.attack=true;
+    UpdateCombat(poweredAttack,poweredHit,0.016f);
+    assert(near(poweredAttack.enemies.front().hp,64.0f));
+
+    GameState preciseAttack;
+    BuildCity(preciseAttack);
+    preciseAttack.enemies.clear();
+    preciseAttack.player.position={0,0.3f,0};
+    preciseAttack.player.facing={0,0,1};
+    preciseAttack.player.weapon=Weapon::Bow;
+    preciseAttack.player.precision=5;
+    preciseAttack.enemies.push_back({{0,0.3f,1.5f},100,100,0,0,false,true});
+    Controls preciseShot{};
+    preciseShot.attack=true;
+    UpdateCombat(preciseAttack,preciseShot,0.016f);
+    preciseShot.attack=false;
+    UpdateCombat(preciseAttack,preciseShot,0.05f);
+    assert(near(preciseAttack.enemies.front().hp,46.0f));
 
     // Fast arrows hit the first target along their path and cannot pass through cover.
     game.projectiles.clear();
@@ -656,6 +1332,28 @@ int main() {
     UpdatePursuit(game,0.45f);
     assert(near(game.player.health,89.0f));
 
+    // A pursuer must route around a solid rooftop wall instead of stalling at it.
+    GameState pathing;
+    pathing.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
+    pathing.platforms.push_back({{0,1.5f,0},{0.4f,3.0f,3.0f},GRAY});
+    pathing.player.position={0,0.3f,-6.0f};
+    pathing.player.invulnerable=1000.0f;
+    pathing.enemies.push_back({{0,0.3f,6.0f},40,40,2.4f,0,false,true});
+    const float blockedRouteDistance=Vector3Distance(pathing.player.position,pathing.enemies.front().position);
+    for(int frame=0;frame<240;frame++) UpdatePursuit(pathing,0.05f);
+    const Enemy& routedPursuer=pathing.enemies.front();
+    const float routedDistance=Vector3Distance(pathing.player.position,routedPursuer.position);
+    assert(routedDistance<3.0f);
+    assert(routedDistance<blockedRouteDistance-7.0f);
+    const Platform& rooftopWall=pathing.platforms[1];
+    const bool overlapsX=routedPursuer.position.x+0.42f>rooftopWall.position.x-rooftopWall.size.x*0.5f &&
+                         routedPursuer.position.x-0.42f<rooftopWall.position.x+rooftopWall.size.x*0.5f;
+    const bool overlapsY=routedPursuer.position.y+1.72f>rooftopWall.position.y-rooftopWall.size.y*0.5f+0.05f &&
+                         routedPursuer.position.y<rooftopWall.position.y+rooftopWall.size.y*0.5f-0.05f;
+    const bool overlapsZ=routedPursuer.position.z+0.42f>rooftopWall.position.z-rooftopWall.size.z*0.5f &&
+                         routedPursuer.position.z-0.42f<rooftopWall.position.z+rooftopWall.size.z*0.5f;
+    assert(!(overlapsX&&overlapsY&&overlapsZ));
+
     game.enemies.clear();
     game.player.position = {0,0.3f,0};
     game.player.facing = {0,0,1};
@@ -724,7 +1422,7 @@ int main() {
     game.enemies.clear();
     game.player.position={0,0.3f,7.0f};
     Enemy spireWindup{{0,0.3f,0},100,100,2.5f,0,true,true};
-    spireWindup.variant=3;
+    spireWindup.variant=4;
     spireWindup.phase=BossPhase::Hunt;
     game.enemies.push_back(spireWindup);
     UpdatePursuit(game,0.016f);
@@ -780,7 +1478,7 @@ int main() {
     game.player.blocking=false;
     game.player.stamina=100;
     Enemy alignedSpire{{0,0.3f,0},100,100,0,0,true,true};
-    alignedSpire.variant=3;
+    alignedSpire.variant=4;
     alignedSpire.phase=BossPhase::Strike;
     alignedSpire.phaseTime=0.23f;
     alignedSpire.strikeDirection={0,0,1};
@@ -795,7 +1493,7 @@ int main() {
     game.player.health=100;
     game.player.invulnerable=0;
     Enemy dodgedSpire{{0,0.3f,0},100,100,0,0,true,true};
-    dodgedSpire.variant=3;
+    dodgedSpire.variant=4;
     dodgedSpire.phase=BossPhase::Strike;
     dodgedSpire.phaseTime=0.23f;
     dodgedSpire.strikeDirection={0,0,1};
@@ -805,9 +1503,37 @@ int main() {
     assert(near(game.player.health,100.0f));
     assert(game.enemies.front().phase==BossPhase::Recover);
 
+    // Telegraph and damage share the same half-width for lane-based boss strikes.
+    assert(near(BossStrikeHalfWidth(0,8.0f),3.04f));
+    assert(near(BossStrikeHalfWidth(1,8.0f),0.9f));
+    assert(near(BossStrikeHalfWidth(4,8.0f),0.9f));
+    assert(near(BossStrikeHalfWidth(2,8.0f),0.0f));
+    const int laneVariants[2]={1,4};
+    for(int variant : laneVariants) {
+        const float expectedDamage=variant==1?30.0f:18.0f;
+        for(int edge=0;edge<2;edge++) {
+            game.platforms.clear();
+            game.enemies.clear();
+            game.player.position={edge==0?0.89f:0.91f,0.3f,2.0f};
+            game.player.health=100;
+            game.player.invulnerable=0;
+            game.player.blocking=false;
+            Enemy laneBoss{{0,0.3f,0},100,100,0,0,true,true};
+            laneBoss.variant=variant;
+            laneBoss.phase=BossPhase::Strike;
+            laneBoss.phaseTime=1.0f;
+            laneBoss.strikeDirection={0,0,1};
+            laneBoss.strikeOrigin=laneBoss.position;
+            game.enemies.push_back(laneBoss);
+            UpdatePursuit(game,0.01f);
+            assert(near(game.player.health,edge==0?100.0f-expectedDamage:100.0f));
+            assert(game.enemies.front().phase==BossPhase::Recover);
+        }
+    }
+
     // Each city boss has a distinct attack pattern, range and damage profile.
-    const float bossDistances[5]={3.5f,2.2f,5.0f,7.0f,4.0f};
-    const float bossDamage[5]={24,30,32,18,28};
+    const float bossDistances[5]={3.5f,2.2f,5.0f,4.0f,7.0f};
+    const float bossDamage[5]={24,30,32,28,18};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
@@ -828,7 +1554,7 @@ int main() {
     }
 
     // Foundry Colossus and Imperial Regent use radial strikes that can be dodged beyond their warning ring.
-    const int radialBossVariants[2]={2,4};
+    const int radialBossVariants[2]={2,3};
     const float radialBossDamage[2]={32.0f,28.0f};
     for(int i=0;i<2;i++) {
         const int variant=radialBossVariants[i];
@@ -860,7 +1586,7 @@ int main() {
     }
 
     // Bosses enter an enrage phase below half health and deal increased strike damage.
-    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,19.8f,30.8f};
+    const float enragedBossDamage[5]={26.4f,33.0f,35.2f,30.8f,19.8f};
     for(int variant=0;variant<5;variant++) {
         game.enemies.clear();
         game.player.position={0,0.3f,0};
@@ -1121,6 +1847,63 @@ int main() {
     closedSpawn.platforms.push_back({{0,-0.3f,0},{120,0.6f,120},GRAY});
     closedSpawn.platforms.push_back({{0,3.0f,0},{120,6.0f,120},GRAY});
     assert(!FindReinforcementSpawn(closedSpawn,{0,0.3f,0},spawn));
+
+    // Floor positions map to the five existing traversal heights; jumping does not reveal a floor.
+    assert(ExplorationFloorForPosition(0.3f)==0);
+    assert(ExplorationFloorForPosition(1.7f)==1);
+    assert(ExplorationFloorForPosition(2.45f)==2);
+    assert(ExplorationFloorForPosition(3.2f)==3);
+    assert(ExplorationFloorForPosition(3.95f)==4);
+    assert(std::string(ExplorationFloorName(0))=="GROUND");
+    assert(std::string(ExplorationFloorName(4))=="BOSS DECK");
+
+    // Discovery is independent per floor. Only grounded movement reveals the floor
+    // the player actually stands on, and floor navigation skips unknown floors.
+    GameState exploration;
+    BuildCity(exploration);
+    assert(exploration.explored.size()==ExplorationMapTotalCells);
+    assert(ExplorationCellForPosition({-50,0.3f,-36})==0);
+    assert(ExplorationCellForPosition({50,0.3f,44})==ExplorationMapCells-1);
+    assert(std::count(exploration.explored.begin(),exploration.explored.end(),(unsigned char)1)==0);
+    const Vector3 firstExplore{0,0.3f,0};
+    assert(UpdateExploration(exploration,firstExplore));
+    const int firstCell=ExplorationCellForPosition(firstExplore);
+    assert(exploration.explored[firstCell]==1);
+    const int firstFloorCount=(int)std::count(exploration.explored.begin(),
+        exploration.explored.begin()+ExplorationMapCells,(unsigned char)1);
+    assert(firstFloorCount>1&&firstFloorCount<ExplorationMapCells);
+    assert(std::count(exploration.explored.begin()+ExplorationMapCells,
+        exploration.explored.end(),(unsigned char)1)==0);
+    assert(!CanChangeExplorationFloor(exploration,-1));
+    assert(!CanChangeExplorationFloor(exploration,1));
+
+    // Airborne movement cannot reveal an upper floor before a landing.
+    exploration.player.grounded=false;
+    assert(!UpdateExploration(exploration,{0,1.7f,0}));
+    assert(exploration.currentFloor==0);
+    assert(exploration.explored[ExplorationMapCells]==0);
+    exploration.player.grounded=true;
+    assert(UpdateExploration(exploration,{0,1.7f,0}));
+    assert(exploration.currentFloor==1&&exploration.mapFloor==1);
+    const int upperCell=ExplorationCellForPosition({0,1.7f,0});
+    const int upperCount=(int)std::count(exploration.explored.begin()+ExplorationMapCells,
+        exploration.explored.begin()+2*ExplorationMapCells,(unsigned char)1);
+    assert(upperCount>1&&upperCount<ExplorationMapCells);
+    assert(exploration.explored[ExplorationMapCells+upperCell]==1);
+    assert(CanChangeExplorationFloor(exploration,-1));
+    assert(!CanChangeExplorationFloor(exploration,1));
+
+    assert(ChangeExplorationFloor(exploration,-1));
+    assert(exploration.mapFloor==0);
+    assert(std::count(exploration.explored.begin()+ExplorationMapCells,
+        exploration.explored.begin()+2*ExplorationMapCells,(unsigned char)1)==upperCount);
+    assert(ChangeExplorationFloor(exploration,1));
+    assert(exploration.mapFloor==1);
+    assert(!ChangeExplorationFloor(exploration,1));
+    assert(UpdateExploration(exploration,{20,1.7f,20}));
+    assert(exploration.currentFloor==1&&exploration.mapFloor==1);
+    assert(exploration.explored[ExplorationMapCells+
+        ExplorationCellForPosition({20,1.7f,20})]!=0);
 
     std::cout << "PASS: city setup, mixed beacon objectives, hold resets, XP/skills, movement, combat, and boss progression.\\n";
     return 0;

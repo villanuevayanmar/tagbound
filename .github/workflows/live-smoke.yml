@@ -197,9 +197,9 @@ jobs:
               settingsButtonVisible: document.querySelector('#settings-open')?.getClientRects().length > 0,
               settingsButtonClearOfHud: (() => {
                 const s = document.querySelector('#settings-open').getBoundingClientRect();
-                const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+                const h = innerHeight <= 440 ? 116 : innerHeight - 78;
                 const boxes = [
-                  { left: 12, right: 262, top: 12, bottom: 87 },
+                  { left: 12, right: 282, top: 12, bottom: 110 },
                   { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
                   { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
                   { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
@@ -425,16 +425,16 @@ jobs:
               })()
             }));
             if (!mobile.controlsVisible || !mobile.installVisible || !mobile.settingsInstallHidden ||
-                !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 6 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.startVisible) {
+                !mobile.settingsButtonHidden || mobile.floatingInstallPresent || mobile.actionCount !== 8 || mobile.bowButtonVisible || mobile.weaponButtonPresent || !mobile.startVisible) {
               throw new Error('Live mobile layout check failed: ' + JSON.stringify(mobile));
             }
 
             await mobilePage.screenshot({ path: 'live-review/production-mobile-home.png', fullPage: true });
             const mobileLoadouts = [
-              { klass: 1, weapon: 3, bowVisible: true, actions: 7 },
-              { klass: 2, weapon: 2, bowVisible: false, actions: 6 },
-              { klass: 0, weapon: 0, bowVisible: false, actions: 6 },
-              { klass: 1, weapon: 3, bowVisible: true, actions: 7 }
+              { klass: 1, weapon: 3, bowVisible: true, actions: 9 },
+              { klass: 2, weapon: 2, bowVisible: false, actions: 8 },
+              { klass: 0, weapon: 0, bowVisible: false, actions: 8 },
+              { klass: 1, weapon: 3, bowVisible: true, actions: 9 }
             ];
             for (const loadout of mobileLoadouts) {
               await mobilePage.locator('[data-class="' + loadout.klass + '"]').tap();
@@ -457,9 +457,9 @@ jobs:
             }
             const mobileSettingsButtonClear = await mobilePage.evaluate(() => {
               const s = document.querySelector('#settings-open').getBoundingClientRect();
-              const h = innerHeight <= 440 ? 96 : innerHeight - 78;
+              const h = innerHeight <= 440 ? 116 : innerHeight - 78;
               const boxes = [
-                { left: 12, right: 262, top: 12, bottom: 87 },
+                { left: 12, right: 282, top: 12, bottom: 110 },
                 { left: innerWidth - 245, right: innerWidth - 12, top: 12, bottom: 88 },
                 { left: innerWidth / 2 - 56, right: innerWidth / 2 + 56, top: 12, bottom: 64 },
                 { left: innerWidth / 2 - 96, right: innerWidth / 2 + 96, top: 67, bottom: 90 },
