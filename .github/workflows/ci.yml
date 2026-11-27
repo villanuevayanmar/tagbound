@@ -1457,20 +1457,30 @@ jobs:
               await dispatchStabilityTouch('touchEnd', []);
               await stabilityPage.waitForTimeout(80);
             };
-            const startEventTrace = await stabilityPage.locator('#start').evaluate(button => {
+            const startEventTrace = await stabilityPage.evaluate(() => {
+              const button = document.querySelector('#start');
+              if (!button) throw new Error('M1 Start button missing before touch instrumentation.');
               window.__TAGBOUND_START_EVENTS = [];
               for (const type of ['touchstart', 'touchend', 'pointerdown', 'pointerup', 'pointercancel', 'click']) {
-                button.addEventListener(type, event => {
+                document.addEventListener(type, event => {
                   window.__TAGBOUND_START_EVENTS.push({
                     type,
                     trusted: event.isTrusted,
+                    target: event.target?.id || event.target?.className || null,
                     pointerType: 'pointerType' in event ? event.pointerType : null,
                     button: 'button' in event ? event.button : null,
                     time: Number(performance.now().toFixed(2))
                   });
                 }, true);
               }
-              return { tag: button.tagName, touchAction: getComputedStyle(button).touchAction };
+              return {
+                tag: button.tagName,
+                touchAction: getComputedStyle(button).touchAction,
+                rect: (() => {
+                  const r = button.getBoundingClientRect();
+                  return { x: r.x, y: r.y, width: r.width, height: r.height };
+                })()
+              };
             });
             let startControlState = null;
             try {
