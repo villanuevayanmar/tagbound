@@ -1382,6 +1382,81 @@ jobs:
               null,
               { timeout: 45000 }
             );
+            const stabilityTouchSession = await stabilityContext.newCDPSession(stabilityPage);
+            const dispatchStabilityTouch = (type, touchPoints) =>
+              stabilityTouchSession.send('Input.dispatchTouchEvent', { type, touchPoints });
+            let nextStabilityTouchId = 1;
+            const stabilityPoint = (id, x, y) => ({
+              id, x, y, radiusX: 6, radiusY: 6, force: 1
+            });
+            const stabilityControl = async (moveX, moveY, buttons, duration = 120) => {
+              const points = [];
+              let stickId = null;
+              if (moveX !== 0 || moveY !== 0) {
+                const stick = stabilityPage.locator('#stick');
+                const box = await stick.boundingBox();
+                if (!box || !(await stick.isVisible())) {
+                  throw new Error('M1 real-touch joystick is not visible.');
+                }
+                stickId = nextStabilityTouchId++;
+                points.push(stabilityPoint(stickId, box.x + box.width / 2, box.y + box.height / 2));
+              }
+              const actions = [
+                [1, '.action.jump'], [2, '.action.slide'], [4, '.action.attack'],
+                [8, '.action.block'], [16, '.action.bow'], [32, '.action.skill'], [64, '.action.sprint']
+              ];
+              for (const [bit, selector] of actions) {
+                if (!(buttons & bit)) continue;
+                const action = stabilityPage.locator(selector);
+                const box = await action.boundingBox();
+                if (!box || !(await action.isVisible()) || !(await action.isEnabled())) {
+                  throw new Error('M1 real-touch action is unavailable: ' + selector);
+                }
+                points.push(stabilityPoint(nextStabilityTouchId++, box.x + box.width / 2, box.y + box.height / 2));
+              }
+              if (!points.length) return;
+              await dispatchStabilityTouch('touchStart', points);
+              try {
+                if (stickId !== null) {
+                  await stabilityPage.waitForTimeout(30);
+                  const moved = points.map(point => point.id === stickId
+                    ? stabilityPoint(point.id, point.x + Math.max(-42, Math.min(42, moveX * 42)),
+                      point.y + Math.max(-42, Math.min(42, moveY * 42)))
+                    : point);
+                  await dispatchStabilityTouch('touchMove', moved);
+                }
+                await stabilityPage.waitForTimeout(duration);
+              } finally {
+                await dispatchStabilityTouch('touchEnd', []);
+              }
+            };
+            const stabilityTap = async selector => {
+              const action = stabilityPage.locator(selector);
+              if (await action.count() !== 1 || !(await action.isVisible()) || !(await action.isEnabled())) {
+                throw new Error('M1 real-touch control is unavailable: ' + selector);
+              }
+              const initial = await action.boundingBox();
+              if (!initial) throw new Error('M1 real-touch control has no visible bounds: ' + selector);
+              await stabilityPage.waitForTimeout(60);
+              const stable = await action.boundingBox();
+              const unchanged = stable && Math.abs(initial.x-stable.x)<0.5 &&
+                Math.abs(initial.y-stable.y)<0.5 && Math.abs(initial.width-stable.width)<0.5 &&
+                Math.abs(initial.height-stable.height)<0.5;
+              const hit = await action.evaluate(element => {
+                const rect = element.getBoundingClientRect();
+                const target = document.elementFromPoint(rect.x+rect.width/2,rect.y+rect.height/2);
+                return target === element || element.contains(target);
+              });
+              if (!unchanged || !hit) {
+                throw new Error('M1 real-touch control failed stable-position/hit-test checks: ' +
+                  JSON.stringify({ selector, initial, stable, hit }));
+              }
+              const point = stabilityPoint(nextStabilityTouchId++, stable.x+stable.width/2, stable.y+stable.height/2);
+              await dispatchStabilityTouch('touchStart', [point]);
+              await stabilityPage.waitForTimeout(90);
+              await dispatchStabilityTouch('touchEnd', []);
+              await stabilityPage.waitForTimeout(80);
+            };
             let startControlState = null;
             try {
               await stabilityPage.bringToFront();
@@ -1393,7 +1468,7 @@ jobs:
                 enabled: startControlCount === 1 && await startControl.isEnabled(),
                 box: startControlCount === 1 ? await startControl.boundingBox() : null
               };
-              await startControl.tap({ timeout: 8000 });
+              await stabilityTap('#start');
             } catch (error) {
               const clickState = await stabilityPage.evaluate(async () => {
                 const button = document.querySelector('#start');
@@ -1450,66 +1525,6 @@ jobs:
             if (bossStart.health <= 0 || bossStart.mana < 24) {
               throw new Error('M1 boss/skill fixture did not load: ' + JSON.stringify(bossStart));
             }
-            const stabilityTouchSession = await stabilityContext.newCDPSession(stabilityPage);
-            const dispatchStabilityTouch = (type, touchPoints) =>
-              stabilityTouchSession.send('Input.dispatchTouchEvent', { type, touchPoints });
-            let nextStabilityTouchId = 1;
-            const stabilityPoint = (id, x, y) => ({
-              id, x, y, radiusX: 6, radiusY: 6, force: 1
-            });
-            const stabilityControl = async (moveX, moveY, buttons, duration = 120) => {
-              const points = [];
-              let stickId = null;
-              if (moveX !== 0 || moveY !== 0) {
-                const stick = stabilityPage.locator('#stick');
-                const box = await stick.boundingBox();
-                if (!box || !(await stick.isVisible())) {
-                  throw new Error('M1 real-touch joystick is not visible.');
-                }
-                stickId = nextStabilityTouchId++;
-                points.push(stabilityPoint(stickId, box.x + box.width / 2, box.y + box.height / 2));
-              }
-              const actions = [
-                [1, '.action.jump'], [2, '.action.slide'], [4, '.action.attack'],
-                [8, '.action.block'], [16, '.action.bow'], [32, '.action.skill'], [64, '.action.sprint']
-              ];
-              for (const [bit, selector] of actions) {
-                if (!(buttons & bit)) continue;
-                const action = stabilityPage.locator(selector);
-                const box = await action.boundingBox();
-                if (!box || !(await action.isVisible()) || !(await action.isEnabled())) {
-                  throw new Error('M1 real-touch action is unavailable: ' + selector);
-                }
-                points.push(stabilityPoint(nextStabilityTouchId++, box.x + box.width / 2, box.y + box.height / 2));
-              }
-              if (!points.length) return;
-              await dispatchStabilityTouch('touchStart', points);
-              try {
-                if (stickId !== null) {
-                  await stabilityPage.waitForTimeout(30);
-                  const moved = points.map(point => point.id === stickId
-                    ? stabilityPoint(point.id, point.x + Math.max(-42, Math.min(42, moveX * 42)),
-                      point.y + Math.max(-42, Math.min(42, moveY * 42)))
-                    : point);
-                  await dispatchStabilityTouch('touchMove', moved);
-                }
-                await stabilityPage.waitForTimeout(duration);
-              } finally {
-                await dispatchStabilityTouch('touchEnd', []);
-              }
-            };
-            const stabilityTap = async selector => {
-              const action = stabilityPage.locator(selector);
-              const box = await action.boundingBox();
-              if (!box || !(await action.isVisible()) || !(await action.isEnabled())) {
-                throw new Error('M1 real-touch control is unavailable: ' + selector);
-              }
-              const point = stabilityPoint(nextStabilityTouchId++, box.x + box.width / 2, box.y + box.height / 2);
-              await dispatchStabilityTouch('touchStart', [point]);
-              await stabilityPage.waitForTimeout(90);
-              await dispatchStabilityTouch('touchEnd', []);
-              await stabilityPage.waitForTimeout(60);
-            };
             await stabilityControl(0, -0.35, 68, 1200);
             await stabilityControl(0, -0.35, 69, 120);
             await stabilityControl(0, -0.35, 68, 850);
